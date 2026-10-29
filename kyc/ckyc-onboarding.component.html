@@ -1,0 +1,28 @@
+<section class="ckyc-shell">
+  <app-ckyc-error-alert />
+  @if (flow.step() === "search" || flow.step() === "enquiryReceived") {
+    <!-- <app-ckyc-search /> -->
+    @if (searchAttemptedPhase() === phase.PROFILE_CREATION) {
+      <app-ckyc-search-v2 />
+    }
+    <app-ckyc-enquiry-list />
+  } @else {
+    <app-ckyc-enquiry-details
+      [enquiry]="flow.activeMatchSelection()?.parentEnquiry!"
+      [match]="flow.activeMatchSelection()?.selectedResult!"
+      [matchIndex]="flow.activeMatchSelection()?.matchIndex!"
+    />
+
+    @switch (flow.step()) {
+      @case ("otp") {
+        <app-ckyc-step-otp />
+      }
+      @case ("face") {
+        <app-ckyc-face-authentication />
+      }
+      @case ("manual") {
+        <app-non-otp-authentication />
+      }
+    }
+  }
+</section>

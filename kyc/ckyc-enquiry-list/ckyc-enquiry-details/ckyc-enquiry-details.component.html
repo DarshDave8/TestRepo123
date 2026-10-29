@@ -1,0 +1,108 @@
+<!-- Recovered from screenshot 147115 (right pane) and 147116.
+     Source lines 60-76 appear across the image boundary. -->
+<article class="ckyc-match">
+  <div class="ckyc-match__header">
+    <strong>
+      @if (match().docSubmitted?.length; as count) {
+        {{ count === 1 ? "Match:" : "Matches:" }}
+        <span>
+          @for (document of match().docSubmitted; track document.documentName + $index) {
+            {{ document.documentName }}
+            @if (document.isMatchedOvd && document.matchedOvdNumber) {
+              - {{ document.matchedOvdNumber }}
+            }
+            @if (!$last) {
+              ,
+            }
+          }
+        </span>
+      } @else if (match()) {
+        Match
+      } @else {
+        Not Matches
+      }
+    </strong>
+    <span>{{ match().status || "Not available" }}</span>
+  </div>
+  <div class="ckyc-match__content" [class.ckyc-match__content--full-width]="!isStaff || !photoSource()">
+    <dl class="ckyc-match__details">
+      <div>
+        <dt>CKYC Reference No</dt>
+        <dd>{{ match().ckycRefNo || "Not available" }}</dd>
+      </div>
+      <div>
+        <dt>Full Name</dt>
+        <dd>{{ match().fullName || "Not available" }}</dd>
+      </div>
+      <div>
+        <dt>Gender</dt>
+        <dd>{{ match().gender || "Not available" }}</dd>
+      </div>
+      <div>
+        <dt>Mobile</dt>
+        <dd>{{ match().mobile || "Not available" }}</dd>
+      </div>
+      <div>
+        <dt>Email</dt>
+        <dd>{{ match().email || "Not available" }}</dd>
+      </div>
+      <div>
+        <dt>Last updated</dt>
+        <dd>{{ (match().lastUpdatedDate | date: 'dd/MM/yyyy, h:mm a') || "—" }}</dd>
+      </div>
+      <div>
+        <dt>Documents Submitted</dt>
+        <dd>
+          @if (!match().docSubmitted?.length) {
+            Not available
+          } @else {
+            @for (document of match().docSubmitted ?? []; track document.documentName + $index) {
+              @if (document.isMatchedOvd) {
+                <span>
+                  {{ document.documentName }} (Matched OVD
+                  @if (document.matchedOvdNumber) {
+                    - {{ document.matchedOvdNumber }}
+                  }
+                  )
+                  @if (!$last) {
+                    ,
+                  }
+                </span>
+              }
+            }
+          }
+        </dd>
+      </div>
+    </dl>
+    @if (isStaff) {
+      <aside class="ckyc-match__photo">
+        @if (photoSource(); as source) {
+          <span class="ckyc-match__photo-type">{{ match().photoExt?.toUpperCase() }}</span>
+          <img
+            class="ckyc-match__photo-image"
+            [src]="source"
+            [alt]="(match().fullName || 'CKYC applicant') + ' CKYC photo'"
+          />
+        } @else {
+          <span>Photo not available</span>
+        }
+      </aside>
+    }
+  </div>
+  <div class="ckyc-match__actions">
+    @if (isStaff && [CkycSearchOption.OVD, CkycSearchOption.MOBILE].includes(enquiry().enquiryRequest.searchOption)) {
+      <button mat-stroked-button color="warn" type="button" (click)="openDedupDialog()">Dedup Check</button>
+    }
+    <button mat-stroked-button color="primary" type="button" (click)="startAuthentication()">Download Data</button>
+  </div>
+  @if (flow.authenticationModesError()) {
+    <div class="ckyc-mobile-choice__error">
+      <p role="alert">{{ flow.authenticationModesError() }}</p>
+    </div>
+  }
+  <!-- @if (isActive()) {
+    <app-ckyc-authentication-types />
+  } -->
+</article>
+<!-- Some punctuation in the first @for block and the closing of the
+     Documents Submitted section was obscured; this is best-effort. -->

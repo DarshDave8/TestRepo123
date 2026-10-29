@@ -1,0 +1,62 @@
+<!-- Recovered from screenshot 147113 (right pane). -->
+<section class="ckyc-history" aria-labelledby="enquiry-history-title">
+  <div class="ckyc-history__header">
+    <div>
+      <h1 id="enquiry-history-title">Enquiry history</h1>
+    </div>
+    <div class="ckyc-history__tools">
+      <span class="ckyc-history__total">{{ flow.displayedEnquiries().length }} enquiries</span>
+    </div>
+  </div>
+  @if (flow.historyError()) {
+    <div class="ckyc-history__state ckyc-history__state--error" role="alert">
+      {{ flow.historyError() }}
+    </div>
+  }
+  @for (group of flow.enquiryGroups() | keyvalue; track group.key) {
+    <section class="ckyc-history__group">
+      <div class="ckyc-history__group-header">
+        <h2>{{ group.key }}</h2>
+        <span class="ckyc-history__group-count">
+          {{ group.value.length }}
+          {{ group.value.length === 1 ? "enquiry" : "enquiries" }}
+        </span>
+      </div>
+      <mat-accordion multi>
+        @for (enquiry of group.value; track enquiryLabel(enquiry)) {
+          <mat-expansion-panel [expanded]="true" class="ckyc-history__transaction">
+            <mat-expansion-panel-header class="ckyc-history__transaction-header">
+              <mat-panel-title class="ckyc-history__transaction-title">
+                <!-- {{ enquiryLabel(enquiry) }} -->
+                <span class="ckyc-history__badge" [class.ckyc-history__badge--empty]="matchCount(enquiry) === 0">
+                  {{ matchCount(enquiry) ? matchCount(enquiry) + " MATCHES" : "NO MATCH" }}
+                </span>
+              </mat-panel-title>
+              <mat-panel-description class="ckyc-history__transaction-meta">
+                <!-- @if (enquiryTimestamp(enquiry); as timestamp) {
+                  {{ timestamp | date: 'dd/MM/yyyy, h:mm a' }}
+                } -->
+              </mat-panel-description>
+            </mat-expansion-panel-header>
+            @if (enquiry.transaction.results.length === 0) {
+              <div class="ckyc-history__no-match">No CKYC record found.</div>
+            } @else {
+              <div class="ckyc-history__matches">
+                @for (
+                  match of enquiry.transaction.results;
+                  track match.enquiryId ?? match.ckycRefNo ?? $index;
+                  let matchIndex = $index
+                ) {
+                  <app-ckyc-enquiry-details [enquiry]="enquiry.transaction" [match]="match" [matchIndex]="matchIndex" />
+                }
+              </div>
+            }
+          </mat-expansion-panel>
+        }
+      </mat-accordion>
+    </section>
+  }
+</section>
+<!-- CAUTION: the source photograph appears to call matchCount(enquiry)
+     and enquiryLabel(enquiry) where enquiry is a CkycTransaction, despite
+     methods accepting ICkycEnquiryListResponseBody. No logic corrected. -->

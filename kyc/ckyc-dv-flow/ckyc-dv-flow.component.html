@@ -1,0 +1,25 @@
+<!-- Recovered from screenshot 147112 (right pane).
+     CAUTION: the original photo had a hard-coded leadId, which is redacted in this
+     public archival copy. Replace only from an authorized original source. -->
+<div class="container">
+  @if (leadDetails()?.customerProfile?.profileProvider === "MANUAL") {
+    <app-ckyc-consent-overview></app-ckyc-consent-overview>
+    <app-ckyc-onboarding [searchAttemptedPhase]="searchAttemptedPhase()"
+      leadId="[REDACTED_LEAD_ID]"
+    <label class="ckyc-not-applicable">
+      <input type="checkbox" />
+      It doesn't pertain to me
+    </label>
+
+    @if (leadDetails()?.isCkyc2AttemptedByCustomer) {}
+    <!-- @else {
+      <app-ckyc-flow />
+    } -->
+  } @else if (leadDetails()?.customerProfile?.profileProvider === "CKYC") {
+    Display CKYC : {{ leadDetails()?.customerProfile?.ckycDetails?.ckycNumber }}
+  } @else if (leadDetails()?.customerProfile?.profileProvider === "AADHAAR") {
+    Display CKYC : {{ leadDetails()?.customerProfile?.ckycDetails?.ckycNumber }}
+  }
+</div>
+<!-- SOURCE WARNING: the screenshot displays an apparently unclosed
+     <app-ckyc-onboarding> start tag. That anomaly is preserved here. -->

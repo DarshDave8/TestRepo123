@@ -1,12 +1,13 @@
 // Screenshot transcription (images 1 and 2), not a complete verified source file.
 // SOURCE GAP markers indicate code not visible in the photographs.
-import { Injectable, inject, signal, DestroyRef } from '@angular/core';
+import { Injectable, inject, signal, DestroyRef, InjectionToken } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Observable, of } from 'rxjs';
-import { tap, catchError, finalize, map } from 'rxjs/operators';
+import { Observable, Subject, defer, of } from 'rxjs';
+import { tap, catchError, finalize, map, switchMap, takeUntil } from 'rxjs/operators';
 import { CkycOnboardingService } from './ckyc-onboarding.service';
 import {
   AuthenticationMode,
+  AuthFactor,
   CKYC_OTP_MAX_ATTEMPTS,
   CKYC_OTP_TTL_SECONDS,
   SearchAttemptedPhase,
@@ -20,12 +21,29 @@ import {
 import { CkycFlowStateService } from './ckyc-flow-state.service';
 import { CkycSearchPhaseService } from './ckyc-search-phase.service';
 
+/**
+ * Connect this token to the application's existing runtime feature-flag service.
+ * Default master OFF keeps the previous behavior until the adapter is provided.
+ */
+export const CKYC_DV_FACTOR_FLAGS = new InjectionToken<() => {
+  master: boolean;
+  dob: boolean;
+  relation: boolean;
+  pincode: boolean;
+}>('CKYC_DV_FACTOR_FLAGS', {
+  providedIn: 'root',
+  factory: () => () => ({ master: false, dob: true, relation: true, pincode: true }),
+});
+
 @Injectable({ providedIn: 'root' })
 export class CkycAuthStateService {
   private readonly ckycSearchPhaseService = inject(CkycSearchPhaseService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly ckycApi = inject(CkycOnboardingService);
   private readonly flow = inject(CkycFlowStateService);
+  private readonly dvFlags = inject(CKYC_DV_FACTOR_FLAGS);
+  private readonly resetDvConsent$ = new Subject<void>();
+  readonly dvConsentBusy = signal(false);
   // readonly searchAttemptedPhase = signal<SearchAttemptedPhase | null>(null);
 
   readonly authState = signal<AuthDomainState>({
@@ -56,6 +74,8 @@ export class CkycAuthStateService {
     leadId: string | null,
     phase: SearchAttemptedPhase,
   ): Observable<boolean> {
+    // Cancel the previous factor sequence and start from DOB on new mode discovery.
+    this.resetDvConsent$.next();
     this.authState.update((s) => ({ ...s, loading: true, error: null }));
     return this.ckycApi
       .getApplicableAuthenticationModes({
@@ -90,6 +110,126 @@ export class CkycAuthStateService {
         finalize(() => this.authState.update((s) => ({ ...s, loading: false })),
         takeUntilDestroyed(this.destroyRef),
       );
+  }
+
+  /** New sequence applies only to the OTP + FACEAUTH Digital Verification branch. */
+  shouldRunDvFactorConsent(
+    modes: readonly AuthenticationMode[],
+    phase: SearchAttemptedPhase,
+  ): boolean {
+    return phase === SearchAttemptedPhase.DIGITAL_VERIFICATION &&
+      this.dvFlags().master &&
+      modes.length === 2 &&
+      modes.includes(AuthenticationMode.OTP) &&
+      modes.includes(AuthenticationMode.FACEAUTH);
+  }
+
+  private nextDvFactor(current: string | null): string | null {
+    switch (current) {
+      case null: return AuthFactor.DOB;
+      case AuthFactor.DOB: return AuthFactor.RELATION;
+      case AuthFactor.RELATION: return AuthFactor.PINCODE;
+      case AuthFactor.PINCODE: return AuthenticationMode.OTP;
+      default: return null;
+    }
+  }
+
+  private isDvFactorEnabled(factor: string): boolean {
+    const flags = this.dvFlags();
+    switch (factor) {
+      case AuthFactor.DOB: return flags.dob;
+      case AuthFactor.RELATION: return flags.relation;
+      case AuthFactor.PINCODE: return flags.pincode;
+      case AuthenticationMode.OTP: return true;
+      default: return false;
+    }
+  }
+
+  private nextEnabledDvFactor(current: string | null): string | null {
+    let next = this.nextDvFactor(current);
+    while (next && !this.isDvFactorEnabled(next)) {
+      next = this.nextDvFactor(next);
+    }
+    return next;
+  }
+
+  /** One consent request per enabled step. Never invokes the legacy failure handler. */
+  startDvFactorConsent(phase: SearchAttemptedPhase): Observable<boolean> {
+    if (this.dvConsentBusy() ||
+        !this.shouldRunDvFactorConsent(this.authState().applicableModes, phase)) {
+      return of(false);
+    }
+
+    const attemptId = this.authState().attemptId;
+    const leadId = this.ckycSearchPhaseService.leadId();
+    if (!attemptId || !leadId) {
+      this.authState.update((s) => ({ ...s, error: 'Missing consent attempt or lead ID.' }));
+      return of(false);
+    }
+
+    const send = (factor: string | null): Observable<boolean> => {
+      if (!factor) return of(false);
+
+      const payload: ITriggerConsentRequest = {
+        attemptId,
+        leadId,
+        consentType: AuthenticationMode.FACEAUTH,
+        searchAttemptedPhase: phase,
+      };
+      const mobile = this.otpState().mobileNumber;
+      if (mobile) payload.mobileNumber = mobile;
+
+      switch (factor) {
+        case AuthFactor.DOB:
+        case AuthFactor.RELATION:
+        case AuthFactor.PINCODE:
+          payload.authFactor = factor; // Single top-level string. No authFactors array.
+          break;
+        case AuthenticationMode.OTP:
+          payload.consentType = AuthenticationMode.OTP;
+          payload.authFactors = []; // Existing OTP format.
+          break;
+        default:
+          this.authState.update((s) => ({ ...s, error: 'Unknown consent factor.' }));
+          return of(false);
+      }
+
+      return this.ckycApi.triggerConsent(payload).pipe(
+        catchError(() => of(null)),
+        switchMap((response) => {
+          if (response?.success) {
+            if (factor === AuthenticationMode.OTP) {
+              this.authState.update((s) => ({ ...s, activeMode: AuthenticationMode.OTP }));
+              this.otpState.update((s) => ({
+                ...s,
+                generated: true,
+                expiresAt: Date.now() + CKYC_OTP_TTL_SECONDS * 1000,
+              }));
+              this.flow.goToStep('otp');
+            } else {
+              this.flow.goToStep('face');
+            }
+            return of(true);
+          }
+
+          if (factor === AuthenticationMode.OTP) {
+            this.authState.update((s) => ({ ...s, error: 'All consent attempts failed.' }));
+            return of(false);
+          }
+
+          return send(this.nextEnabledDvFactor(factor));
+        }),
+      );
+    };
+
+    return defer(() => {
+      this.dvConsentBusy.set(true);
+      return send(this.nextEnabledDvFactor(null));
+    }).pipe(
+      takeUntil(this.resetDvConsent$),
+      takeUntilDestroyed(this.destroyRef),
+      finalize(() => this.dvConsentBusy.set(false)),
+    );
   }
 
   /**

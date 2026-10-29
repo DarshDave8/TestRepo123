@@ -30,3 +30,21 @@ This folder contains a **best-effort transcription**, not a verified build of an
 - External constants, Angular modules, SCSS, dialog components, consent models, child components, and project infrastructure are not included unless explicitly shown in the photographs.
 - Some imports and domain types might not compile, and the images themselves show possible business-logic inconsistencies. No attempt was made to silently correct those defects.
 - Do not merge or deploy this code to a production system without validating it against the authorized original source.
+
+
+## Latest change: OTP + FACEAUTH factor sequence (feature-gated)
+
+- `services/ckyc-dv-consent-sequence.ts`: new isolated DOB -> Relation(Father/Mother/Spouse) -> Birth year + PINCODE -> OTP consent fallback, with a switch on the current factor.
+- `services/ckyc-auth-state.service.ts`: adds optional sequence with reset on each `loadApplicableModes()`, retains existing `triggerConsent()` for other paths.
+- `ckyc-enquiry-list/ckyc-enquiry-details/ckyc-enquiry-details.component.ts`: invokes this sequence only when both OTP and FACEAUTH are allowed for DIGITAL_VERIFICATION **and** the master flag is ON.
+- `services/ckyc-dv-consent-sequence.spec.ts`: test cases for master OFF, all ON, DOB OFF, DOB+RELATION OFF, RELATION OFF, all factors OFF; early success, terminal OTP success, and missing data.
+- `models/ckyc-consent-request.model.ts`, `models/ckyc-consent-response.model.ts`, and `constants/ckyc-onboarding.constants.ts` were transcribed from the two additional user screenshots. The constants file remains incomplete beyond photographed lines.
+
+**Integration required before enabling this new flow:**
+1. Provide `CKYC_DV_CONSENT_FLAGS` in the Angular app's DI from the **actual existing runtime flag/config service** (not present in this screenshot archive). The default provider returns `master:false`, `dob:true`, `relation:true`, `pincode:true`, preserving legacy behavior.
+2. Provide `CKYC_DV_CONSENT_FACTOR_VALUES` from your authorized DOB, FATHER/MOTHER/SPOUSE, and birth-year/PINCODE data source. The default provider returns no values; enabling without wiring the values fails closed and does not transmit placeholders.
+3. Confirm the correct backend relationName values and date formatting; the images show the field shapes, not these mapping rules.
+
+Factor successes route to the existing `face` step; OTP fallback success routes to the existing `otp` step. Face GET, OTP validation, resend and all other authentication branches are unchanged.
+
+**Validation status:** GitHub writes and file reads were verified. Jasmine/Angular tests have been **added but not executed**, because this reconstructed repository lacks a complete Angular project, dependencies, and test runner. Do not deploy until integrated and tested against authorized sources.

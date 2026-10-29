@@ -34,16 +34,16 @@ This folder contains a **best-effort transcription**, not a verified build of an
 
 ## Latest change: OTP + FACEAUTH factor sequence (feature-gated)
 
-- `services/ckyc-dv-consent-sequence.ts`: new isolated DOB -> Relation(Father/Mother/Spouse) -> Birth year + PINCODE -> OTP consent fallback, with a switch on the current factor.
+- `services/ckyc-dv-consent-sequence.ts`: new isolated DOB -> RELATION -> birth year + PINCODE -> OTP fallback, with a switch on the current factor. Only the authFactor enum is sent, never personal values. RELATION is one call because the corrected request includes no Father/Mother/Spouse discriminator.
 - `services/ckyc-auth-state.service.ts`: adds optional sequence with reset on each `loadApplicableModes()`, retains existing `triggerConsent()` for other paths.
 - `ckyc-enquiry-list/ckyc-enquiry-details/ckyc-enquiry-details.component.ts`: invokes this sequence only when both OTP and FACEAUTH are allowed for DIGITAL_VERIFICATION **and** the master flag is ON.
-- `services/ckyc-dv-consent-sequence.spec.ts`: test cases for master OFF, all ON, DOB OFF, DOB+RELATION OFF, RELATION OFF, all factors OFF; early success, terminal OTP success, and missing data.
+- `services/ckyc-dv-consent-sequence.spec.ts`: tests for master OFF, all ON, DOB OFF, DOB+RELATION OFF, RELATION OFF, all factors OFF; identifier-only payloads, early success, terminal OTP, network failure, and unknown step.
 - `models/ckyc-consent-request.model.ts`, `models/ckyc-consent-response.model.ts`, and `constants/ckyc-onboarding.constants.ts` were transcribed from the two additional user screenshots. The constants file remains incomplete beyond photographed lines.
 
 **Integration required before enabling this new flow:**
 1. Provide `CKYC_DV_CONSENT_FLAGS` in the Angular app's DI from the **actual existing runtime flag/config service** (not present in this screenshot archive). The default provider returns `master:false`, `dob:true`, `relation:true`, `pincode:true`, preserving legacy behavior.
-2. Provide `CKYC_DV_CONSENT_FACTOR_VALUES` from your authorized DOB, FATHER/MOTHER/SPOUSE, and birth-year/PINCODE data source. The default provider returns no values; enabling without wiring the values fails closed and does not transmit placeholders.
-3. Confirm the correct backend relationName values and date formatting; the images show the field shapes, not these mapping rules.
+2. No customer DOB, relationship name, birth year, or PINCODE values are needed. Each factor request sends `authFactors: [{ authFactor: AuthFactor.DOB | AuthFactor.RELATION | AuthFactor.BIRTHYEARPINCODE }]`, with the appropriate single enum member. The optional fields in the original union models remain available for legacy callers.
+3. Confirm the backend expects one `RELATION` attempt (rather than separate Father, Mother and Spouse requests) when only the factor identifier is supplied.
 
 Factor successes route to the existing `face` step; OTP fallback success routes to the existing `otp` step. Face GET, OTP validation, resend and all other authentication branches are unchanged.
 

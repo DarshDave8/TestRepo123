@@ -38,7 +38,6 @@ export enum AuthenticationMode {
 export enum AuthFactor {
   DOB = 'DOB',
   RELATION = 'RELATION',
-  PINCODE = 'PINCODE',
   BIRTHYEARPINCODE = 'BIRTHYEARPINCODE',
 }
 export const CKYC_OTP_MAX_ATTEMPTS = 3;

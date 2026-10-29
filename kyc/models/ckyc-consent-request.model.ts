@@ -10,11 +10,11 @@ export interface IGetApplicableConsentTypesRequest {
 
 export interface IDobAuthFactor {
   authFactor: AuthFactor.DOB;
-  authValue: string;
+  authValue?: string; // Optional: DV factor discovery sends the identifier only.
 }
 export interface IRelationAuthFactor {
   authFactor: AuthFactor.RELATION;
-  authFactorValueObj: IRelationAuthFactorValue;
+  authFactorValueObj?: IRelationAuthFactorValue; // Optional for identifier-only requests.
 }
 export interface IRelationAuthFactorValue {
   firstName: string;
@@ -24,7 +24,7 @@ export interface IRelationAuthFactorValue {
 }
 export interface IBirthYearPincodeAuthFactor {
   authFactor: AuthFactor.BIRTHYEARPINCODE;
-  authFactorValueObj: IBirthYearPincodeAuthFactorValue;
+  authFactorValueObj?: IBirthYearPincodeAuthFactorValue; // Optional for identifier-only requests.
 }
 export interface IBirthYearPincodeAuthFactorValue {
   year: string;

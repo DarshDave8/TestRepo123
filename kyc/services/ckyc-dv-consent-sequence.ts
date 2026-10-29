@@ -2,24 +2,16 @@ import { defer, of, type Observable } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 import { AuthFactor, AuthenticationMode } from '../constants/ckyc-onboarding.constants';
 import type {
-  IBirthYearPincodeAuthFactorValue,
-  IRelationAuthFactorValue,
   ITriggerConsentRequest,
   TriggerConsentAuthFactor,
 } from '../models/ckyc-consent-request.model';
 
-/** Independent of the UI's CkycFlowStep: only the OTP + FACEAUTH DV branch. */
+/** Internal step state, independent of the application's UI flow steps. */
 export enum DvConsentFactor {
   DOB = 'DOB',
   RELATION = 'RELATION',
   PINCODE = 'PINCODE',
   OTP = 'OTP',
-}
-
-export enum DvRelation {
-  FATHER = 'FATHER',
-  MOTHER = 'MOTHER',
-  SPOUSE = 'SPOUSE',
 }
 
 export interface DvConsentFlags {
@@ -29,56 +21,36 @@ export interface DvConsentFlags {
   readonly pincode: boolean;
 }
 
-export interface DvConsentFactorValues {
-  readonly dob?: string;
-  readonly relations?: Partial<Record<DvRelation, IRelationAuthFactorValue>>;
-  readonly yearPincode?: IBirthYearPincodeAuthFactorValue;
-}
-
-export interface DvConsentCursor {
-  readonly factor: DvConsentFactor;
-  readonly relation?: DvRelation;
-}
-
 type ConsentBase = Pick<
   ITriggerConsentRequest,
   'attemptId' | 'leadId' | 'searchAttemptedPhase' | 'mobileNumber'
 >;
 
-function nextCandidate(current: DvConsentCursor | null): DvConsentCursor | null {
-  if (current === null) return { factor: DvConsentFactor.DOB };
-
-  switch (current.factor) {
+function nextCandidate(current: DvConsentFactor | null): DvConsentFactor | null {
+  switch (current) {
+    case null:
+      return DvConsentFactor.DOB;
     case DvConsentFactor.DOB:
-      return { factor: DvConsentFactor.RELATION, relation: DvRelation.FATHER };
+      return DvConsentFactor.RELATION;
     case DvConsentFactor.RELATION:
-      switch (current.relation) {
-        case DvRelation.FATHER:
-          return { factor: DvConsentFactor.RELATION, relation: DvRelation.MOTHER };
-        case DvRelation.MOTHER:
-          return { factor: DvConsentFactor.RELATION, relation: DvRelation.SPOUSE };
-        case DvRelation.SPOUSE:
-          return { factor: DvConsentFactor.PINCODE };
-        default:
-          return null; // Unknown relation: do not guess another step.
-      }
+      return DvConsentFactor.PINCODE;
     case DvConsentFactor.PINCODE:
-      return { factor: DvConsentFactor.OTP };
+      return DvConsentFactor.OTP;
     case DvConsentFactor.OTP:
     default:
       return null;
   }
 }
 
-/** Returns the next enabled attempt, always ending with OTP. */
+/** Skip disabled factors; OTP always remains the final step. */
 export function getNextDvConsentStep(
-  current: DvConsentCursor | null,
+  current: DvConsentFactor | null,
   flags: DvConsentFlags,
-): DvConsentCursor | null {
+): DvConsentFactor | null {
   let candidate = nextCandidate(current);
-  // At most DOB + three relations + PINCODE + OTP.
-  for (let i = 0; candidate && i < 6; i++) {
-    switch (candidate.factor) {
+  // Maximum of four steps: DOB, RELATION, PINCODE, OTP.
+  for (let i = 0; candidate !== null && i < 4; i++) {
+    switch (candidate) {
       case DvConsentFactor.DOB:
         if (flags.dob) return candidate;
         break;
@@ -98,35 +70,25 @@ export function getNextDvConsentStep(
   return null;
 }
 
-/** Never send placeholders or empty required factor values to the bank API. */
+/**
+ * Backend identifies each factor by its authFactor enum alone.
+ * Do not transmit DOB, names, birth year or PINCODE values.
+ */
 export function buildDvConsentRequest(
-  cursor: DvConsentCursor,
+  step: DvConsentFactor,
   base: ConsentBase,
-  values: DvConsentFactorValues,
 ): ITriggerConsentRequest {
-  let authFactors: TriggerConsentAuthFactor[];
+  let authFactors: TriggerConsentAuthFactor[] = [];
 
-  switch (cursor.factor) {
+  switch (step) {
     case DvConsentFactor.DOB:
-      if (!values.dob?.trim()) throw new Error('DOB auth factor is unavailable.');
-      authFactors = [{ authFactor: AuthFactor.DOB, authValue: values.dob }];
+      authFactors = [{ authFactor: AuthFactor.DOB }];
       break;
-    case DvConsentFactor.RELATION: {
-      const value = cursor.relation && values.relations?.[cursor.relation];
-      if (!value?.firstName?.trim() || !value.lastName?.trim() || !value.relationName?.trim()) {
-        throw new Error('Required relation auth factor is unavailable.');
-      }
-      authFactors = [{ authFactor: AuthFactor.RELATION, authFactorValueObj: value }];
+    case DvConsentFactor.RELATION:
+      authFactors = [{ authFactor: AuthFactor.RELATION }];
       break;
-    }
     case DvConsentFactor.PINCODE:
-      if (!values.yearPincode?.year?.trim() || !values.yearPincode.pincode?.trim()) {
-        throw new Error('Birth year and PINCODE auth factor is unavailable.');
-      }
-      authFactors = [{
-        authFactor: AuthFactor.BIRTHYEARPINCODE,
-        authFactorValueObj: values.yearPincode,
-      }];
+      authFactors = [{ authFactor: AuthFactor.BIRTHYEARPINCODE }];
       break;
     case DvConsentFactor.OTP:
       return { ...base, consentType: AuthenticationMode.OTP, authFactors: [] };
@@ -139,43 +101,32 @@ export function buildDvConsentRequest(
 
 export interface DvConsentSequenceOptions {
   readonly flags: DvConsentFlags;
-  readonly values: DvConsentFactorValues;
   readonly base: ConsentBase;
   readonly send: (request: ITriggerConsentRequest) => Observable<{ success: boolean } | null>;
-  readonly onSuccess: (cursor: DvConsentCursor) => void;
-  readonly onMissingData: (message: string) => void;
+  readonly onSuccess: (step: DvConsentFactor) => void;
 }
 
-/** Sequential calls only. Failure advances; success stops; OTP never retries here. */
+/** Failure advances once; success stops; OTP is terminal. Legacy consent is separate. */
 export function executeDvConsentSequence(options: DvConsentSequenceOptions): Observable<boolean> {
-  const { flags, values, base, send, onSuccess, onMissingData } = options;
+  const { flags, base, send, onSuccess } = options;
 
-  const run = (cursor: DvConsentCursor | null): Observable<boolean> => {
-    if (!cursor) return of(false);
+  const run = (step: DvConsentFactor | null): Observable<boolean> => {
+    if (step === null) return of(false);
 
-    let request: ITriggerConsentRequest;
-    try {
-      request = buildDvConsentRequest(cursor, base, values);
-    } catch (error) {
-      onMissingData(error instanceof Error ? error.message : 'Invalid auth factor.');
-      return of(false);
-    }
-
+    const request = buildDvConsentRequest(step, base);
     return send(request).pipe(
-      // A network failure counts as one failed attempt; do not trigger the legacy fallback handler.
       catchError(() => of(null)),
       switchMap((response) => {
         if (response?.success) {
-          onSuccess(cursor);
+          onSuccess(step);
           return of(true);
         }
-        return run(getNextDvConsentStep(cursor, flags));
+        return run(getNextDvConsentStep(step, flags));
       }),
     );
   };
 
-  return defer(() => {
-    if (!flags.master) return of(false);
-    return run(getNextDvConsentStep(null, flags));
-  });
+  return defer(() =>
+    flags.master ? run(getNextDvConsentStep(null, flags)) : of(false),
+  );
 }

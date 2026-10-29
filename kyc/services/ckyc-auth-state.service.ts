@@ -70,24 +70,14 @@ export class CkycAuthStateService {
             this.authState.update((s) => ({ ...s, error: 'Unable to load authentication modes.' }));
             return;
           }
-          let modes: AuthenticationMode[] = res.body?.applicableConsentTypes || [];
-          if (phase === 'PROFILE_CREATION') {
-            modes = modes.filter((mode) => mode === AuthenticationMode.OTP);
-          }
+          const { modes, activeMode } = this.determineAuthModes(
+            res.body?.applicableConsentTypes || [],
+            phase,
+          );
 
-          let selectedActiveMode: AuthenticationMode;
-          if (modes.includes(AuthenticationMode.OTP) && modes.includes(AuthenticationMode.FACEAUTH)) {
-            selectedActiveMode = AuthenticationMode.FACEAUTH;
-          } else if (modes.includes(AuthenticationMode.MANUAL) && modes.includes(AuthenticationMode.FACEAUTH)) {
-            selectedActiveMode = AuthenticationMode.MANUAL;
-          } else {
-            selectedActiveMode = modes[0] ?? AuthenticationMode.OTP;
-          }
-
-          console.log(modes[0]);
           this.authState.update((s) => ({
             ...s,
-            activeMode: selectedActiveMode,
+            activeMode,
             attemptId: res.body.attemptId,
             applicableModes: modes,
           }));
@@ -258,4 +248,36 @@ export class CkycAuthStateService {
       otpAttemptCount: 0,
     });
   }
+  /**
+   * Helper method to process raw authentication modes and determine the active mode.
+   * Image transcription: phase filtering followed by mode priority.
+   */
+  private determineAuthModes(
+    rawModes: AuthenticationMode[],
+    phase: SearchAttemptedPhase,
+  ): { modes: AuthenticationMode[]; activeMode: AuthenticationMode | null } {
+    // 1. Filter modes based on phase
+    const modes = phase === 'PROFILE_CREATION'
+      ? rawModes.filter((m) => m === AuthenticationMode.OTP)
+      : rawModes;
+
+    // 2. Evaluate priority conditions
+    const hasFace = modes.includes(AuthenticationMode.FACEAUTH);
+    const hasOtp = modes.includes(AuthenticationMode.OTP);
+    const hasManual = modes.includes(AuthenticationMode.MANUAL);
+
+    // Nullable, because the original fallback returns null for an empty array.
+    let activeMode: AuthenticationMode | null;
+
+    if (hasOtp && hasFace) {
+      activeMode = AuthenticationMode.FACEAUTH;
+    } else if (hasManual && hasFace) {
+      activeMode = AuthenticationMode.MANUAL;
+    } else {
+      activeMode = modes[0] ?? null;
+    }
+
+    return { modes, activeMode };
+  }
+
 }

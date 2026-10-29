@@ -99,6 +99,15 @@ export class CkycEnquiryDetailsComponent implements OnInit {
           if (!isSuccess) return;
           const modes = this.authStore.authState().applicableModes;
           const startingMode = this.authStore.resolveStartingMode(modes, currentPhase!);
+          // Only OTP + FACEAUTH in Digital Verification, and only when master flag is ON.
+          // Master OFF keeps the exact existing navigation and consent behavior below.
+          if (currentPhase === SearchAttemptedPhase.DIGITAL_VERIFICATION &&
+              this.authStore.isDvOtpFaceSequenceEnabled(modes, currentPhase)) {
+            this.authStore.startDvOtpFaceConsentSequence()
+              .pipe(takeUntilDestroyed(this.destroyRef))
+              .subscribe();
+            return;
+          }
           if (currentPhase === SearchAttemptedPhase.DIGITAL_VERIFICATION) {
             if (startingMode === AuthenticationMode.OTP) {
               this.flow.goToStep('otp');

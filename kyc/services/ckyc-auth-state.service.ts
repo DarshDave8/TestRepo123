@@ -21,20 +21,14 @@ import { CkycFlowStateService } from './ckyc-flow-state.service';
 import { CkycSearchPhaseService } from './ckyc-search-phase.service';
 import {
   DvConsentFactor,
-  DvConsentFactorValues,
   DvConsentFlags,
   executeDvConsentSequence,
 } from './ckyc-dv-consent-sequence';
 
-/** Provide adapters to your existing runtime flag service and customer data source.
- * Defaults deliberately preserve today's behavior and never invent auth-factor data. */
+/** Adapter for the existing runtime flag service; OFF preserves legacy behavior. */
 export const CKYC_DV_CONSENT_FLAGS = new InjectionToken<() => DvConsentFlags>(
   'CKYC_DV_CONSENT_FLAGS',
   { providedIn: 'root', factory: () => () => ({ master: false, dob: true, relation: true, pincode: true }) },
-);
-export const CKYC_DV_CONSENT_FACTOR_VALUES = new InjectionToken<() => DvConsentFactorValues>(
-  'CKYC_DV_CONSENT_FACTOR_VALUES',
-  { providedIn: 'root', factory: () => () => ({}) },
 );
 
 @Injectable({ providedIn: 'root' })
@@ -44,7 +38,6 @@ export class CkycAuthStateService {
   private readonly ckycApi = inject(CkycOnboardingService);
   private readonly flow = inject(CkycFlowStateService);
   private readonly dvFlags = inject(CKYC_DV_CONSENT_FLAGS);
-  private readonly dvFactorValues = inject(CKYC_DV_CONSENT_FACTOR_VALUES);
   private readonly dvSequenceReset$ = new Subject<void>();
   // readonly searchAttemptedPhase = signal<SearchAttemptedPhase | null>(null);
 
@@ -142,7 +135,6 @@ export class CkycAuthStateService {
     const mobileNumber = this.otpState().mobileNumber;
     return executeDvConsentSequence({
       flags: this.dvFlags(),
-      values: this.dvFactorValues(),
       base: {
         attemptId,
         leadId,
@@ -150,8 +142,7 @@ export class CkycAuthStateService {
         ...(mobileNumber ? { mobileNumber } : {}),
       },
       send: (request) => this.ckycApi.triggerConsent(request),
-      onMissingData: (message) => this.authState.update((s) => ({ ...s, error: message })),
-      onSuccess: ({ factor }) => {
+      onSuccess: (factor) => {
         if (factor === DvConsentFactor.OTP) {
           this.authState.update((s) => ({ ...s, activeMode: AuthenticationMode.OTP }));
           this.otpState.update((s) => ({

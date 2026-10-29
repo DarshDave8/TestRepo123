@@ -1,9 +1,9 @@
 // Screenshot transcription (images 1 and 2), not a complete verified source file.
 // SOURCE GAP markers indicate code not visible in the photographs.
-import { Injectable, inject, signal, DestroyRef, InjectionToken } from '@angular/core';
+import { Injectable, inject, signal, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Observable, Subject, of } from 'rxjs';
-import { tap, catchError, finalize, map, takeUntil } from 'rxjs/operators';
+import { Observable, of } from 'rxjs';
+import { tap, catchError, finalize, map } from 'rxjs/operators';
 import { CkycOnboardingService } from './ckyc-onboarding.service';
 import {
   AuthenticationMode,
@@ -19,17 +19,6 @@ import {
 } from '../models/ckyc-onboarding.model';
 import { CkycFlowStateService } from './ckyc-flow-state.service';
 import { CkycSearchPhaseService } from './ckyc-search-phase.service';
-import {
-  DvConsentFactor,
-  DvConsentFlags,
-  executeDvConsentSequence,
-} from './ckyc-dv-consent-sequence';
-
-/** Adapter for the existing runtime flag service; OFF preserves legacy behavior. */
-export const CKYC_DV_CONSENT_FLAGS = new InjectionToken<() => DvConsentFlags>(
-  'CKYC_DV_CONSENT_FLAGS',
-  { providedIn: 'root', factory: () => () => ({ master: false, dob: true, relation: true, pincode: true }) },
-);
 
 @Injectable({ providedIn: 'root' })
 export class CkycAuthStateService {
@@ -37,8 +26,6 @@ export class CkycAuthStateService {
   private readonly destroyRef = inject(DestroyRef);
   private readonly ckycApi = inject(CkycOnboardingService);
   private readonly flow = inject(CkycFlowStateService);
-  private readonly dvFlags = inject(CKYC_DV_CONSENT_FLAGS);
-  private readonly dvSequenceReset$ = new Subject<void>();
   // readonly searchAttemptedPhase = signal<SearchAttemptedPhase | null>(null);
 
   readonly authState = signal<AuthDomainState>({
@@ -69,8 +56,6 @@ export class CkycAuthStateService {
     leadId: string | null,
     phase: SearchAttemptedPhase,
   ): Observable<boolean> {
-    // Cancel any prior in-flight DV chain and reset its local sequence to DOB.
-    this.dvSequenceReset$.next();
     this.authState.update((s) => ({ ...s, loading: true, error: null }));
     return this.ckycApi
       .getApplicableAuthenticationModes({
@@ -105,66 +90,6 @@ export class CkycAuthStateService {
         finalize(() => this.authState.update((s) => ({ ...s, loading: false })),
         takeUntilDestroyed(this.destroyRef),
       );
-  }
-
-
-  /** Only the DV branch with both backend modes AND master feature flag enabled. */
-  isDvOtpFaceSequenceEnabled(modes: readonly AuthenticationMode[], phase: SearchAttemptedPhase): boolean {
-    return phase === SearchAttemptedPhase.DIGITAL_VERIFICATION &&
-      this.dvFlags().master &&
-      modes.includes(AuthenticationMode.OTP) &&
-      modes.includes(AuthenticationMode.FACEAUTH);
-  }
-
-  /** Sequence is independent of triggerConsent()/handleAuthFailure() legacy behavior. */
-  startDvOtpFaceConsentSequence(): Observable<boolean> {
-    const phase = this.ckycSearchPhaseService.searchAttemptedPhase();
-    const modes = this.authState().applicableModes;
-    if (phase !== SearchAttemptedPhase.DIGITAL_VERIFICATION ||
-        !this.isDvOtpFaceSequenceEnabled(modes, phase)) {
-      return of(false);
-    }
-
-    const attemptId = this.authState().attemptId;
-    const leadId = this.ckycSearchPhaseService.leadId();
-    if (!attemptId || !leadId) {
-      this.authState.update((s) => ({ ...s, error: 'Missing consent attempt ID or lead ID.' }));
-      return of(false);
-    }
-
-    const mobileNumber = this.otpState().mobileNumber;
-    return executeDvConsentSequence({
-      flags: this.dvFlags(),
-      base: {
-        attemptId,
-        leadId,
-        searchAttemptedPhase: phase,
-        ...(mobileNumber ? { mobileNumber } : {}),
-      },
-      send: (request) => this.ckycApi.triggerConsent(request),
-      onSuccess: (factor) => {
-        if (factor === DvConsentFactor.OTP) {
-          this.authState.update((s) => ({ ...s, activeMode: AuthenticationMode.OTP }));
-          this.otpState.update((s) => ({
-            ...s,
-            generated: true,
-            expiresAt: Date.now() + CKYC_OTP_TTL_SECONDS * 1000,
-          }));
-          this.flow.goToStep('otp');
-          return;
-        }
-        // Existing face-authentication entry; no DOWNLOAD FACE AUTH/GET implementation here.
-        this.flow.goToStep('face');
-      },
-    }).pipe(
-      takeUntil(this.dvSequenceReset$),
-      takeUntilDestroyed(this.destroyRef),
-      tap((success) => {
-        if (!success && !this.authState().error) {
-          this.authState.update((s) => ({ ...s, error: 'All enabled consent attempts failed.' }));
-        }
-      }),
-    );
   }
 
   /**

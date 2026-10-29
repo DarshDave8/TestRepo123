@@ -12,7 +12,8 @@ import {
   SearchAttemptedPhase,
 } from '../constants/ckyc-onboarding.constants';
 import { CkycSearchRequest } from './ckyc-search-request.model';
-import { IGetApplicableConsentTypesResponseBody } from './ckyc-consent-response.model';
+// The response body type is re-exported below; local use is type-only.
+import type { IGetApplicableConsentTypesResponseBody } from './ckyc-consent-response.model';
 import { IResponse } from 'src/app/models/base-response.model';
 
 export type CkycFlowStep = 'search' | 'enquiryReceived' | 'otp' | 'face' | 'manual';
@@ -111,8 +112,80 @@ export interface NonOtpAuthenticationPayload {
 }
 export type CkycGender = GENDER;
 
-// SOURCE GAP: lines 116 onward show further exports but are cut off in image 10.
-// Recognizable names: IBirthYearPincodeAuthFactor,
-// IBirthYearPincodeAuthFactorValue, IConsentData, IDobAuthFactor,
-// IGetApplicableConsentTypesRequest, IRelationAuthFactor.
-// No missing definitions were invented.
+// Continuation recovered from new screenshot 147110 (lines 121-195).
+export type {
+  IGetApplicableConsentTypesRequest,
+  IRelationAuthFactor,
+  IRelationAuthFactorValue,
+  ITriggerConsentRequest,
+  IValidateConsentRequest,
+  TriggerConsentAuthFactor,
+} from './ckyc-consent-request.model';
+
+export type {
+  IGetApplicableConsentTypesResponse,
+  IGetApplicableConsentTypesResponseBody,
+  ITriggerConsentResponse,
+  ITriggerConsentResponseBody,
+  IValidateConsentResponse,
+} from './ckyc-consent-response.model';
+
+// UI interface
+export interface CkycFlowState {
+  status: CkycWorkflowStatus | null;
+  businessError: CkycBusinessError | null;
+  // Search and enquiry data
+  searchQuery: CkycSearchRequest | null;
+  enquiries: ICkycEnquiryListResponseBody[] | [];
+  // selected enquiry representing the transaction
+  selectedEnquiry: ICkycEnquiryListResponseBody | null;
+  // which result is selected for authentication
+  selectedSearchResult: ICkycSearchResult | null;
+  // applicable authentication type on the above selected search result
+  applicableConsentTypes: IGetApplicableConsentTypesResponseBody | null;
+  // which authentication type is chosen
+  selectedAuthenticationMode: AuthenticationMode | null;
+  // otp related data
+  otpGenerated: boolean | null;
+  otpAttemptsMade: number | null;
+  otpExpiresAt: number | null;
+}
+
+export interface CkycBusinessError {
+  phase: CkycBusinessErrorPhase;
+  messages: string;
+}
+
+// auth related UI model
+export interface AuthDomainState {
+  loading: boolean;
+  error: string | null;
+  attemptId: string | null; // may be it will be replaced with attemptid
+  applicableModes: AuthenticationMode[];
+  activeMode: AuthenticationMode | null;
+}
+
+export interface OtpDomainState {
+  loading: boolean;
+  error: string | null;
+  generated: boolean;
+  expiresAt: number | null;
+  mobileNumber: string | null;
+  otpAttemptCount: number;
+}
+
+// Trigger-Enquiries
+export interface ITriggerEnquiriesRequest {
+  leadId: string | null;
+  searchAttemptedPhase: SearchAttemptedPhase;
+}
+
+export interface ITriggerEnquiriesResponse extends IResponse {
+  body: ITriggerEnquiriesResponseBody;
+}
+export interface ITriggerEnquiriesResponseBody {
+  messages: string[];
+  recordsFound: number;
+  searchOption?: CkycSearchOption;
+  success: boolean;
+}

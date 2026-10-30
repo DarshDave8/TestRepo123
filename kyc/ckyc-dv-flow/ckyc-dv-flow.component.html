@@ -6,6 +6,7 @@
     <app-ckyc-consent-overview></app-ckyc-consent-overview>
     <app-ckyc-onboarding [searchAttemptedPhase]="searchAttemptedPhase()"
       leadId="[REDACTED_LEAD_ID]"
+    />
     <label class="ckyc-not-applicable">
       <input type="checkbox" />
       It doesn't pertain to me
@@ -20,6 +21,45 @@
   } @else if (leadDetails()?.customerProfile?.profileProvider === "AADHAAR") {
     Display CKYC : {{ leadDetails()?.customerProfile?.ckycDetails?.ckycNumber }}
   }
+  @if (consentAttempts().length > 0) {
+    <div class="consent-status" role="region" aria-labelledby="consent-status-caption" tabindex="0">
+      <table aria-live="polite">
+        <caption id="consent-status-caption">Consent call status</caption>
+        <thead>
+          <tr>
+            <th scope="col">#</th>
+            <th scope="col">Call</th>
+            <th scope="col">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (attempt of consentAttempts(); track attempt.id; let index = $index) {
+            <tr>
+              <td>{{ index + 1 }}</td>
+              <td>
+                @switch (attempt.consentType) {
+                  @case (authMode.FACEAUTH) { Face auth }
+                  @case (authMode.OTP) { OTP }
+                  @case (authMode.MANUAL) { Manual auth }
+                }
+                @switch (attempt.authFactor) {
+                  @case (authFactor.DOB) { with DOB }
+                  @case (authFactor.RELATION) { with relation }
+                  @case (authFactor.BIRTHYEARPINCODE) { with year of birth and pincode }
+                }
+                called
+              </td>
+              <td>
+                <span class="consent-result"
+                  [class.consent-result--success]="attempt.status === 'Success'"
+                  [class.consent-result--failed]="attempt.status === 'Failed'">
+                  {{ attempt.status }}
+                </span>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
 </div>
-<!-- SOURCE WARNING: the screenshot displays an apparently unclosed
-     <app-ckyc-onboarding> start tag. That anomaly is preserved here. -->

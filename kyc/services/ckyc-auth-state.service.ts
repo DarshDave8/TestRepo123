@@ -1,6 +1,6 @@
 // Screenshot transcription (images 1 and 2), not a complete verified source file.
 // SOURCE GAP markers indicate code not visible in the photographs.
-import { Injectable, computed, inject, signal, DestroyRef } from '@angular/core';
+import { Injectable, inject, signal, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Observable, defer, of } from 'rxjs';
 import { tap, catchError, finalize, map } from 'rxjs/operators';
@@ -37,13 +37,12 @@ export class CkycAuthStateService {
   private readonly flow = inject(CkycFlowStateService);
   // readonly searchAttemptedPhase = signal<SearchAttemptedPhase | null>(null);
 
-  // Current DV consent factor for OTP + FACE or MANUAL + FACE. null = no factor.
+  // DV (OTP + FACE): the factor we are currently sending in the consent call. null = no factor.
   private currentFactor: AuthFactor | null = null;
 
   private nextConsentAttemptId = 0;
   private readonly _consentAttempts = signal<readonly CkycConsentAttempt[]>([]);
   readonly consentAttempts = this._consentAttempts.asReadonly();
-  readonly manualWithFaceMode = computed(() => this.isDvWithFaceMode(AuthenticationMode.MANUAL));
 
   readonly authState = signal<AuthDomainState>({
     loading: false,
@@ -106,26 +105,20 @@ export class CkycAuthStateService {
           this.authState.update((s) => ({ ...s, error: 'Network error loading auth modes.' }));
           return of(false);
         }),
-        finalize(() => this.authState.update((s) => ({ ...s, loading: false }))),
+        finalize(() => this.authState.update((s) => ({ ...s, loading: false })),
         takeUntilDestroyed(this.destroyRef),
       );
   }
 
   /**
    * Resolves initial starting mode according to requirements:
-   * - DIGITAL_VERIFICATION: MANUAL + FACE without OTP starts MANUAL; otherwise FACE -> OTP -> MANUAL
+   * - DIGITAL_VERIFICATION: FACE -> OTP -> MANUAL
    * - PROFILE_CREATION: Strictly OTP
    */
   resolveStartingMode(modes: AuthenticationMode[], phase: SearchAttemptedPhase): AuthenticationMode | null {
     if (phase === 'PROFILE_CREATION') {
       return modes.includes(AuthenticationMode.OTP) ? AuthenticationMode.OTP : null;
     }
-    if (
-      phase === SearchAttemptedPhase.DIGITAL_VERIFICATION &&
-      modes.includes(AuthenticationMode.MANUAL) &&
-      modes.includes(AuthenticationMode.FACEAUTH) &&
-      !modes.includes(AuthenticationMode.OTP)
-    ) return AuthenticationMode.MANUAL;
     if (modes.includes(AuthenticationMode.FACEAUTH)) return AuthenticationMode.FACEAUTH;
     if (modes.includes(AuthenticationMode.OTP)) return AuthenticationMode.OTP;
     if (modes.includes(AuthenticationMode.MANUAL)) return AuthenticationMode.MANUAL;
@@ -133,15 +126,11 @@ export class CkycAuthStateService {
   }
 
   triggerConsent(): Observable<boolean> {
-    // Start each applicable DV consent stage with its first enabled factor.
-    const currentMode = this.authState().activeMode;
+    // First FACE consent call in DV (OTP + FACE): start with the first enabled factor.
     if (
+      this.authState().activeMode === AuthenticationMode.FACEAUTH &&
       this.currentFactor === null &&
-      (
-        (currentMode === AuthenticationMode.FACEAUTH && this.isDvWithFaceMode()) ||
-        (this.manualWithFaceMode() &&
-          (currentMode === AuthenticationMode.MANUAL || currentMode === AuthenticationMode.FACEAUTH))
-      )
+      this.isOtpWithFaceMode()
     ) {
       this.currentFactor = this.nextFactor(null);
     }
@@ -225,31 +214,10 @@ export class CkycAuthStateService {
   handleAuthFailure(): Observable<boolean> {
     const currentMode = this.authState().activeMode;
     const available = this.authState().applicableModes;
-    // DV MANUAL + FACE: finish MANUAL factors, then restart factors with FACE. No OTP or loop.
-    if (this.manualWithFaceMode() &&
-      (currentMode === AuthenticationMode.MANUAL || currentMode === AuthenticationMode.FACEAUTH)) {
-      const next = this.currentFactor === null ? null : this.nextFactor(this.currentFactor);
-      if (next !== null) {
-        this.currentFactor = next;
-        return this.triggerConsent();
-      }
-      this.currentFactor = null;
-      if (currentMode === AuthenticationMode.MANUAL) {
-        this.authState.update((state) => ({
-          ...state, activeMode: AuthenticationMode.FACEAUTH,
-          error: 'Manual authentication failed. Falling back to Face authentication.',
-        }));
-        return this.triggerConsent();
-      }
-      this.authState.update((state) => ({
-        ...state, error: 'All enabled Face authentication factors failed.',
-      }));
-      return of(false);
-    }
     // Rule 1: Face Auth Failed -> Fallback to OTP or MANUAL
     if (currentMode === AuthenticationMode.FACEAUTH) {
       // Rule 1a (DV, OTP + FACE): a factor failed -> try the next enabled factor first.
-      if (this.isDvWithFaceMode() && this.currentFactor !== null) {
+      if (this.isOtpWithFaceMode() && this.currentFactor !== null) {
         const next = this.nextFactor(this.currentFactor);
         if (next !== null) {
           this.currentFactor = next;
@@ -263,7 +231,7 @@ export class CkycAuthStateService {
         this.authState.update((s) => ({ ...s, activeMode: AuthenticationMode.OTP }));
         this.otpState.update((s) => ({ ...s, generated: false, expiresAt: null }));
         // DV OTP + FACE: wait for the Trigger OTP button when switching to OTP.
-        return this.isDvWithFaceMode() ? of(false) : this.triggerConsent();
+        return this.isOtpWithFaceMode() ? of(false) : this.triggerConsent();
       } else if (available.includes(AuthenticationMode.MANUAL)) {
         this.authState.update((s) => ({ ...s, error: 'Face authentication failed. Falling back to Manual.' }));
         this.authState.update((s) => ({ ...s, activeMode: AuthenticationMode.MANUAL }));
@@ -384,14 +352,13 @@ export class CkycAuthStateService {
 
   // ---- DV factor consent helpers (OTP + FACE) ----
 
-  // Default OTP check is unchanged; the MANUAL pair specifically excludes OTP.
-  private isDvWithFaceMode(companionMode = AuthenticationMode.OTP): boolean {
+  // True only in Digital Verification when the backend allows both OTP and FACE.
+  private isOtpWithFaceMode(): boolean {
     const modes = this.authState().applicableModes;
     return (
       this.ckycSearchPhaseService.searchAttemptedPhase() === SearchAttemptedPhase.DIGITAL_VERIFICATION &&
-      modes.includes(companionMode) &&
-      modes.includes(AuthenticationMode.FACEAUTH) &&
-      (companionMode !== AuthenticationMode.MANUAL || !modes.includes(AuthenticationMode.OTP))
+      modes.includes(AuthenticationMode.OTP) &&
+      modes.includes(AuthenticationMode.FACEAUTH)
     );
   }
 

@@ -1,36 +1,20 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { AuthenticationMode, AuthFactor } from '../constants/ckyc-onboarding.constants';
+import { CkycConsentStatusComponent } from '../ckyc-consent-status/ckyc-consent-status.component';
 import { CkycAuthStateService } from '../services/ckyc-auth-state.service';
 
 @Component({
   selector: 'app-ckyc-face-authentication',
   standalone: true,
+  imports: [CkycConsentStatusComponent],
   templateUrl: './ckyc-face-authentication.component.html',
-  styleUrl: './ckyc-face-authentication.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CkycFaceAuthenticationComponent implements OnInit {
   private readonly authStore = inject(CkycAuthStateService);
   private readonly destroyRef = inject(DestroyRef);
 
-  readonly consentAttempts = this.authStore.consentAttempts;
-  readonly authState = this.authStore.authState;
-  readonly otpState = this.authStore.otpState;
-  readonly authMode = AuthenticationMode;
-  readonly authFactor = AuthFactor;
-
   ngOnInit(): void {
-    this.authStore.triggerConsent()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe();
-  }
-
-  triggerOtp(): void {
-    if (
-      this.authState().activeMode !== AuthenticationMode.OTP ||
-      this.otpState().loading || this.otpState().generated
-    ) return;
     this.authStore.triggerConsent()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe();

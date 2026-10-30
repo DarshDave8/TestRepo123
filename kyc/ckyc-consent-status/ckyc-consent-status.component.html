@@ -1,0 +1,63 @@
+@if (authState().error; as error) {
+  <p role="alert">{{ error }}</p>
+}
+<div class="consent-status" role="region" aria-labelledby="ckyc-consent-status-caption" tabindex="0">
+  <table aria-live="polite">
+    <caption id="ckyc-consent-status-caption">Consent call status</caption>
+    <thead>
+      <tr>
+        <th scope="col">#</th>
+        <th scope="col">Consent request</th>
+        <th scope="col">Status</th>
+        <th scope="col">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (attempt of consentAttempts(); track attempt.id; let index = $index) {
+        <tr>
+          <td>{{ index + 1 }}</td>
+          <td>
+            @switch (attempt.consentType) {
+              @case (authMode.FACEAUTH) { Face auth }
+              @case (authMode.OTP) { OTP consent }
+              @case (authMode.MANUAL) { Manual auth }
+            }
+            @switch (attempt.authFactor) {
+              @case (authFactor.DOB) { with DOB }
+              @case (authFactor.RELATION) { with relation }
+              @case (authFactor.BIRTHYEARPINCODE) { with year of birth and pincode }
+            }
+          </td>
+          <td>
+            <span class="consent-result"
+              [class.consent-result--success]="attempt.status === 'Success'"
+              [class.consent-result--failed]="attempt.status === 'Failed'">
+              {{ attempt.status }}
+            </span>
+          </td>
+          <td>
+            @if (canDownload(attempt)) {
+              <button type="button" [disabled]="isBusy()" (click)="downloadData(attempt)">Download Data</button>
+            } @else {
+              —
+            }
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td colspan="4">No consent calls yet.</td>
+        </tr>
+      }
+      @if (authState().activeMode === authMode.OTP && !otpState().generated && !otpState().loading) {
+        <tr>
+          <td>{{ consentAttempts().length + 1 }}</td>
+          <td>OTP consent</td>
+          <td><span class="consent-result">Awaiting action</span></td>
+          <td>
+            <button type="button" [disabled]="isBusy()" (click)="triggerOtp()">Trigger OTP</button>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

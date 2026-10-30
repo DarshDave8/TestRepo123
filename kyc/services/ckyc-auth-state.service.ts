@@ -2,7 +2,7 @@
 // SOURCE GAP markers indicate code not visible in the photographs.
 import { Injectable, inject, signal, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Observable, defer, of } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { tap, catchError, finalize, map } from 'rxjs/operators';
 import { CkycOnboardingService } from './ckyc-onboarding.service';
 import {
@@ -22,13 +22,6 @@ import {
 import { CkycFlowStateService } from './ckyc-flow-state.service';
 import { CkycSearchPhaseService } from './ckyc-search-phase.service';
 
-export interface CkycConsentAttempt {
-  readonly id: number;
-  readonly consentType: AuthenticationMode;
-  readonly authFactor: AuthFactor | null;
-  readonly status: 'Calling' | 'Success' | 'Failed' | 'Cancelled';
-}
-
 @Injectable({ providedIn: 'root' })
 export class CkycAuthStateService {
   private readonly ckycSearchPhaseService = inject(CkycSearchPhaseService);
@@ -39,10 +32,6 @@ export class CkycAuthStateService {
 
   // DV (OTP + FACE): the factor we are currently sending in the consent call. null = no factor.
   private currentFactor: AuthFactor | null = null;
-
-  private nextConsentAttemptId = 0;
-  private readonly _consentAttempts = signal<readonly CkycConsentAttempt[]>([]);
-  readonly consentAttempts = this._consentAttempts.asReadonly();
 
   readonly authState = signal<AuthDomainState>({
     loading: false,
@@ -73,7 +62,6 @@ export class CkycAuthStateService {
     phase: SearchAttemptedPhase,
   ): Observable<boolean> {
     this.currentFactor = null;
-    this._consentAttempts.set([]);
     this.authState.update((s) => ({ ...s, loading: true, error: null }));
     return this.ckycApi
       .getApplicableAuthenticationModes({
@@ -147,30 +135,7 @@ export class CkycAuthStateService {
     }
     // this.authState.update((s) => ({ ...s, activeMode: payload.consentType }));
     this.otpState.update((s) => ({ ...s, loading: true, error: null }));
-    return defer(() => {
-      const attemptId = payload.searchAttemptedPhase === SearchAttemptedPhase.DIGITAL_VERIFICATION
-        ? ++this.nextConsentAttemptId
-        : null;
-      if (attemptId !== null) {
-        this._consentAttempts.update((attempts) => [
-          ...attempts,
-          {
-            id: attemptId,
-            consentType: payload.consentType,
-            authFactor: payload.authFactors,
-            status: 'Calling',
-          },
-        ]);
-      }
-      return this.ckycApi.triggerConsent(payload).pipe(
-        // Record this request's result before handleAuthFailure starts the next one.
-        tap({
-          next: (response) => this.setConsentAttemptStatus(attemptId, response?.success ? 'Success' : 'Failed'),
-          error: () => this.setConsentAttemptStatus(attemptId, 'Failed'),
-        }),
-        finalize(() => this.setConsentAttemptStatus(attemptId, 'Cancelled')),
-      );
-    }).pipe(
+    return this.ckycApi.triggerConsent(payload).pipe(
       map((response) => {
         if (!response || !response.success) {
           this.handleAuthFailure().subscribe();
@@ -196,13 +161,6 @@ export class CkycAuthStateService {
       }),
       takeUntilDestroyed(this.destroyRef),
     );
-  }
-
-  private setConsentAttemptStatus(id: number | null, status: CkycConsentAttempt['status']): void {
-    if (id === null) return;
-    this._consentAttempts.update((attempts) => attempts.map((attempt) =>
-      attempt.id === id && attempt.status === 'Calling' ? { ...attempt, status } : attempt,
-    ));
   }
 
   /**

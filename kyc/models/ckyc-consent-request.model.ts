@@ -40,7 +40,7 @@ export interface ITriggerConsentRequest {
   consentType: AuthenticationMode;
   searchAttemptedPhase: SearchAttemptedPhase;
   leadId?: string;
-  authFactors: TriggerConsentAuthFactor[];
+  authFactors: AuthFactor | null;
   mobileNumber?: string; // Selected CKYC OTP destination; backend contract pending.
 }
 

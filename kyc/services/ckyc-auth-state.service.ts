@@ -7,6 +7,8 @@ import { tap, catchError, finalize, map } from 'rxjs/operators';
 import { CkycOnboardingService } from './ckyc-onboarding.service';
 import {
   AuthenticationMode,
+  AuthFactor,
+  CKYC_DV_FACTOR_FLAGS,
   CKYC_OTP_MAX_ATTEMPTS,
   CKYC_OTP_TTL_SECONDS,
   SearchAttemptedPhase,
@@ -27,6 +29,9 @@ export class CkycAuthStateService {
   private readonly ckycApi = inject(CkycOnboardingService);
   private readonly flow = inject(CkycFlowStateService);
   // readonly searchAttemptedPhase = signal<SearchAttemptedPhase | null>(null);
+
+  // DV (OTP + FACE): the factor we are currently sending in the consent call. null = no factor.
+  private currentFactor: AuthFactor | null = null;
 
   readonly authState = signal<AuthDomainState>({
     loading: false,
@@ -56,6 +61,7 @@ export class CkycAuthStateService {
     leadId: string | null,
     phase: SearchAttemptedPhase,
   ): Observable<boolean> {
+    this.currentFactor = null;
     this.authState.update((s) => ({ ...s, loading: true, error: null }));
     return this.ckycApi
       .getApplicableAuthenticationModes({
@@ -108,11 +114,19 @@ export class CkycAuthStateService {
   }
 
   triggerConsent(): Observable<boolean> {
+    // First FACE consent call in DV (OTP + FACE): start with the first enabled factor.
+    if (
+      this.authState().activeMode === AuthenticationMode.FACEAUTH &&
+      this.currentFactor === null &&
+      this.isOtpWithFaceMode()
+    ) {
+      this.currentFactor = this.nextFactor(null);
+    }
     let payload = {
       attemptId: this.authState().attemptId!,
       consentType: this.authState().activeMode!,
       leadId: this.ckycSearchPhaseService.leadId(),
-      authFactors: [],
+      authFactors: this.currentFactor,
       searchAttemptedPhase: this.ckycSearchPhaseService.searchAttemptedPhase(),
     } as ITriggerConsentRequest;
 
@@ -160,6 +174,16 @@ export class CkycAuthStateService {
     const available = this.authState().applicableModes;
     // Rule 1: Face Auth Failed -> Fallback to OTP or MANUAL
     if (currentMode === AuthenticationMode.FACEAUTH) {
+      // Rule 1a (DV, OTP + FACE): a factor failed -> try the next enabled factor first.
+      if (this.isOtpWithFaceMode()) {
+        const next = this.nextFactor(this.currentFactor);
+        if (next !== null) {
+          this.currentFactor = next;
+          return this.triggerConsent();
+        }
+        // No factor left -> clear it and use the OTP fallback below.
+        this.currentFactor = null;
+      }
       if (available.includes(AuthenticationMode.OTP)) {
         this.authState.update((s) => ({ ...s, error: 'Face authentication failed. Falling back to OTP.' }));
         this.authState.update((s) => ({ ...s, activeMode: AuthenticationMode.OTP }));
@@ -232,6 +256,7 @@ export class CkycAuthStateService {
   }
 
   resetAuth(): void {
+    this.currentFactor = null;
     this.authState.set({
       loading: false,
       attemptId: null,
@@ -280,4 +305,51 @@ export class CkycAuthStateService {
     return { modes, activeMode };
   }
 
+  // ---- DV factor consent helpers (OTP + FACE) ----
+
+  // True only in Digital Verification when the backend allows both OTP and FACE.
+  private isOtpWithFaceMode(): boolean {
+    const modes = this.authState().applicableModes;
+    return (
+      this.ckycSearchPhaseService.searchAttemptedPhase() === SearchAttemptedPhase.DIGITAL_VERIFICATION &&
+      modes.includes(AuthenticationMode.OTP) &&
+      modes.includes(AuthenticationMode.FACEAUTH)
+    );
+  }
+
+  // Is this factor switched on? Master OFF means every factor is off.
+  private isEnabled(factor: AuthFactor): boolean {
+    if (!CKYC_DV_FACTOR_FLAGS.masterEnabled) return false;
+    switch (factor) {
+      case AuthFactor.DOB:
+        return CKYC_DV_FACTOR_FLAGS.dob;
+      case AuthFactor.RELATION:
+        return CKYC_DV_FACTOR_FLAGS.relation;
+      case AuthFactor.BIRTHYEARPINCODE:
+        return CKYC_DV_FACTOR_FLAGS.birthYearPincode;
+      default:
+        return false;
+    }
+  }
+
+  // Fixed order: DOB -> RELATION -> BIRTHYEARPINCODE.
+  // Pass null to get the first enabled factor. Returns null when no factor is left (-> OTP).
+  private nextFactor(current: AuthFactor | null): AuthFactor | null {
+    switch (current) {
+      case null:
+        if (this.isEnabled(AuthFactor.DOB)) return AuthFactor.DOB;
+        if (this.isEnabled(AuthFactor.RELATION)) return AuthFactor.RELATION;
+        if (this.isEnabled(AuthFactor.BIRTHYEARPINCODE)) return AuthFactor.BIRTHYEARPINCODE;
+        return null;
+      case AuthFactor.DOB:
+        if (this.isEnabled(AuthFactor.RELATION)) return AuthFactor.RELATION;
+        if (this.isEnabled(AuthFactor.BIRTHYEARPINCODE)) return AuthFactor.BIRTHYEARPINCODE;
+        return null;
+      case AuthFactor.RELATION:
+        if (this.isEnabled(AuthFactor.BIRTHYEARPINCODE)) return AuthFactor.BIRTHYEARPINCODE;
+        return null;
+      default:
+        return null;
+    }
+  }
 }

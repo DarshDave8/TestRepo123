@@ -43,6 +43,17 @@ export enum AuthFactor {
 export const CKYC_OTP_MAX_ATTEMPTS = 3;
 export const CKYC_OTP_TTL_SECONDS = 60;
 
+// Simple on/off switches for Digital Verification (OTP + FACE) factor consent.
+// masterEnabled = false -> old behaviour, the factor flags below are ignored.
+// masterEnabled = true  -> try DOB, then RELATION, then BIRTHYEARPINCODE (only the ones set to true),
+//                          then fall back to OTP.
+export const CKYC_DV_FACTOR_FLAGS = {
+  masterEnabled: false,
+  dob: true,
+  relation: true,
+  birthYearPincode: true,
+};
+
 export const CKYC_CONSENT_TEXT = 'Placeholder CKYC consent text. The final approved consent declaration will replace this configuration without changing the flow.';
 
 export const NON_OTP_FACTORS = [

@@ -6,6 +6,7 @@
         <th scope="col">#</th>
         <th scope="col">Call</th>
         <th scope="col">Status</th>
+        <th scope="col">Action</th>
       </tr>
     </thead>
     <tbody>
@@ -23,7 +24,6 @@
               @case (authFactor.RELATION) { with relation }
               @case (authFactor.BIRTHYEARPINCODE) { with year of birth and pincode }
             }
-            called
           </td>
           <td>
             <span class="consent-result"
@@ -32,10 +32,29 @@
               {{ attempt.status }}
             </span>
           </td>
+          <td>
+            @if (attempt.status === 'Ready' && $last) {
+              <button mat-stroked-button color="primary" type="button"
+                [disabled]="isCalling()" (click)="runAttempt(attempt.id)">
+                @switch (attempt.authFactor) {
+                  @case (authFactor.DOB) { Try DOB }
+                  @case (authFactor.RELATION) { Try Relation }
+                  @case (authFactor.BIRTHYEARPINCODE) { Try Year of Birth + Pincode }
+                  @default {
+                    @switch (attempt.consentType) {
+                      @case (authMode.OTP) { Send OTP }
+                      @case (authMode.MANUAL) { Try Manual Auth }
+                      @default { Try Face Auth }
+                    }
+                  }
+                }
+              </button>
+            }
+          </td>
         </tr>
       } @empty {
         <tr>
-          <td colspan="3">No consent calls yet.</td>
+          <td colspan="4">No consent calls yet.</td>
         </tr>
       }
     </tbody>

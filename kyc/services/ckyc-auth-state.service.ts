@@ -26,7 +26,7 @@ export interface CkycConsentAttempt {
   readonly id: number;
   readonly consentType: AuthenticationMode;
   readonly authFactor: AuthFactor | null;
-  readonly status: 'Calling' | 'Success' | 'Failed' | 'Cancelled';
+  readonly status: 'Ready' | 'Calling' | 'Success' | 'Failed' | 'Cancelled';
 }
 
 @Injectable({ providedIn: 'root' })
@@ -125,6 +125,50 @@ export class CkycAuthStateService {
     return null;
   }
 
+  // Opening the face component prepares a row without sending a request.
+  prepareConsentAttempt(): void {
+    if (this._consentAttempts().length > 0 || !this.authState().attemptId) return;
+    if (this.authState().activeMode === AuthenticationMode.FACEAUTH && this.isOtpWithFaceMode()) {
+      this.currentFactor = this.nextFactor(null);
+    }
+    this.queueConsentAttempt();
+  }
+
+  runConsentAttempt(id: number): Observable<boolean> {
+    return defer(() => {
+      const attempts = this._consentAttempts();
+      const ready = attempts[attempts.length - 1];
+      if (
+        !ready || ready.id !== id || ready.status !== 'Ready' ||
+        attempts.some((attempt) => attempt.status === 'Calling') ||
+        ready.consentType !== this.authState().activeMode ||
+        ready.authFactor !== this.currentFactor
+      ) {
+        return of(false);
+      }
+      return this.triggerConsent();
+    });
+  }
+
+  private queueConsentAttempt(): void {
+    const consentType = this.authState().activeMode;
+    if (!consentType || this._consentAttempts().some((attempt) =>
+      attempt.status === 'Ready' || attempt.status === 'Calling',
+    )) return;
+    this._consentAttempts.update((attempts) => [
+      ...attempts,
+      { id: ++this.nextConsentAttemptId, consentType, authFactor: this.currentFactor, status: 'Ready' },
+    ]);
+  }
+
+  private continueConsentAfterFailure(): Observable<boolean> {
+    if (this.isOtpWithFaceMode()) {
+      this.queueConsentAttempt();
+      return of(false);
+    }
+    return this.triggerConsent();
+  }
+
   triggerConsent(): Observable<boolean> {
     // First FACE consent call in DV (OTP + FACE): start with the first enabled factor.
     if (
@@ -148,10 +192,20 @@ export class CkycAuthStateService {
     // this.authState.update((s) => ({ ...s, activeMode: payload.consentType }));
     this.otpState.update((s) => ({ ...s, loading: true, error: null }));
     return defer(() => {
-      const attemptId = payload.searchAttemptedPhase === SearchAttemptedPhase.DIGITAL_VERIFICATION
-        ? ++this.nextConsentAttemptId
+      const attempts = this._consentAttempts();
+      const last = attempts[attempts.length - 1];
+      const ready = last?.status === 'Ready' &&
+        last.consentType === payload.consentType && last.authFactor === payload.authFactors
+        ? last
         : null;
-      if (attemptId !== null) {
+      const attemptId = ready?.id ?? (
+        payload.searchAttemptedPhase === SearchAttemptedPhase.DIGITAL_VERIFICATION
+          ? ++this.nextConsentAttemptId
+          : null
+      );
+      if (ready) {
+        this.setConsentAttemptStatus(ready.id, 'Calling');
+      } else if (attemptId !== null) {
         this._consentAttempts.update((attempts) => [
           ...attempts,
           {
@@ -163,7 +217,7 @@ export class CkycAuthStateService {
         ]);
       }
       return this.ckycApi.triggerConsent(payload).pipe(
-        // Record this request's result before handleAuthFailure starts the next one.
+        // Record this request's result before preparing the next attempt.
         tap({
           next: (response) => this.setConsentAttemptStatus(attemptId, response?.success ? 'Success' : 'Failed'),
           error: () => this.setConsentAttemptStatus(attemptId, 'Failed'),
@@ -201,13 +255,16 @@ export class CkycAuthStateService {
   private setConsentAttemptStatus(id: number | null, status: CkycConsentAttempt['status']): void {
     if (id === null) return;
     this._consentAttempts.update((attempts) => attempts.map((attempt) =>
-      attempt.id === id && attempt.status === 'Calling' ? { ...attempt, status } : attempt,
+      attempt.id === id && (
+        attempt.status === 'Calling' || (attempt.status === 'Ready' && status === 'Calling')
+      ) ? { ...attempt, status } : attempt,
     ));
   }
 
   /**
    * Fallback Manager Engine:
-   * - Face fails -> Fallback to OTP (or Manual)
+   * - DV OTP + FACE failures prepare the next row; a click sends its request.
+   * - Other Face failures -> Fallback to OTP (or Manual)
    * - OTP fails < 3 times -> Retry
    * - OTP fails 3rd time -> Fallback to Manual (if available in backend list)
    */
@@ -221,7 +278,7 @@ export class CkycAuthStateService {
         const next = this.nextFactor(this.currentFactor);
         if (next !== null) {
           this.currentFactor = next;
-          return this.triggerConsent();
+          return this.continueConsentAfterFailure();
         }
       }
       // Clear the factor before every OTP or MANUAL fallback, including legacy paths.
@@ -229,24 +286,24 @@ export class CkycAuthStateService {
       if (available.includes(AuthenticationMode.OTP)) {
         this.authState.update((s) => ({ ...s, error: 'Face authentication failed. Falling back to OTP.' }));
         this.authState.update((s) => ({ ...s, activeMode: AuthenticationMode.OTP }));
-        return this.triggerConsent();
+        return this.continueConsentAfterFailure();
       } else if (available.includes(AuthenticationMode.MANUAL)) {
         this.authState.update((s) => ({ ...s, error: 'Face authentication failed. Falling back to Manual.' }));
         this.authState.update((s) => ({ ...s, activeMode: AuthenticationMode.MANUAL }));
-        return this.triggerConsent();
+        return this.continueConsentAfterFailure();
       }
     }
     // Rule 2: OTP Auth Failed -> Check 3-Attempt Count
     if (currentMode === AuthenticationMode.OTP) {
       this.currentFactor = null;
       const nextCount = this.otpState().otpAttemptCount + 1;
-      // The image appears to use authState rather than otpState here; preserved.
-      this.authState.update((s) => ({ ...s, otpAttemptCount: nextCount }));
+      this.otpState.update((s) => ({ ...s, otpAttemptCount: nextCount }));
       if (nextCount < CKYC_OTP_MAX_ATTEMPTS) {
         this.otpState.update((s) => ({
           ...s,
           error: `Invalid OTP. Attempt ${nextCount} of ${CKYC_OTP_MAX_ATTEMPTS}.`,
         }));
+        if (this.isOtpWithFaceMode()) this.queueConsentAttempt();
         return of(false);
       } else {
         if (available.includes(AuthenticationMode.MANUAL)) {
@@ -255,7 +312,7 @@ export class CkycAuthStateService {
             error: 'Maximum OTP attempts reached. Falling back to Manual verification.',
           }));
           this.authState.update((s) => ({ ...s, activeMode: AuthenticationMode.MANUAL }));
-          return this.triggerConsent();
+          return this.continueConsentAfterFailure();
         } else {
           this.authState.update((s) => ({
             ...s,

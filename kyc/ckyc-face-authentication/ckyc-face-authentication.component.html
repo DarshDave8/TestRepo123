@@ -1,3 +1,6 @@
+@if (authState().error; as error) {
+  <p role="alert">{{ error }}</p>
+}
 <div class="consent-status" role="region" aria-labelledby="face-consent-status-caption" tabindex="0">
   <table aria-live="polite">
     <caption id="face-consent-status-caption">Consent call status</caption>
@@ -32,7 +35,13 @@
               {{ attempt.status }}
             </span>
           </td>
-          <td>—</td>
+          <td>
+            @if (canDownload(attempt)) {
+              <button type="button" [disabled]="isBusy()" (click)="downloadData(attempt)">Download Data</button>
+            } @else {
+              —
+            }
+          </td>
         </tr>
       } @empty {
         <tr>

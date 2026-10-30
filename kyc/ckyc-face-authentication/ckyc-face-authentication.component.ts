@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthenticationMode, AuthFactor } from '../constants/ckyc-onboarding.constants';
-import { CkycAuthStateService } from '../services/ckyc-auth-state.service';
+import { CkycAuthStateService, CkycConsentAttempt } from '../services/ckyc-auth-state.service';
 
 @Component({
   selector: 'app-ckyc-face-authentication',
@@ -32,6 +32,26 @@ export class CkycFaceAuthenticationComponent implements OnInit {
       this.otpState().loading || this.otpState().generated
     ) return;
     this.authStore.triggerConsent()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe();
+  }
+
+  canDownload(attempt: CkycConsentAttempt): boolean {
+    const attempts = this.consentAttempts();
+    return attempt.status === 'Success' &&
+      attempt.consentType === AuthenticationMode.FACEAUTH &&
+      attempt.consentType === this.authState().activeMode &&
+      attempt.id === attempts[attempts.length - 1]?.id;
+  }
+
+  isBusy(): boolean {
+    return this.authState().loading || this.otpState().loading ||
+      this.consentAttempts().some((attempt) => attempt.status === 'Calling');
+  }
+
+  downloadData(attempt: CkycConsentAttempt): void {
+    if (!this.canDownload(attempt) || this.isBusy()) return;
+    this.authStore.validate()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe();
   }

@@ -15,10 +15,22 @@ export class CkycFaceAuthenticationComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly consentAttempts = this.authStore.consentAttempts;
+  readonly authState = this.authStore.authState;
+  readonly otpState = this.authStore.otpState;
   readonly authMode = AuthenticationMode;
   readonly authFactor = AuthFactor;
 
   ngOnInit(): void {
+    this.authStore.triggerConsent()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe();
+  }
+
+  triggerOtp(): void {
+    if (
+      this.authState().activeMode !== AuthenticationMode.OTP ||
+      this.otpState().loading || this.otpState().generated
+    ) return;
     this.authStore.triggerConsent()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe();

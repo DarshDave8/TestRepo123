@@ -40,4 +40,7 @@
       }
     </tbody>
   </table>
+  @if (authState().activeMode === authMode.OTP && !otpState().generated) {
+    <button type="button" [disabled]="otpState().loading" (click)="triggerOtp()">Trigger OTP</button>
+  }
 </div>

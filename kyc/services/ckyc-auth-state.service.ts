@@ -229,7 +229,9 @@ export class CkycAuthStateService {
       if (available.includes(AuthenticationMode.OTP)) {
         this.authState.update((s) => ({ ...s, error: 'Face authentication failed. Falling back to OTP.' }));
         this.authState.update((s) => ({ ...s, activeMode: AuthenticationMode.OTP }));
-        return this.triggerConsent();
+        this.otpState.update((s) => ({ ...s, generated: false, expiresAt: null }));
+        // DV OTP + FACE: wait for the Trigger OTP button when switching to OTP.
+        return this.isOtpWithFaceMode() ? of(false) : this.triggerConsent();
       } else if (available.includes(AuthenticationMode.MANUAL)) {
         this.authState.update((s) => ({ ...s, error: 'Face authentication failed. Falling back to Manual.' }));
         this.authState.update((s) => ({ ...s, activeMode: AuthenticationMode.MANUAL }));

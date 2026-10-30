@@ -90,10 +90,16 @@
     }
   </div>
   <div class="ckyc-match__actions">
-    @if (isStaff && [CkycSearchOption.OVD, CkycSearchOption.MOBILE].includes(enquiry().enquiryRequest.searchOption)) {
+    @if (
+      ckycSearchPhaseService.searchAttemptedPhase() !== phase.DIGITAL_VERIFICATION &&
+      isStaff &&
+      [CkycSearchOption.OVD, CkycSearchOption.MOBILE].includes(enquiry().enquiryRequest.searchOption)
+    ) {
       <button mat-stroked-button color="warn" type="button" (click)="openDedupDialog()">Dedup Check</button>
     }
-    <button mat-stroked-button color="primary" type="button" (click)="startAuthentication()">Download Data</button>
+    @if (flow.step() === 'search' || flow.step() === 'enquiryReceived') {
+      <button mat-stroked-button color="primary" type="button" (click)="startAuthentication()">Download Data</button>
+    }
   </div>
   @if (flow.authenticationModesError()) {
     <div class="ckyc-mobile-choice__error">

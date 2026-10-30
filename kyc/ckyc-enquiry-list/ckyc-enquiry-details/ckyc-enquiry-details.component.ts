@@ -52,6 +52,7 @@ export class CkycEnquiryDetailsComponent implements OnInit {
   readonly flow = inject(CkycFlowStateService);
   readonly authStore = inject(CkycAuthStateService);
   CkycSearchOption = CkycSearchOption;
+  readonly phase = SearchAttemptedPhase;
   private readonly dialog = inject(MatDialog);
   private readonly destroyRef = inject(DestroyRef);
   private mobileDialogRef?: MatDialogRef<ConfirmMobileForCkycDialogComponent, ConfirmMobileDialogResult | undefined>;

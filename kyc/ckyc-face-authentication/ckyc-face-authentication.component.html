@@ -4,8 +4,9 @@
     <thead>
       <tr>
         <th scope="col">#</th>
-        <th scope="col">Call</th>
+        <th scope="col">Consent request</th>
         <th scope="col">Status</th>
+        <th scope="col">Action</th>
       </tr>
     </thead>
     <tbody>
@@ -15,7 +16,7 @@
           <td>
             @switch (attempt.consentType) {
               @case (authMode.FACEAUTH) { Face auth }
-              @case (authMode.OTP) { OTP }
+              @case (authMode.OTP) { OTP consent }
               @case (authMode.MANUAL) { Manual auth }
             }
             @switch (attempt.authFactor) {
@@ -23,7 +24,6 @@
               @case (authFactor.RELATION) { with relation }
               @case (authFactor.BIRTHYEARPINCODE) { with year of birth and pincode }
             }
-            called
           </td>
           <td>
             <span class="consent-result"
@@ -32,15 +32,23 @@
               {{ attempt.status }}
             </span>
           </td>
+          <td>—</td>
         </tr>
       } @empty {
         <tr>
-          <td colspan="3">No consent calls yet.</td>
+          <td colspan="4">No consent calls yet.</td>
+        </tr>
+      }
+      @if (authState().activeMode === authMode.OTP && !otpState().generated && !otpState().loading) {
+        <tr>
+          <td>{{ consentAttempts().length + 1 }}</td>
+          <td>OTP consent</td>
+          <td><span class="consent-result">Awaiting action</span></td>
+          <td>
+            <button type="button" [disabled]="otpState().loading" (click)="triggerOtp()">Trigger OTP</button>
+          </td>
         </tr>
       }
     </tbody>
   </table>
-  @if (authState().activeMode === authMode.OTP && !otpState().generated) {
-    <button type="button" [disabled]="otpState().loading" (click)="triggerOtp()">Trigger OTP</button>
-  }
 </div>

@@ -1,6 +1,6 @@
 // Screenshot transcription (images 1 and 2), not a complete verified source file.
 // SOURCE GAP markers indicate code not visible in the photographs.
-import { Injectable, inject, signal, DestroyRef } from '@angular/core';
+import { Injectable, computed, inject, signal, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Observable, defer, of } from 'rxjs';
 import { tap, catchError, finalize, map } from 'rxjs/operators';
@@ -21,6 +21,7 @@ import {
 } from '../models/ckyc-onboarding.model';
 import { CkycFlowStateService } from './ckyc-flow-state.service';
 import { CkycSearchPhaseService } from './ckyc-search-phase.service';
+import type { IConsentData } from '../models/ckyc-consent-request.model';
 
 export interface CkycConsentAttempt {
   readonly id: number;
@@ -37,12 +38,16 @@ export class CkycAuthStateService {
   private readonly flow = inject(CkycFlowStateService);
   // readonly searchAttemptedPhase = signal<SearchAttemptedPhase | null>(null);
 
-  // DV (OTP + FACE): the factor we are currently sending in the consent call. null = no factor.
+  // Current DV factor for either OTP + FACE or MANUAL + FACE. null = no factor.
   private currentFactor: AuthFactor | null = null;
 
   private nextConsentAttemptId = 0;
   private readonly _consentAttempts = signal<readonly CkycConsentAttempt[]>([]);
   readonly consentAttempts = this._consentAttempts.asReadonly();
+  readonly manualConsentRequired = signal(false);
+  readonly manualWithFaceMode = computed(() =>
+    CKYC_DV_FACTOR_FLAGS.masterEnabled && this.isDvWithFaceMode(AuthenticationMode.MANUAL),
+  );
 
   readonly authState = signal<AuthDomainState>({
     loading: false,
@@ -74,6 +79,7 @@ export class CkycAuthStateService {
   ): Observable<boolean> {
     this.currentFactor = null;
     this._consentAttempts.set([]);
+    this.manualConsentRequired.set(false);
     this.authState.update((s) => ({ ...s, loading: true, error: null }));
     return this.ckycApi
       .getApplicableAuthenticationModes({
@@ -105,20 +111,27 @@ export class CkycAuthStateService {
           this.authState.update((s) => ({ ...s, error: 'Network error loading auth modes.' }));
           return of(false);
         }),
-        finalize(() => this.authState.update((s) => ({ ...s, loading: false })),
+        finalize(() => this.authState.update((s) => ({ ...s, loading: false }))),
         takeUntilDestroyed(this.destroyRef),
       );
   }
 
   /**
    * Resolves initial starting mode according to requirements:
-   * - DIGITAL_VERIFICATION: FACE -> OTP -> MANUAL
+   * - DIGITAL_VERIFICATION: enabled MANUAL + FACE without OTP starts MANUAL; otherwise FACE -> OTP -> MANUAL
    * - PROFILE_CREATION: Strictly OTP
    */
   resolveStartingMode(modes: AuthenticationMode[], phase: SearchAttemptedPhase): AuthenticationMode | null {
     if (phase === 'PROFILE_CREATION') {
       return modes.includes(AuthenticationMode.OTP) ? AuthenticationMode.OTP : null;
     }
+    if (
+      CKYC_DV_FACTOR_FLAGS.masterEnabled &&
+      phase === SearchAttemptedPhase.DIGITAL_VERIFICATION &&
+      modes.includes(AuthenticationMode.MANUAL) &&
+      modes.includes(AuthenticationMode.FACEAUTH) &&
+      !modes.includes(AuthenticationMode.OTP)
+    ) return AuthenticationMode.MANUAL;
     if (modes.includes(AuthenticationMode.FACEAUTH)) return AuthenticationMode.FACEAUTH;
     if (modes.includes(AuthenticationMode.OTP)) return AuthenticationMode.OTP;
     if (modes.includes(AuthenticationMode.MANUAL)) return AuthenticationMode.MANUAL;
@@ -126,13 +139,22 @@ export class CkycAuthStateService {
   }
 
   triggerConsent(): Observable<boolean> {
-    // First FACE consent call in DV (OTP + FACE): start with the first enabled factor.
+    // Upload UI integration completes this stage through validate({ file }).
+    if (this.manualWithFaceMode() && this.manualConsentRequired()) return of(false);
+    const currentMode = this.authState().activeMode;
     if (
-      this.authState().activeMode === AuthenticationMode.FACEAUTH &&
       this.currentFactor === null &&
-      this.isOtpWithFaceMode()
+      (
+        (currentMode === AuthenticationMode.FACEAUTH && this.isDvWithFaceMode()) ||
+        (this.manualWithFaceMode() &&
+          (currentMode === AuthenticationMode.MANUAL || currentMode === AuthenticationMode.FACEAUTH))
+      )
     ) {
       this.currentFactor = this.nextFactor(null);
+      // No enabled manual factor: proceed to FACE without treating validation as successful.
+      if (this.manualWithFaceMode() && currentMode === AuthenticationMode.MANUAL && this.currentFactor === null) {
+        this.authState.update((state) => ({ ...state, activeMode: AuthenticationMode.FACEAUTH }));
+      }
     }
     let payload = {
       attemptId: this.authState().attemptId!,
@@ -176,6 +198,10 @@ export class CkycAuthStateService {
           this.handleAuthFailure().subscribe();
           return false;
         }
+        if (this.manualWithFaceMode() && payload.consentType === AuthenticationMode.MANUAL) {
+          this.currentFactor = null;
+          this.manualConsentRequired.set(true);
+        }
         if (payload.consentType === AuthenticationMode.OTP) {
           this.otpState.update((s) => ({
             ...s,
@@ -214,10 +240,44 @@ export class CkycAuthStateService {
   handleAuthFailure(): Observable<boolean> {
     const currentMode = this.authState().activeMode;
     const available = this.authState().applicableModes;
+
+    // Scoped DV MANUAL + FACE flow. Never return to MANUAL after the FACE stage.
+    if (this.manualWithFaceMode()) {
+      if (currentMode === AuthenticationMode.MANUAL && this.manualConsentRequired()) {
+        this.manualConsentRequired.set(false);
+        this.currentFactor = this.nextFactor(null);
+        this.authState.update((state) => ({
+          ...state, activeMode: AuthenticationMode.FACEAUTH,
+          error: 'Manual consent upload failed. Falling back to Face authentication.',
+        }));
+        return this.triggerConsent();
+      }
+      if (currentMode === AuthenticationMode.MANUAL || currentMode === AuthenticationMode.FACEAUTH) {
+        const next = this.currentFactor === null ? null : this.nextFactor(this.currentFactor);
+        if (next !== null) {
+          this.currentFactor = next;
+          return this.triggerConsent();
+        }
+        this.currentFactor = null;
+        if (currentMode === AuthenticationMode.MANUAL) {
+          this.currentFactor = this.nextFactor(null);
+          this.authState.update((state) => ({
+            ...state, activeMode: AuthenticationMode.FACEAUTH,
+            error: 'Manual authentication factors exhausted. Falling back to Face authentication.',
+          }));
+          return this.triggerConsent();
+        }
+        this.authState.update((state) => ({
+          ...state, error: 'All enabled Face authentication factors failed.',
+        }));
+        return of(false);
+      }
+    }
+
     // Rule 1: Face Auth Failed -> Fallback to OTP or MANUAL
     if (currentMode === AuthenticationMode.FACEAUTH) {
       // Rule 1a (DV, OTP + FACE): a factor failed -> try the next enabled factor first.
-      if (this.isOtpWithFaceMode() && this.currentFactor !== null) {
+      if (this.isDvWithFaceMode() && this.currentFactor !== null) {
         const next = this.nextFactor(this.currentFactor);
         if (next !== null) {
           this.currentFactor = next;
@@ -231,7 +291,7 @@ export class CkycAuthStateService {
         this.authState.update((s) => ({ ...s, activeMode: AuthenticationMode.OTP }));
         this.otpState.update((s) => ({ ...s, generated: false, expiresAt: null }));
         // DV OTP + FACE: wait for the Trigger OTP button when switching to OTP.
-        return this.isOtpWithFaceMode() ? of(false) : this.triggerConsent();
+        return this.isDvWithFaceMode() ? of(false) : this.triggerConsent();
       } else if (available.includes(AuthenticationMode.MANUAL)) {
         this.authState.update((s) => ({ ...s, error: 'Face authentication failed. Falling back to Manual.' }));
         this.authState.update((s) => ({ ...s, activeMode: AuthenticationMode.MANUAL }));
@@ -276,16 +336,23 @@ export class CkycAuthStateService {
     return this.triggerConsent();
   }
 
-  validate(otp: string): Observable<boolean> {
+  validate(otp: string | IConsentData): Observable<boolean> {
+    const isManualConsent = this.manualWithFaceMode() && this.manualConsentRequired() &&
+      this.authState().activeMode === AuthenticationMode.MANUAL;
+    if (isManualConsent && (typeof otp === 'string' || !otp.file)) return of(false);
     const request: IValidateConsentRequest = {
       attemptId: this.authState().attemptId!,
       consentType: this.authState().activeMode!,
-      consentData: { otp: otp },
+      consentData: typeof otp === 'string' ? { otp: otp } : otp,
       searchAttemptedPhase: this.ckycSearchPhaseService.searchAttemptedPhase(),
     };
     return this.ckycApi.validateConsent(request).pipe(
       map((response) => {
+        if (isManualConsent && (
+          !this.manualConsentRequired() || request.attemptId !== this.authState().attemptId
+        )) return false;
         if (!response || !response.success) {
+          if (isManualConsent) this.handleAuthFailure().subscribe();
           return false;
         }
         this.flow.emitValidatedDetails(response.body);
@@ -293,6 +360,10 @@ export class CkycAuthStateService {
         return true;
       }),
       catchError(() => {
+        if (isManualConsent && this.manualConsentRequired() &&
+          request.attemptId === this.authState().attemptId) {
+          this.handleAuthFailure().subscribe();
+        }
         return of(false);
       }),
       finalize(() => {}),
@@ -302,6 +373,7 @@ export class CkycAuthStateService {
 
   resetAuth(): void {
     this.currentFactor = null;
+    this.manualConsentRequired.set(false);
     this.authState.set({
       loading: false,
       attemptId: null,
@@ -350,15 +422,16 @@ export class CkycAuthStateService {
     return { modes, activeMode };
   }
 
-  // ---- DV factor consent helpers (OTP + FACE) ----
+  // ---- DV factor consent helpers (OTP + FACE and MANUAL + FACE) ----
 
-  // True only in Digital Verification when the backend allows both OTP and FACE.
-  private isOtpWithFaceMode(): boolean {
+  // Default OTP guard is unchanged. MANUAL + FACE additionally excludes OTP.
+  private isDvWithFaceMode(companionMode = AuthenticationMode.OTP): boolean {
     const modes = this.authState().applicableModes;
     return (
       this.ckycSearchPhaseService.searchAttemptedPhase() === SearchAttemptedPhase.DIGITAL_VERIFICATION &&
-      modes.includes(AuthenticationMode.OTP) &&
-      modes.includes(AuthenticationMode.FACEAUTH)
+      modes.includes(companionMode) &&
+      modes.includes(AuthenticationMode.FACEAUTH) &&
+      (companionMode !== AuthenticationMode.MANUAL || !modes.includes(AuthenticationMode.OTP))
     );
   }
 
@@ -378,7 +451,7 @@ export class CkycAuthStateService {
   }
 
   // Fixed order: DOB -> RELATION -> BIRTHYEARPINCODE.
-  // Pass null to get the first enabled factor. Returns null when no factor is left (-> OTP).
+  // Pass null to get the first enabled factor. Returns null when the current chain is exhausted.
   private nextFactor(current: AuthFactor | null): AuthFactor | null {
     switch (current) {
       case null:

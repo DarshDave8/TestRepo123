@@ -21,7 +21,16 @@
         <app-ckyc-face-authentication />
       }
       @case ("manual") {
-        <app-non-otp-authentication />
+        @if (ckycAuthState.manualWithFaceMode()) {
+          <!-- Reuse the consent status view to run MANUAL factors, then FACE on failure. -->
+          <app-ckyc-face-authentication />
+          @if (ckycAuthState.manualConsentRequired()) {
+            <!-- Existing upload UI submits its file value through authStore.validate({ file }). -->
+            <app-non-otp-authentication />
+          }
+        } @else {
+          <app-non-otp-authentication />
+        }
       }
     }
   }

@@ -30,3 +30,31 @@ This folder contains a **best-effort transcription**, not a verified build of an
 - External constants, Angular modules, SCSS, dialog components, consent models, child components, and project infrastructure are not included unless explicitly shown in the photographs.
 - Some imports and domain types might not compile, and the images themselves show possible business-logic inconsistencies. No attempt was made to silently correct those defects.
 - Do not merge or deploy this code to a production system without validating it against the authorized original source.
+
+## DV MANUAL + FACE consent chain
+
+With `CKYC_DV_FACTOR_FLAGS.masterEnabled` enabled, Digital Verification with
+MANUAL + FACEAUTH and no OTP starts with MANUAL. Existing factor flags and
+`nextFactor()` are shared by both chains: DOB, RELATION (one step), BIRTHYEARPINCODE.
+The API value of `AuthenticationMode.MANUAL` remains `PHYSICAL`.
+
+- A successful MANUAL factor sets `manualConsentRequired()` and displays the existing
+  non-OTP upload component alongside the consent history.
+- That component must pass its existing uploaded-file value to
+  `authStore.validate({ file: uploadedConsentFile })`. Its original source is
+  absent from this archive, so the upload handler itself has not been wired here.
+  No endpoint, file encoding, or upload widget has been invented.
+- Upload success follows the existing validated-details emission/reset path.
+  Upload failure starts FACEAUTH again from its first enabled factor.
+- If every enabled MANUAL factor fails, FACEAUTH starts directly.
+- FACEAUTH factor success retains the existing subsequent Face/GET integration.
+  When every FACEAUTH factor fails, the chain stops with an error; it never
+  returns to MANUAL or OTP.
+- If every individual factor is disabled, the MANUAL chain is skipped and
+  FACEAUTH is attempted without a factor. This does not count as manual success.
+
+Master OFF retains the previous behavior. OTP + FACE, mixed modes containing
+OTP, Profile Creation, and MANUAL-only branches keep their existing logic.
+The missing closing parenthesis in the archived mode-discovery `finalize` call
+has been repaired; the archive still lacks the full Angular application needed
+for a complete build and upload/Face/GET integration test.

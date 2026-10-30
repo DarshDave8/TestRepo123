@@ -175,15 +175,15 @@ export class CkycAuthStateService {
     // Rule 1: Face Auth Failed -> Fallback to OTP or MANUAL
     if (currentMode === AuthenticationMode.FACEAUTH) {
       // Rule 1a (DV, OTP + FACE): a factor failed -> try the next enabled factor first.
-      if (this.isOtpWithFaceMode()) {
+      if (this.isOtpWithFaceMode() && this.currentFactor !== null) {
         const next = this.nextFactor(this.currentFactor);
         if (next !== null) {
           this.currentFactor = next;
           return this.triggerConsent();
         }
-        // No factor left -> clear it and use the OTP fallback below.
-        this.currentFactor = null;
       }
+      // Clear the factor before every OTP or MANUAL fallback, including legacy paths.
+      this.currentFactor = null;
       if (available.includes(AuthenticationMode.OTP)) {
         this.authState.update((s) => ({ ...s, error: 'Face authentication failed. Falling back to OTP.' }));
         this.authState.update((s) => ({ ...s, activeMode: AuthenticationMode.OTP }));
@@ -196,6 +196,7 @@ export class CkycAuthStateService {
     }
     // Rule 2: OTP Auth Failed -> Check 3-Attempt Count
     if (currentMode === AuthenticationMode.OTP) {
+      this.currentFactor = null;
       const nextCount = this.otpState().otpAttemptCount + 1;
       // The image appears to use authState rather than otpState here; preserved.
       this.authState.update((s) => ({ ...s, otpAttemptCount: nextCount }));

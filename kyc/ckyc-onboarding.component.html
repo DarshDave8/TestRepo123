@@ -21,7 +21,11 @@
         <app-ckyc-face-authentication />
       }
       @case ("manual") {
-        <app-non-otp-authentication />
+        @if (ckycAuthState.manualWithFaceMode()) {
+          <app-ckyc-face-authentication />
+        } @else {
+          <app-non-otp-authentication />
+        }
       }
     }
   }

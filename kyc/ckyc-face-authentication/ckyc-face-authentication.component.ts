@@ -20,6 +20,7 @@ export class CkycFaceAuthenticationComponent implements OnInit {
   readonly authState = this.authStore.authState;
   readonly otpState = this.authStore.otpState;
   readonly consentAttempts = this.authStore.consentAttempts;
+  readonly otpFallbackPending = this.authStore.otpFallbackPending;
   readonly authMode = AuthenticationMode;
   readonly authFactor = AuthFactor;
   ngOnInit(): void {
@@ -31,9 +32,12 @@ export class CkycFaceAuthenticationComponent implements OnInit {
     this.authStore.triggerConsent().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
   }
   triggerOtp(): void {
-    if (this.authState().activeMode !== AuthenticationMode.OTP || this.otpState().loading || this.otpState().generated)
-      return;
-    this.authStore.triggerConsent().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
+    if (!this.otpFallbackPending() || this.isCalling()) return;
+    this.authStore.triggerOtpFallback().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
+  }
+  // True only while a consent request is actually in flight.
+  isCalling(): boolean {
+    return this.consentAttempts().some((attempt) => attempt.status === 'Calling');
   }
   canDownload(attempt: CkycConsentAttempt): boolean {
     const attempts = this.consentAttempts();

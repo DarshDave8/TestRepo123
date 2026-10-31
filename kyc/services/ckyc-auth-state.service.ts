@@ -34,6 +34,10 @@ export class CkycAuthStateService {
   private nextConsentAttemptId = 0;
   private readonly _consentAttempts = signal<readonly CkycConsentAttempt[]>([]);
   readonly consentAttempts = this._consentAttempts.asReadonly();
+  // DV OTP + FACE: true once every face factor has failed and the "Trigger OTP" row must be shown.
+  // Set at the same point as the "Falling back to OTP" message, so the row can never miss it.
+  private readonly _otpFallbackPending = signal(false);
+  readonly otpFallbackPending = this._otpFallbackPending.asReadonly();
 
   readonly authState = signal<AuthDomainState>({
     loading: false,
@@ -67,6 +71,7 @@ export class CkycAuthStateService {
   ): Observable<boolean> {
     this.currentFactor = null;
     this._consentAttempts.set([]);
+    this._otpFallbackPending.set(false);
     this.authState.update((s) => ({ ...s, loading: true, error: null }));
     return this.ckycApi
       .getApplicableAuthenticationModes({
@@ -188,7 +193,11 @@ export class CkycAuthStateService {
       map((response) => {
         if (!response || !response.success) {
           this.handleAuthFailure().subscribe();
-          this.ckycSharedStateService.setManualVerificationEnabled(true); //error occured so set manual true
+          // DV factor chains are not over after one failed call (next factor / FACE / OTP row follow),
+          // so only flag manual verification here outside those chains; handleAuthFailure flags it at the end.
+          if (!this.isOtpWithFaceMode() && !this.isManualWithFaceMode()) {
+            this.ckycSharedStateService.setManualVerificationEnabled(true); //error occured so set manual true
+          }
           return false;
         }
         if (payload.consentType === AuthenticationMode.OTP) {
@@ -248,6 +257,7 @@ export class CkycAuthStateService {
         return of(false);
       }
       this.authState.update((s) => ({ ...s, error: 'Face authentication failed. No authentication factors remain.' }));
+      this.ckycSharedStateService.setManualVerificationEnabled(true); // PHYSICAL + FACE chain exhausted
       return of(false);
     }
     // Rule 1: Face Auth Failed -> Fallback to OTP or MANUAL
@@ -265,8 +275,12 @@ export class CkycAuthStateService {
         this.authState.update((s) => ({ ...s, error: 'Face authentication failed. Falling back to OTP.' }));
         this.authState.update((s) => ({ ...s, activeMode: AuthenticationMode.OTP }));
         this.otpState.update((s) => ({ ...s, generated: false, expiresAt: null }));
-        // DV OTP + FACE: wait for the Trigger OTP button when switching to OTP.
-        return this.isOtpWithFaceMode() ? of(false) : this.triggerConsent();
+        if (this.isOtpWithFaceMode()) {
+          // DV OTP + FACE: stop the face chain and show the "Trigger OTP" row; the user starts the OTP call.
+          this.showOtpFallbackRow();
+          return of(false);
+        }
+        return this.triggerConsent();
       } else if (available.includes(AuthenticationMode.MANUAL)) {
         this.authState.update((s) => ({ ...s, error: 'Face authentication failed. Falling back to Manual.' }));
         this.authState.update((s) => ({ ...s, activeMode: AuthenticationMode.MANUAL }));
@@ -282,6 +296,11 @@ export class CkycAuthStateService {
           ...s,
           error: `Invalid OTP. Attempt ${nextCount} of ${CKYC_OTP_MAX_ATTEMPTS}.`,
         }));
+        if (this.isOtpWithFaceMode()) {
+          // DV OTP + FACE: the OTP trigger itself failed, so offer the "Trigger OTP" row again.
+          this.authState.update((s) => ({ ...s, error: 'Unable to send OTP. Please try again.' }));
+          this.showOtpFallbackRow();
+        }
         return of(false);
       } else {
         this.ckycSharedStateService.setManualVerificationEnabled(true); //set manual true as max otp attempt exausted
@@ -309,6 +328,19 @@ export class CkycAuthStateService {
     return this.triggerConsent();
   }
 
+  /**
+   * DV OTP + FACE: the "Trigger OTP" row's button. Sends the consent call with consentType OTP
+   * (no auth factor). It sets the OTP mode itself, so it does not depend on the state left by the face chain.
+   */
+  triggerOtpFallback(): Observable<boolean> {
+    if (!this._otpFallbackPending()) return of(false);
+    this._otpFallbackPending.set(false);
+    this.currentFactor = null;
+    this.authState.update((s) => ({ ...s, activeMode: AuthenticationMode.OTP, error: null }));
+    this.otpState.update((s) => ({ ...s, generated: false, expiresAt: null, error: null }));
+    return this.triggerConsent();
+  }
+
   validate(otp?: string, otpIdentifier?: OtpIdentifier): Observable<boolean> {
     const request: IValidateConsentRequest = {
       attemptId: this.authState().attemptId!,
@@ -329,6 +361,7 @@ export class CkycAuthStateService {
           error: 'Face authentication failed. Falling back to OTP.',
         }));
         this.otpState.update((s) => ({ ...s, generated: false, expiresAt: null }));
+        this.showOtpFallbackRow();
       } else if (request.consentType !== AuthenticationMode.OTP) {
         this.authState.update((s) => ({ ...s, error: message }));
       }
@@ -352,6 +385,7 @@ export class CkycAuthStateService {
   }
 
   resetAuth(): void {
+    this._otpFallbackPending.set(false);
     this.authState.set({
       loading: false,
       attemptId: null,
@@ -401,6 +435,12 @@ export class CkycAuthStateService {
   }
 
   // ---- DV factor consent helpers ----
+
+  // Ends the face chain for DV OTP + FACE: no call is running any more, show the "Trigger OTP" row.
+  private showOtpFallbackRow(): void {
+    this.otpState.update((s) => ({ ...s, loading: false }));
+    this._otpFallbackPending.set(true);
+  }
 
   private startFaceConsent(): void {
     this.currentFactor = null;

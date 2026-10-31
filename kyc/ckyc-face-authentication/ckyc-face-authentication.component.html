@@ -63,13 +63,13 @@
           <td colspan="4">No consent calls yet.</td>
         </tr>
       }
-      @if (authState().activeMode === authMode.OTP && !otpState().generated && !otpState().loading) {
+      @if (otpFallbackPending()) {
         <tr>
           <td>{{ consentAttempts().length + 1 }}</td>
           <td>OTP consent</td>
           <td><span class="consent-result">Awaiting action</span></td>
           <td>
-            <button type="button" [disabled]="otpState().loading" (click)="triggerOtp()">Trigger OTP</button>
+            <button type="button" [disabled]="isCalling()" (click)="triggerOtp()">Trigger OTP</button>
           </td>
         </tr>
       }

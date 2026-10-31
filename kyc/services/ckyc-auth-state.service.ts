@@ -373,17 +373,9 @@ export class CkycAuthStateService {
     };
     this.authState.update((s) => ({ ...s, loading: true, error: null }));
     const validationFailed = (message: string): boolean => {
-      if (request.consentType === AuthenticationMode.FACEAUTH && this.isOtpWithFaceMode()) {
-        // OTP + FACE: only switch to OTP so the Trigger OTP button shows.
-        this.currentFactor = null;
-        this.authState.update((s) => ({
-          ...s,
-          activeMode: AuthenticationMode.OTP,
-          error: 'Face authentication failed. Falling back to OTP.',
-        }));
-        this.otpState.update((s) => ({ ...s, generated: false, expiresAt: null }));
-        this.showOtpFallbackRow();
-      } else if (request.consentType !== AuthenticationMode.OTP) {
+      // FACEAUTH and PHYSICAL: show the error and stay on this step, so "Download Data" can be retried.
+      // A failed validate never switches the mode (OTP fallback only follows failed trigger calls).
+      if (request.consentType !== AuthenticationMode.OTP) {
         this.authState.update((s) => ({ ...s, error: message }));
       }
       return false;

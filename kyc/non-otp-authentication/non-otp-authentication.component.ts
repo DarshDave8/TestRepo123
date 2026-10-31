@@ -9,6 +9,7 @@ import { AuthenticationMode, AuthFactor } from '../constants/ckyc-onboarding.con
 import { CkycRelatedPersonFieldsComponent } from '../ckyc-related-person-fields/ckyc-related-person-fields.component';
 import { CkycConsentAttempt } from '../models/ckyc-consent-request.model';
 import { CkycAuthStateService } from '../services/ckyc-auth-state.service';
+import { CkycFlowStateService } from '../services/ckyc-flow-state.service';
 
 @Component({
   selector: 'app-non-otp-authentication',
@@ -28,6 +29,7 @@ import { CkycAuthStateService } from '../services/ckyc-auth-state.service';
 export class NonOtpAuthenticationComponent implements OnInit {
   private readonly authStore = inject(CkycAuthStateService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly flow = inject(CkycFlowStateService);
 
   readonly consentAttempts = this.authStore.consentAttempts;
   readonly authState = this.authStore.authState;
@@ -66,5 +68,11 @@ export class NonOtpAuthenticationComponent implements OnInit {
   downloadData(attempt: CkycConsentAttempt): void {
     if (!this.canDownload(attempt) || this.isBusy()) return;
     this.authStore.validate().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
+  }
+
+  // Back to the enquiry list, like the OTP step. Also stops consent calls still running for this match.
+  goBack(): void {
+    this.authStore.cancelConsentFlow();
+    this.flow.returnToEnquiryReceived();
   }
 }

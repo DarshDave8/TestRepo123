@@ -1,8 +1,8 @@
 // Screenshot transcription (2026-10-31 photographs of the working tree), not a verified source file.
 import { Injectable, inject, signal, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { defer, Observable, of } from 'rxjs';
-import { tap, catchError, finalize, map } from 'rxjs/operators';
+import { defer, Observable, of, Subject } from 'rxjs';
+import { tap, catchError, finalize, map, takeUntil } from 'rxjs/operators';
 import { CkycOnboardingService } from './ckyc-onboarding.service';
 import {
   AuthenticationMode,
@@ -38,6 +38,9 @@ export class CkycAuthStateService {
   // Set at the same point as the "Falling back to OTP" message, so the row can never miss it.
   private readonly _otpFallbackPending = signal(false);
   readonly otpFallbackPending = this._otpFallbackPending.asReadonly();
+  // Fired by cancelConsentFlow(): stops every running consent / validate call, including the
+  // follow-up calls that handleAuthFailure subscribes to (those outlive the component that started them).
+  private readonly cancelConsent$ = new Subject<void>();
 
   readonly authState = signal<AuthDomainState>({
     loading: false,
@@ -241,6 +244,7 @@ export class CkycAuthStateService {
           return;
         this.otpState.update((s) => ({ ...s, loading: false }));
       }),
+      takeUntil(this.cancelConsent$),
       takeUntilDestroyed(this.destroyRef),
     );
   }
@@ -397,8 +401,21 @@ export class CkycAuthStateService {
         return of(validationFailed('Unable to validate consent. Please try again.'));
       }),
       finalize(() => this.authState.update((s) => ({ ...s, loading: false }))),
+      takeUntil(this.cancelConsent$),
       takeUntilDestroyed(this.destroyRef),
     );
+  }
+
+  /**
+   * Back from the face / PHYSICAL step: stop the consent chain for this match (no further factor,
+   * FACE or OTP calls, no late navigation back to the face step) and clear its state, so the next
+   * "Download Data" starts clean.
+   */
+  cancelConsentFlow(): void {
+    this.cancelConsent$.next();
+    this.currentFactor = null;
+    this._consentAttempts.set([]);
+    this.resetAuth();
   }
 
   resetAuth(): void {

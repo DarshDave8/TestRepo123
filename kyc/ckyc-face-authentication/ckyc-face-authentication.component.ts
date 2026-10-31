@@ -41,6 +41,11 @@ export class CkycFaceAuthenticationComponent implements OnInit {
         if (sent) this.flow.goToStep('otp');
       });
   }
+  // Back to the enquiry list, like the OTP step. Also stops consent calls still running for this match.
+  goBack(): void {
+    this.authStore.cancelConsentFlow();
+    this.flow.returnToEnquiryReceived();
+  }
   // True only while a consent request is actually in flight.
   isCalling(): boolean {
     return this.consentAttempts().some((attempt) => attempt.status === 'Calling');

@@ -312,8 +312,12 @@ export class CkycAuthStateService {
     };
     this.authState.update((s) => ({ ...s, loading: true, error: null }));
     const validationFailed = (message: string): boolean => {
-      if (request.consentType === AuthenticationMode.MANUAL && this.isManualWithFaceMode()) {
-        this.startFaceConsent();
+      // Hard stop: once validate consent is called, no further consent call is made automatically.
+      if (request.consentType === AuthenticationMode.FACEAUTH && this.isOtpWithFaceMode()) {
+        // OTP + FACE: only switch to OTP so the Trigger OTP button shows.
+        this.currentFactor = null;
+        this.authState.update((s) => ({ ...s, activeMode: AuthenticationMode.OTP, error: 'Face authentication failed. Falling back to OTP.' }));
+        this.otpState.update((s) => ({ ...s, generated: false, expiresAt: null }));
       } else if (request.consentType !== AuthenticationMode.OTP) {
         this.authState.update((s) => ({ ...s, error: message }));
       }
@@ -417,6 +421,8 @@ export class CkycAuthStateService {
 
   // Is this factor switched on? Master OFF means every factor is off.
   private isEnabled(factor: AuthFactor): boolean {
+    // MANUAL + FACE (no OTP) always uses every factor; the flags only apply to OTP + FACE.
+    if (this.isManualWithFaceMode()) return true;
     if (!CKYC_DV_FACTOR_FLAGS.masterEnabled) return false;
     switch (factor) {
       case AuthFactor.DOB:

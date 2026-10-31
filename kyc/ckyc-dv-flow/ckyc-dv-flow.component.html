@@ -4,8 +4,15 @@
 <div class="container">
   @if (leadDetails()?.customerProfile?.profileProvider === "MANUAL") {
     <app-ckyc-consent-overview></app-ckyc-consent-overview>
-    <app-ckyc-onboarding [searchAttemptedPhase]="searchAttemptedPhase()"
-      leadId="[REDACTED_LEAD_ID]"
+    @if (validatedDetails(); as details) {
+      <!-- Consent validated: show the fetched details only; the onboarding widget (and its table) is removed. -->
+      <app-ckyc-validated-card [details]="details" />
+    } @else {
+      <app-ckyc-onboarding [searchAttemptedPhase]="searchAttemptedPhase()"
+        leadId="[REDACTED_LEAD_ID]"
+        (customerBasicDetailsFetch)="onCustomerBasicDetailsFetch($event)"
+      />
+    }
     <label class="ckyc-not-applicable">
       <input type="checkbox" />
       It doesn't pertain to me

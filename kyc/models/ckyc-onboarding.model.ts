@@ -172,6 +172,8 @@ export interface OtpDomainState {
   expiresAt: number | null;
   mobileNumber: string | null;
   otpAttemptCount: number;
+  hasMobileNumber?: boolean; // INFERRED from screenshot usage
+  hasEmailAddress?: boolean; // INFERRED from screenshot usage
 }
 
 // Trigger-Enquiries

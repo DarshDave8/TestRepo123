@@ -1,11 +1,26 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ReactiveFormsModule } from '@angular/forms';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { AuthenticationMode, AuthFactor } from '../constants/ckyc-onboarding.constants';
-import { CkycAuthStateService, CkycConsentAttempt } from '../services/ckyc-auth-state.service';
+import { CkycRelatedPersonFieldsComponent } from '../ckyc-related-person-fields/ckyc-related-person-fields.component';
+import { CkycConsentAttempt } from '../models/ckyc-consent-request.model';
+import { CkycAuthStateService } from '../services/ckyc-auth-state.service';
 
 @Component({
   selector: 'app-non-otp-authentication',
   standalone: true,
+  imports: [
+    ReactiveFormsModule,
+    MatButtonModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
+    CkycRelatedPersonFieldsComponent,
+  ],
   templateUrl: './non-otp-authentication.component.html',
   styleUrl: './non-otp-authentication.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -21,34 +36,35 @@ export class NonOtpAuthenticationComponent implements OnInit {
   readonly authFactor = AuthFactor;
 
   ngOnInit(): void {
-    // Keep a completed DV manual attempt when this screen is recreated.
     if (
       this.authState().activeMode !== AuthenticationMode.MANUAL ||
       (this.authState().applicableModes.includes(AuthenticationMode.FACEAUTH) &&
         this.consentAttempts().some((attempt) => attempt.consentType === AuthenticationMode.MANUAL))
-    ) return;
-    this.authStore.triggerConsent()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe();
+    )
+      return;
+    this.authStore.triggerConsent().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
   }
 
   canDownload(attempt: CkycConsentAttempt): boolean {
     const attempts = this.consentAttempts();
-    return attempt.status === 'Success' &&
+    return (
+      attempt.status === 'Success' &&
       attempt.consentType === AuthenticationMode.MANUAL &&
       attempt.consentType === this.authState().activeMode &&
-      attempt.id === attempts[attempts.length - 1]?.id;
+      attempt.id === attempts[attempts.length - 1]?.id
+    );
   }
 
   isBusy(): boolean {
-    return this.authState().loading || this.otpState().loading ||
-      this.consentAttempts().some((attempt) => attempt.status === 'Calling');
+    return (
+      this.authState().loading ||
+      this.otpState().loading ||
+      this.consentAttempts().some((attempt) => attempt.status === 'Calling')
+    );
   }
 
   downloadData(attempt: CkycConsentAttempt): void {
     if (!this.canDownload(attempt) || this.isBusy()) return;
-    this.authStore.validate()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe();
+    this.authStore.validate().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
   }
 }

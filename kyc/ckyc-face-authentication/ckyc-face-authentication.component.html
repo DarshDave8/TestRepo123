@@ -1,9 +1,8 @@
-@if (authState().error; as error) {
-  <p role="alert">{{ error }}</p>
-}
+@if (authState().error; as error) { <p role="alert">{{ error }}</p> }
 <div class="consent-status" role="region" aria-labelledby="face-consent-status-caption" tabindex="0">
-  <table aria-live="polite">
-    <caption id="face-consent-status-caption">Consent call status</caption>
+  <table aria-live="polite">   <caption id="face-consent-status-caption">
+      Consent call status
+    </caption>
     <thead>
       <tr>
         <th scope="col">#</th>
@@ -18,20 +17,34 @@
           <td>{{ index + 1 }}</td>
           <td>
             @switch (attempt.consentType) {
-              @case (authMode.FACEAUTH) { Face auth }
-              @case (authMode.OTP) { OTP consent }
-              @case (authMode.MANUAL) { Manual auth }
+              @case (authMode.FACEAUTH) {
+                Face auth
+              }
+              @case (authMode.OTP) {
+                OTP consent
+              }
+              @case (authMode.MANUAL) {
+                Manual auth
+              }
             }
             @switch (attempt.authFactor) {
-              @case (authFactor.DOB) { with DOB }
-              @case (authFactor.RELATION) { with relation }
-              @case (authFactor.BIRTHYEARPINCODE) { with year of birth and pincode }
+              @case (authFactor.DOB) {
+                with DOB
+              }
+              @case (authFactor.RELATION) {
+                with relation
+              }
+              @case (authFactor.BIRTHYEARPINCODE) {
+                with year of birth and pincode
+              }
             }
           </td>
           <td>
-            <span class="consent-result"
+            <span
+              class="consent-result"
               [class.consent-result--success]="attempt.status === 'Success'"
-              [class.consent-result--failed]="attempt.status === 'Failed'">
+              [class.consent-result--failed]="attempt.status === 'Failed'"
+            >
               {{ attempt.status }}
             </span>
           </td>

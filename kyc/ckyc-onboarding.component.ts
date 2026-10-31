@@ -8,6 +8,7 @@ import {
   inject,
   input,
   output,
+  untracked,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ProviderFetchStatus } from 'src/app/models/account.model';
@@ -21,7 +22,7 @@ import { CkycSearchV2Component } from './ckyc-search-v2/ckyc-search-v2.component
 import { SearchAttemptedPhase } from './constants/ckyc-onboarding.constants';
 import { CkycAuthStateService } from './services/ckyc-auth-state.service';
 import { CkycErrorAlertComponent } from './ckyc-error-alert/ckyc-error-alert.component';
-import { CkycSearchPhaseService } from './services/ckyc-search-phase.service';
+import { CkycSharedStateService } from './services/ckyc-shared-state.service';
 import { CkycEnquiryDetailsComponent } from './ckyc-enquiry-list/ckyc-enquiry-details/ckyc-enquiry-details.component';
 
 @Component({
@@ -49,40 +50,43 @@ export class CkycOnboardingComponent implements OnInit {
   readonly searchAttemptedPhase = input<SearchAttemptedPhase>(SearchAttemptedPhase.PROFILE_CREATION);
   readonly leadId = input<string | null>();
   readonly customerBasicDetailsFetch = output<ICustomerBasicDetailsFetch>();
-  readonly ckycSearchPhaseService = inject(CkycSearchPhaseService);
-  readonly phase = SearchAttemptedPhase;
+  readonly ckycSharedStateService = inject(CkycSharedStateService);
+  phase = SearchAttemptedPhase;
   // 2. Combine your signals into a single computed signal
   readonly hasAnyError = computed(() => {
     const enquiryListError = this.flow.historyError();
     const enquiryError = this.flow.enquiryError();
-    const authenticationModesError = this.flow.authenticationModesError();
-    const otpError = this.flow.otpError();
-    return enquiryListError || enquiryError || authenticationModesError || otpError;
+    // const otpError = this.flow.otpError();
+    return enquiryListError || enquiryError;
   });
-
   constructor() {
     effect(() => {
       const hasError = this.hasAnyError();
-      if (hasError) {
-        this.customerBasicDetailsFetch.emit({
-          status: ProviderFetchStatus.FAILURE,
+      if (hasError)
+        untracked(() => {
+          this.customerBasicDetailsFetch.emit({ status: ProviderFetchStatus.FAILURE });
+        });
+    });
+    effect(() => {
+      if (this.ckycSharedStateService.isManualVerificationEnabled()) {
+        console.log('fired');
+        untracked(() => {
+          this.customerBasicDetailsFetch.emit({ status: ProviderFetchStatus.FAILURE });
         });
       }
     });
+    this.destroyRef.onDestroy(() => {
+      this.ckycSharedStateService.setManualVerificationEnabled(false);
+    });
   }
-
   ngOnInit(): void {
+    this.ckycSharedStateService.setManualVerificationEnabled(false);
     this.flow.registeredMobileNumber.set(this.registeredMobileNumber() ?? null);
-    this.ckycSearchPhaseService.setSearchAttemptedPhase(this.searchAttemptedPhase());
-    this.ckycSearchPhaseService.setLeadId(this.leadId());
-    this.flow.validatedDetails
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((profileData) => {
-        this.customerBasicDetailsFetch.emit({
-          status: ProviderFetchStatus.SUCCESS,
-          profileData,
-        });
-      });
+    this.ckycSharedStateService.setSearchAttemptedPhase(this.searchAttemptedPhase());
+    this.ckycSharedStateService.setLeadId(this.leadId()!);
+    this.flow.validatedDetails$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((profileData) => {
+      this.customerBasicDetailsFetch.emit({ status: ProviderFetchStatus.SUCCESS, profileData });
+    });
     this.flow.loadEnquiries();
   }
 }

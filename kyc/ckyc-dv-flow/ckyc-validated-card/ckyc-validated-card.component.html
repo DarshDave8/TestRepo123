@@ -1,11 +1,8 @@
-<article class="ckyc-validated" aria-labelledby="ckyc-validated-title">
-  <header class="ckyc-validated__header">
-    <h3 id="ckyc-validated-title" class="ckyc-validated__title">CKYC details</h3>
-    <span class="ckyc-validated__badge">Consent validated</span>
-  </header>
+<!-- Shown under the "CKYC details verified" heading in ckyc-dv-flow, which titles this card. -->
+<div class="ckyc-validated">
   @for (section of sections(); track section.title) {
     <section class="ckyc-validated__section">
-      <h4 class="ckyc-validated__section-title">{{ section.title }}</h4>
+      <h3 class="ckyc-validated__section-title">{{ section.title }}</h3>
       <dl class="ckyc-validated__details">
         @for (row of section.rows; track row.label) {
           <div>
@@ -18,4 +15,4 @@
   } @empty {
     <p class="ckyc-validated__empty">The validate response returned no details to show.</p>
   }
-</article>
+</div>

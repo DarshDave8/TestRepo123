@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -9,6 +9,12 @@ import { AuthenticationMode, AuthFactor } from '../constants/ckyc-onboarding.con
 import { CkycRelatedPersonFieldsComponent } from '../ckyc-related-person-fields/ckyc-related-person-fields.component';
 import { CkycConsentAttempt } from '../models/ckyc-consent-request.model';
 import { CkycAuthStateService } from '../services/ckyc-auth-state.service';
+import {
+  consentAttemptDetail,
+  consentMethodLabel,
+  consentStatusLabel,
+  summarizeConsent,
+} from '../shared/ckyc-consent-ui';
 
 @Component({
   selector: 'app-non-otp-authentication',
@@ -34,6 +40,20 @@ export class NonOtpAuthenticationComponent implements OnInit {
   readonly otpState = this.authStore.otpState;
   readonly authMode = AuthenticationMode;
   readonly authFactor = AuthFactor;
+
+  // ---- display only ----
+  readonly methodLabel = consentMethodLabel;
+  readonly attemptDetail = consentAttemptDetail;
+  readonly statusLabel = consentStatusLabel;
+  readonly isValidating = computed(() => this.authState().loading);
+  readonly summary = computed(() =>
+    summarizeConsent({
+      attempts: this.consentAttempts(),
+      canValidate: this.consentAttempts().some((attempt) => this.canDownload(attempt)),
+      otpPending: false,
+      hasError: !!this.authState().error,
+    }),
+  );
 
   ngOnInit(): void {
     if (
@@ -63,6 +83,7 @@ export class NonOtpAuthenticationComponent implements OnInit {
     );
   }
 
+  // "Validate consent": on success ckyc-onboarding emits the details and ckyc-dv-flow shows the verified card.
   downloadData(attempt: CkycConsentAttempt): void {
     if (!this.canDownload(attempt) || this.isBusy()) return;
     this.authStore.validate().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();

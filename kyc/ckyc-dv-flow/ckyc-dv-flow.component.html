@@ -1,32 +1,78 @@
 <!-- Recovered from screenshot 147112 (right pane).
      CAUTION: the original photo had a hard-coded leadId, which is redacted in this
      public archival copy. Replace only from an authorized original source. -->
-<div class="container">
-  @if (leadDetails()?.customerProfile?.profileProvider === "MANUAL") {
-    <app-ckyc-consent-overview></app-ckyc-consent-overview>
-    @if (validatedDetails(); as details) {
-      <!-- Consent validated: show the fetched details only; the onboarding widget (and its table) is removed. -->
+<div class="container ckyc-dv">
+  @if (validatedDetails(); as details) {
+    <!-- Consent validated: CKYC view. Consent overview, onboarding and the opt-out are no longer shown. -->
+    <section class="ckyc-dv__section ckyc-dv__section--verified" aria-labelledby="ckyc-dv-verified-title">
+      <header class="ckyc-dv__header">
+        <span class="ckyc-dv__seal" aria-hidden="true">
+          <svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7" /></svg>
+        </span>
+        <div>
+          <h2 #verifiedHeading id="ckyc-dv-verified-title" class="ckyc-dv__title" tabindex="-1">
+            CKYC details verified
+          </h2>
+          <p class="ckyc-dv__intro">Consent was validated and these details were fetched from the CKYC registry.</p>
+        </div>
+      </header>
       <app-ckyc-validated-card [details]="details" />
-    } @else {
+    </section>
+  } @else if (leadDetails()?.customerProfile?.profileProvider === "MANUAL") {
+    <section class="ckyc-dv__section" aria-labelledby="ckyc-dv-title">
+      <header class="ckyc-dv__header">
+        <div>
+          <h2 id="ckyc-dv-title" class="ckyc-dv__title">CKYC verification</h2>
+          <p class="ckyc-dv__intro">Get the customer's consent to fetch their record from the CKYC registry.</p>
+        </div>
+      </header>
+      <app-ckyc-consent-overview></app-ckyc-consent-overview>
       <app-ckyc-onboarding [searchAttemptedPhase]="searchAttemptedPhase()"
         leadId="[REDACTED_LEAD_ID]"
         (customerBasicDetailsFetch)="onCustomerBasicDetailsFetch($event)"
       />
-    }
-    <label class="ckyc-not-applicable">
-      <input type="checkbox" />
-      It doesn't pertain to me
-    </label>
+      <label class="ckyc-dv__opt-out">
+        <input type="checkbox" />
+        <span>It doesn't pertain to me</span>
+      </label>
+    </section>
 
     @if (leadDetails()?.isCkyc2AttemptedByCustomer) {}
     <!-- @else {
       <app-ckyc-flow />
     } -->
   } @else if (leadDetails()?.customerProfile?.profileProvider === "CKYC") {
-    Display CKYC : {{ leadDetails()?.customerProfile?.ckycDetails?.ckycNumber }}
+    <section class="ckyc-dv__section" aria-labelledby="ckyc-dv-linked-title">
+      <header class="ckyc-dv__header">
+        <span class="ckyc-dv__seal" aria-hidden="true">
+          <svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7" /></svg>
+        </span>
+        <div>
+          <h2 id="ckyc-dv-linked-title" class="ckyc-dv__title">CKYC record linked</h2>
+          <p class="ckyc-dv__intro">This customer's profile details came from the CKYC registry.</p>
+        </div>
+      </header>
+      <dl class="ckyc-dv__facts">
+        <div>
+          <dt>CKYC number</dt>
+          <dd>{{ ckycNumber() || "Not available" }}</dd>
+        </div>
+      </dl>
+    </section>
   } @else if (leadDetails()?.customerProfile?.profileProvider === "AADHAAR") {
-    Display CKYC : {{ leadDetails()?.customerProfile?.ckycDetails?.ckycNumber }}
+    <section class="ckyc-dv__section" aria-labelledby="ckyc-dv-aadhaar-title">
+      <header class="ckyc-dv__header">
+        <div>
+          <h2 id="ckyc-dv-aadhaar-title" class="ckyc-dv__title">Profile from Aadhaar</h2>
+          <p class="ckyc-dv__intro">This customer's profile details came from Aadhaar.</p>
+        </div>
+      </header>
+      <dl class="ckyc-dv__facts">
+        <div>
+          <dt>CKYC number</dt>
+          <dd>{{ ckycNumber() || "Not available" }}</dd>
+        </div>
+      </dl>
+    </section>
   }
 </div>
-<!-- SOURCE WARNING: the screenshot displays an apparently unclosed
-     <app-ckyc-onboarding> start tag. That anomaly is preserved here. -->

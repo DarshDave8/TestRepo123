@@ -1,76 +1,78 @@
-<section class="ckyc-consent" aria-labelledby="face-consent-title">
-  <header class="ckyc-consent__header">
-    <div>
-      <h3 id="face-consent-title" class="ckyc-consent__title">Consent verification</h3>
-      <p class="ckyc-consent__intro">Checks run one at a time and stop at the first success.</p>
-    </div>
-    @if (summary(); as state) {
-      <span class="ckyc-consent__state" [attr.data-tone]="state.tone">{{ state.label }}</span>
-    }
-  </header>
-
-  @if (authState().error; as error) {
-    <p class="ckyc-consent__alert" role="alert">{{ error }}</p>
-  }
-
-  <ol class="ckyc-consent__chain" aria-live="polite">
-    @for (attempt of consentAttempts(); track attempt.id) {
-      <li class="ckyc-consent__step" [attr.data-status]="attempt.status">
-        <span class="ckyc-consent__marker" aria-hidden="true">
-          @switch (attempt.status) {
-            @case ('Success') {
-              <svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7" /></svg>
+@if (authState().error; as error) { <p role="alert">{{ error }}</p> }
+<div class="consent-status" role="region" aria-labelledby="face-consent-status-caption" tabindex="0">
+  <table aria-live="polite">   <caption id="face-consent-status-caption">
+      Consent call status
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">#</th>
+        <th scope="col">Consent request</th>
+        <th scope="col">Status</th>
+        <th scope="col">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (attempt of consentAttempts(); track attempt.id; let index = $index) {
+        <tr>
+          <td>{{ index + 1 }}</td>
+          <td>
+            @switch (attempt.consentType) {
+              @case (authMode.FACEAUTH) {
+                Face auth
+              }
+              @case (authMode.OTP) {
+                OTP consent
+              }
+              @case (authMode.MANUAL) {
+                Manual auth
+              }
             }
-            @case ('Failed') {
-              <svg viewBox="0 0 16 16"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7" /></svg>
+            @switch (attempt.authFactor) {
+              @case (authFactor.DOB) {
+                with DOB
+              }
+              @case (authFactor.RELATION) {
+                with relation
+              }
+              @case (authFactor.BIRTHYEARPINCODE) {
+                with year of birth and pincode
+              }
             }
-            @case ('Cancelled') {
-              <svg viewBox="0 0 16 16"><path d="M4.5 8h7" /></svg>
+          </td>
+          <td>
+            <span
+              class="consent-result"
+              [class.consent-result--success]="attempt.status === 'Success'"
+              [class.consent-result--failed]="attempt.status === 'Failed'"
+            >
+              {{ attempt.status }}
+            </span>
+          </td>
+          <td>
+            @if (canDownload(attempt)) {
+              <button type="button" [disabled]="isBusy()" (click)="downloadData(attempt)">Download Data</button>
+            } @else if (canRetriggerOtp(attempt)) {
+              <button type="button" [disabled]="isCalling()" (click)="triggerOtp()">Re-trigger OTP</button>
+            } @else {
+              —
             }
-          }
-        </span>
-        <div class="ckyc-consent__body">
-          <p class="ckyc-consent__method">{{ methodLabel(attempt.consentType) }}</p>
-          @if (attemptDetail(attempt); as detail) {
-            <p class="ckyc-consent__detail">{{ detail }}</p>
-          }
-        </div>
-        <span class="ckyc-consent__status">{{ statusLabel(attempt.status) }}</span>
-        <div class="ckyc-consent__action">
-          @if (canDownload(attempt)) {
-            <button mat-flat-button color="primary" type="button" [disabled]="isBusy()" (click)="downloadData(attempt)">
-              {{ isValidating() ? 'Validating…' : 'Validate consent' }}
-            </button>
-          } @else if (canRetriggerOtp(attempt)) {
-            <button mat-stroked-button color="primary" type="button" [disabled]="isCalling()" (click)="triggerOtp()">
-              Re-trigger OTP
-            </button>
-          }
-        </div>
-      </li>
-    } @empty {
-      @if (!showTriggerOtpRow()) {
-        <li class="ckyc-consent__step" data-status="Calling">
-          <span class="ckyc-consent__marker" aria-hidden="true"></span>
-          <div class="ckyc-consent__body">
-            <p class="ckyc-consent__method">Starting the first check</p>
-          </div>
-        </li>
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td colspan="4">No consent calls yet.</td>
+        </tr>
       }
-    }
-    @if (showTriggerOtpRow()) {
-      <li class="ckyc-consent__step" data-status="Next">
-        <span class="ckyc-consent__marker" aria-hidden="true"></span>
-        <div class="ckyc-consent__body">
-          <p class="ckyc-consent__method">OTP</p>
-          <p class="ckyc-consent__detail">Send a one-time password to the customer to continue.</p>
-        </div>
-        <div class="ckyc-consent__action">
-          <button mat-flat-button color="primary" type="button" [disabled]="isCalling()" (click)="triggerOtp()">
-            Trigger OTP
-          </button>
-        </div>
-      </li>
-    }
-  </ol>
-</section>
+      @if (showTriggerOtpRow()) {
+        <tr>
+          <td>{{ consentAttempts().length + 1 }}</td>
+          <td>OTP consent</td>
+          <td><span class="consent-result">Awaiting action</span></td>
+          <td>
+            <button type="button" [disabled]="isCalling()" (click)="triggerOtp()">Trigger OTP</button>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

@@ -1,265 +1,49 @@
-// Consent verification chain. Kept identical in ckyc-face-authentication and non-otp-authentication.
-// The colour tokens below are the only place to retune the look.
-:host {
-  --ckyc-ink: #1f2a44;
-  --ckyc-muted: #5b6474;
-  --ckyc-line: #dde2ea;
-  --ckyc-surface: #ffffff;
-  --ckyc-wash: #f5f7fa;
-  --ckyc-pass: #18794e;
-  --ckyc-pass-bg: #e6f4ec;
-  --ckyc-fail: #b42318;
-  --ckyc-fail-bg: #fdeceb;
-  --ckyc-live: #2453c7;
-  --ckyc-live-bg: #e3eafb;
-  --ckyc-wait: #8a5a00;
-  --ckyc-wait-bg: #fdf3dc;
-  display: block;
-  margin-top: 16px;
-  color: var(--ckyc-ink);
+.consent-status {
+  margin-block-start: 1rem;
+  overflow-x: auto;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+  }
+
+  caption {
+    padding: 0.75rem;
+    font-weight: 600;
+    text-align: left;
+  }
+
+  th,
+  td {
+    padding: 0.75rem;
+    border-top: 1px solid #e5e7eb;
+    vertical-align: top;
+  }
+
+  th {
+    background: #f3f4f6;
+    color: #1f2937;
+  }
 }
 
-.ckyc-consent {
-  border: 1px solid var(--ckyc-line);
-  border-radius: 10px;
-  background: var(--ckyc-surface);
-  padding: 20px 20px 8px;
-}
-
-.ckyc-consent__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.ckyc-consent__title {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.4;
-}
-
-.ckyc-consent__intro {
-  margin: 2px 0 0;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--ckyc-muted);
-}
-
-.ckyc-consent__state {
-  flex: none;
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: var(--ckyc-wash);
-  color: var(--ckyc-muted);
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.5;
+.consent-result {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+  background: #f3f4f6;
+  color: #374151;
   white-space: nowrap;
-}
 
-.ckyc-consent__state[data-tone='progress'] {
-  background: var(--ckyc-live-bg);
-  color: var(--ckyc-live);
-}
-
-.ckyc-consent__state[data-tone='success'] {
-  background: var(--ckyc-pass-bg);
-  color: var(--ckyc-pass);
-}
-
-.ckyc-consent__state[data-tone='action'] {
-  background: var(--ckyc-wait-bg);
-  color: var(--ckyc-wait);
-}
-
-.ckyc-consent__state[data-tone='failed'] {
-  background: var(--ckyc-fail-bg);
-  color: var(--ckyc-fail);
-}
-
-.ckyc-consent__alert {
-  margin: 16px 0 0;
-  padding: 10px 12px;
-  border-left: 3px solid var(--ckyc-wait);
-  border-radius: 0 6px 6px 0;
-  background: var(--ckyc-wait-bg);
-  color: #5c3d00;
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-// ---- the chain ----
-.ckyc-consent__chain {
-  margin: 12px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.ckyc-consent__step {
-  position: relative;
-  display: grid;
-  // Fixed action column so status text lines up whether or not a step has a button.
-  grid-template-columns: 28px minmax(0, 1fr) auto 168px;
-  grid-template-areas: 'marker body status action';
-  column-gap: 14px;
-  align-items: start;
-  padding: 12px 0;
-}
-
-// Rail joining the markers; it starts and ends at the centre of the first and last marker.
-.ckyc-consent__step::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 13px;
-  width: 2px;
-  background: var(--ckyc-line);
-}
-
-.ckyc-consent__step:first-child::before {
-  top: 26px;
-}
-
-.ckyc-consent__step:last-child::before {
-  bottom: calc(100% - 26px);
-}
-
-.ckyc-consent__marker {
-  position: relative;
-  z-index: 1;
-  grid-area: marker;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-  width: 28px;
-  height: 28px;
-  border: 2px solid var(--ckyc-line);
-  border-radius: 50%;
-  background: var(--ckyc-surface);
-  color: var(--ckyc-muted);
-}
-
-.ckyc-consent__marker svg {
-  width: 14px;
-  height: 14px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2.2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.ckyc-consent__body {
-  grid-area: body;
-  padding-top: 3px;
-  min-width: 0;
-}
-
-.ckyc-consent__method {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.5;
-}
-
-.ckyc-consent__detail {
-  margin: 2px 0 0;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--ckyc-muted);
-}
-
-.ckyc-consent__status {
-  grid-area: status;
-  justify-self: end;
-  padding-top: 5px;
-  font-size: 12.5px;
-  font-weight: 600;
-  line-height: 1.5;
-  white-space: nowrap;
-  color: var(--ckyc-muted);
-}
-
-.ckyc-consent__action {
-  grid-area: action;
-  justify-self: end;
-}
-
-// ---- states ----
-.ckyc-consent__step[data-status='Success'] .ckyc-consent__marker {
-  border-color: var(--ckyc-pass);
-  background: var(--ckyc-pass);
-  color: #fff;
-}
-
-.ckyc-consent__step[data-status='Success'] .ckyc-consent__status {
-  color: var(--ckyc-pass);
-}
-
-.ckyc-consent__step[data-status='Failed'] .ckyc-consent__marker {
-  border-color: var(--ckyc-fail-bg);
-  background: var(--ckyc-fail-bg);
-  color: var(--ckyc-fail);
-}
-
-.ckyc-consent__step[data-status='Failed'] .ckyc-consent__status {
-  color: var(--ckyc-fail);
-}
-
-.ckyc-consent__step[data-status='Calling'] .ckyc-consent__marker {
-  border-color: var(--ckyc-live-bg);
-  border-top-color: var(--ckyc-live);
-  animation: ckyc-consent-spin 0.9s linear infinite;
-}
-
-.ckyc-consent__step[data-status='Calling'] .ckyc-consent__status {
-  color: var(--ckyc-live);
-}
-
-.ckyc-consent__step[data-status='Next'] .ckyc-consent__marker {
-  border-style: dashed;
-  border-color: var(--ckyc-wait);
-}
-
-.ckyc-consent__step[data-status='Next'] .ckyc-consent__status {
-  color: var(--ckyc-wait);
-}
-
-@keyframes ckyc-consent-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ckyc-consent__step[data-status='Calling'] .ckyc-consent__marker {
-    animation: none;
-    border-color: var(--ckyc-live);
-  }
-}
-
-@media (max-width: 600px) {
-  .ckyc-consent {
-    padding: 16px 16px 4px;
+  &--success {
+    background: #dcfce7;
+    color: #166534;
   }
 
-  .ckyc-consent__step {
-    grid-template-columns: 28px minmax(0, 1fr) auto;
-    grid-template-areas:
-      'marker body status'
-      'marker action action';
-  }
-
-  .ckyc-consent__action {
-    justify-self: start;
-    margin-top: 10px;
-  }
-
-  .ckyc-consent__action:empty {
-    display: none;
+  &--failed {
+    background: #fee2e2;
+    color: #991b1b;
   }
 }

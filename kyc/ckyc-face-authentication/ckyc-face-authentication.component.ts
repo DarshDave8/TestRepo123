@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit } from '
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthenticationMode, AuthFactor } from '../constants/ckyc-onboarding.constants';
 import { CkycAuthStateService, CkycConsentAttempt } from '../services/ckyc-auth-state.service';
+import { CkycFlowStateService } from '../services/ckyc-flow-state.service';
 
 @Component({
   selector: 'app-ckyc-face-authentication',
@@ -12,6 +13,7 @@ import { CkycAuthStateService, CkycConsentAttempt } from '../services/ckyc-auth-
 })
 export class CkycFaceAuthenticationComponent implements OnInit {
   private readonly authStore = inject(CkycAuthStateService);
+  private readonly flow = inject(CkycFlowStateService);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly consentAttempts = this.authStore.consentAttempts;
@@ -47,6 +49,20 @@ export class CkycFaceAuthenticationComponent implements OnInit {
       attempt.consentType === AuthenticationMode.FACEAUTH &&
       attempt.consentType === this.authState().activeMode &&
       attempt.id === attempts[attempts.length - 1]?.id;
+  }
+
+  canValidateOtp(attempt: CkycConsentAttempt): boolean {
+    const attempts = this.consentAttempts();
+    return attempt.status === 'Success' &&
+      attempt.consentType === AuthenticationMode.OTP &&
+      this.authState().activeMode === AuthenticationMode.OTP &&
+      this.otpState().generated &&
+      attempt.id === attempts[attempts.length - 1]?.id;
+  }
+
+  validateOtp(attempt: CkycConsentAttempt): void {
+    if (!this.canValidateOtp(attempt) || this.isBusy()) return;
+    this.flow.goToStep('otp');
   }
 
   isBusy(): boolean {

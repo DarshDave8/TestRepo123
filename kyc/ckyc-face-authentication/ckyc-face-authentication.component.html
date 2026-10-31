@@ -38,6 +38,8 @@
           <td>
             @if (canDownload(attempt)) {
               <button type="button" [disabled]="isBusy()" (click)="downloadData(attempt)">Download Data</button>
+            } @else if (canValidateOtp(attempt)) {
+              <button type="button" [disabled]="isBusy()" (click)="validateOtp(attempt)">Validate OTP</button>
             } @else {
               —
             }

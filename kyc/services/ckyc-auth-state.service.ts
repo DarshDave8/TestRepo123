@@ -196,7 +196,6 @@ export class CkycAuthStateService {
             generated: true,
             expiresAt: Date.now() + CKYC_OTP_TTL_SECONDS * 1000,
           }));
-          if (this.isOtpWithFaceMode()) this.flow.goToStep('otp');
           // SOURCE GAP: the exact counter update and closing lines around 145-149
           // are partially cropped in the provided photographs.
         }

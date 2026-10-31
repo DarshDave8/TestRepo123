@@ -73,8 +73,6 @@ export class CkycOnboardingComponent implements OnInit {
 
   ngOnInit(): void {
     this.flow.registeredMobileNumber.set(this.registeredMobileNumber() ?? null);
-    this.flow.searchAttemptedPhase.set(SearchAttemptedPhase.PROFILE_CREATION);
-    this.ckycAuthState.searchAttemptedPhase.set(SearchAttemptedPhase.PROFILE_CREATION);
     this.ckycSearchPhaseService.setSearchAttemptedPhase(this.searchAttemptedPhase());
     this.ckycSearchPhaseService.setLeadId(this.leadId());
     this.flow.validatedDetails

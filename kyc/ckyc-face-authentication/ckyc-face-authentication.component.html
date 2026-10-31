@@ -51,8 +51,8 @@
           <td>
             @if (canDownload(attempt)) {
               <button type="button" [disabled]="isBusy()" (click)="downloadData(attempt)">Download Data</button>
-            } @else if (canValidateOtp(attempt)) {
-              <button type="button" [disabled]="isBusy()" (click)="validateOtp(attempt)">Validate OTP</button>
+            } @else if (canRetriggerOtp(attempt)) {
+              <button type="button" [disabled]="isCalling()" (click)="triggerOtp()">Re-trigger OTP</button>
             } @else {
               —
             }
@@ -63,7 +63,7 @@
           <td colspan="4">No consent calls yet.</td>
         </tr>
       }
-      @if (otpFallbackPending()) {
+      @if (showTriggerOtpRow()) {
         <tr>
           <td>{{ consentAttempts().length + 1 }}</td>
           <td>OTP consent</td>

@@ -31,13 +31,31 @@ export class CkycFaceAuthenticationComponent implements OnInit {
       return;
     this.authStore.triggerConsent().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
   }
+  // Used by both "Trigger OTP" and "Re-trigger OTP". OTP sent -> go straight to the OTP step.
   triggerOtp(): void {
     if (!this.otpFallbackPending() || this.isCalling()) return;
-    this.authStore.triggerOtpFallback().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
+    this.authStore
+      .triggerOtpFallback()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((sent) => {
+        if (sent) this.flow.goToStep('otp');
+      });
   }
   // True only while a consent request is actually in flight.
   isCalling(): boolean {
     return this.consentAttempts().some((attempt) => attempt.status === 'Calling');
+  }
+  // "Awaiting action" row: only before the first OTP call. After that the OTP row itself carries the button.
+  showTriggerOtpRow(): boolean {
+    return (
+      this.otpFallbackPending() &&
+      !this.consentAttempts().some((attempt) => attempt.consentType === AuthenticationMode.OTP)
+    );
+  }
+  canRetriggerOtp(attempt: CkycConsentAttempt): boolean {
+    return (
+      this.otpFallbackPending() && attempt.consentType === AuthenticationMode.OTP && attempt.status === 'Failed'
+    );
   }
   canDownload(attempt: CkycConsentAttempt): boolean {
     const attempts = this.consentAttempts();
@@ -47,20 +65,6 @@ export class CkycFaceAuthenticationComponent implements OnInit {
       attempt.consentType === this.authState().activeMode &&
       attempt.id === attempts[attempts.length - 1]?.id
     );
-  }
-  canValidateOtp(attempt: CkycConsentAttempt): boolean {
-    const attempts = this.consentAttempts();
-    return (
-      attempt.status === 'Success' &&
-      attempt.consentType === AuthenticationMode.OTP &&
-      this.authState().activeMode === AuthenticationMode.OTP &&
-      this.otpState().generated &&
-      attempt.id === attempts[attempts.length - 1]?.id
-    );
-  }
-  validateOtp(attempt: CkycConsentAttempt): void {
-    if (!this.canValidateOtp(attempt) || this.isBusy()) return;
-    this.flow.goToStep('otp');
   }
   isBusy(): boolean {
     return (

@@ -168,9 +168,21 @@ export class CkycAuthStateService {
     // this.authState.update((s) => ({ ...s, activeMode: payload.consentType }));
     return defer(() => {
       this.otpState.update((s) => ({ ...s, loading: true, error: null }));
-      const attemptId =
-        payload.searchAttemptedPhase === SearchAttemptedPhase.DIGITAL_VERIFICATION ? ++this.nextConsentAttemptId : null;
-      if (attemptId !== null) {
+      // DV OTP + FACE: every OTP (re-)trigger re-uses the one OTP row instead of adding a row per try.
+      const existingOtpRow =
+        payload.consentType === AuthenticationMode.OTP && this.isOtpWithFaceMode()
+          ? this.consentAttempts().find((attempt) => attempt.consentType === AuthenticationMode.OTP)
+          : undefined;
+      const attemptId = existingOtpRow
+        ? existingOtpRow.id
+        : payload.searchAttemptedPhase === SearchAttemptedPhase.DIGITAL_VERIFICATION
+          ? ++this.nextConsentAttemptId
+          : null;
+      if (existingOtpRow) {
+        this._consentAttempts.update((attempts) =>
+          attempts.map((attempt) => (attempt.id === existingOtpRow.id ? { ...attempt, status: 'Calling' } : attempt)),
+        );
+      } else if (attemptId !== null) {
         this._consentAttempts.update((attempts) => [
           ...attempts,
           {

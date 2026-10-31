@@ -155,6 +155,11 @@ export class CkycAuthStateService {
       // Master ON with no enabled factors goes directly to the Trigger OTP step.
       return defer(() => this.handleAuthFailure()).pipe(takeUntilDestroyed(this.destroyRef));
     }
+    // Guarantee the first call of every DV factor chain carries the first enabled factor,
+    // including PHYSICAL calls in PHYSICAL + FACE (they were going out with authFactor null).
+    if (this.currentFactor === null && this.isDvFactorChainCall()) {
+      this.currentFactor = this.nextFactor(null);
+    }
     let payload = {
       attemptId: this.authState().attemptId!,
       consentType: this.authState().activeMode!,
@@ -459,6 +464,15 @@ export class CkycAuthStateService {
     this.authState.update((s) => ({ ...s, activeMode: AuthenticationMode.FACEAUTH, error: null }));
     // The face component's ngOnInit owns the first call after this handoff.
     this.flow.goToStep('face');
+  }
+
+  // Calls that go through the DV factor chain (DOB -> RELATION -> BIRTHYEARPINCODE):
+  // OTP + FACE -> the FACEAUTH calls; PHYSICAL + FACE -> the PHYSICAL calls, then the FACEAUTH calls.
+  private isDvFactorChainCall(): boolean {
+    const mode = this.authState().activeMode;
+    if (this.isOtpWithFaceMode()) return mode === AuthenticationMode.FACEAUTH;
+    if (this.isManualWithFaceMode()) return mode === AuthenticationMode.MANUAL || mode === AuthenticationMode.FACEAUTH;
+    return false;
   }
 
   private isManualWithFaceMode(): boolean {

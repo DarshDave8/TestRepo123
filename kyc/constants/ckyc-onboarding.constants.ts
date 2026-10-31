@@ -47,6 +47,8 @@ export const CKYC_OTP_TTL_SECONDS = 60;
 // masterEnabled = false -> old behaviour, the factor flags below are ignored.
 // masterEnabled = true  -> try DOB, then RELATION, then BIRTHYEARPINCODE (only the ones set to true),
 //                          then fall back to OTP.
+// Digital Verification (PHYSICAL + FACE, no OTP) ignores masterEnabled: it sends the factors set to true
+// below, one per consent call, PHYSICAL first and then FACEAUTH.
 export const CKYC_DV_FACTOR_FLAGS = {
   masterEnabled: false,
   dob: true,

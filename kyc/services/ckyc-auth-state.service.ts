@@ -432,11 +432,10 @@ export class CkycAuthStateService {
     );
   }
 
-  // Is this factor switched on? Master OFF means every factor is off.
+  // Is this factor switched on? OTP + FACE: master OFF means every factor is off.
+  // MANUAL + FACE (no OTP) ignores the master switch but still honours each factor's own flag.
   private isEnabled(factor: AuthFactor): boolean {
-    // MANUAL + FACE (no OTP) always uses every factor; the flags only apply to OTP + FACE.
-    if (this.isManualWithFaceMode()) return true;
-    if (!CKYC_DV_FACTOR_FLAGS.masterEnabled) return false;
+    if (!this.isManualWithFaceMode() && !CKYC_DV_FACTOR_FLAGS.masterEnabled) return false;
     switch (factor) {
       case AuthFactor.DOB:
         return CKYC_DV_FACTOR_FLAGS.dob;

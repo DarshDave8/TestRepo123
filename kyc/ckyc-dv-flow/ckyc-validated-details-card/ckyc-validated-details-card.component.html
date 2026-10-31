@@ -1,0 +1,30 @@
+<article class="ckyc-validated" aria-labelledby="ckyc-validated-title">
+  <header class="ckyc-validated__header">
+    <h3 id="ckyc-validated-title" class="ckyc-validated__title">CKYC details</h3>
+    <span class="ckyc-validated__badge">Consent validated</span>
+  </header>
+  <div class="ckyc-validated__content" [class.ckyc-validated__content--with-photo]="photoSource()">
+    <div class="ckyc-validated__sections">
+      @for (section of sections(); track $index) {
+        @if (section.title) {
+          <h4 class="ckyc-validated__section-title">{{ section.title }}</h4>
+        }
+        <dl class="ckyc-validated__details">
+          @for (row of section.rows; track $index) {
+            <div>
+              <dt>{{ row.label }}</dt>
+              <dd>{{ row.value }}</dd>
+            </div>
+          }
+        </dl>
+      } @empty {
+        <p class="ckyc-validated__empty">The validate response returned no details to show.</p>
+      }
+    </div>
+    @if (photoSource(); as source) {
+      <aside class="ckyc-validated__photo">
+        <img class="ckyc-validated__photo-image" [src]="source" alt="CKYC photo" />
+      </aside>
+    }
+  </div>
+</article>

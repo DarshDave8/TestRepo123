@@ -21,6 +21,12 @@ export class NonOtpAuthenticationComponent implements OnInit {
   readonly authFactor = AuthFactor;
 
   ngOnInit(): void {
+    // Keep a completed DV manual attempt when this screen is recreated.
+    if (
+      this.authState().activeMode !== AuthenticationMode.MANUAL ||
+      (this.authState().applicableModes.includes(AuthenticationMode.FACEAUTH) &&
+        this.consentAttempts().some((attempt) => attempt.consentType === AuthenticationMode.MANUAL))
+    ) return;
     this.authStore.triggerConsent()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe();

@@ -21,6 +21,11 @@ export class CkycFaceAuthenticationComponent implements OnInit {
   readonly authFactor = AuthFactor;
 
   ngOnInit(): void {
+    // Recreating this screen must not send OTP or restart a previous face attempt.
+    if (
+      this.authState().activeMode !== AuthenticationMode.FACEAUTH ||
+      this.consentAttempts().some((attempt) => attempt.consentType === AuthenticationMode.FACEAUTH)
+    ) return;
     this.authStore.triggerConsent()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe();

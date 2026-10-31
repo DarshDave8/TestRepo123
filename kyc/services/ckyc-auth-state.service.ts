@@ -140,6 +140,14 @@ export class CkycAuthStateService {
     ) {
       this.currentFactor = this.nextFactor(null);
     }
+    if (
+      this.authState().activeMode === AuthenticationMode.FACEAUTH &&
+      this.isOtpWithFaceMode() && CKYC_DV_FACTOR_FLAGS.masterEnabled &&
+      this.currentFactor === null
+    ) {
+      // Master ON with no enabled factors goes directly to the Trigger OTP step.
+      return defer(() => this.handleAuthFailure()).pipe(takeUntilDestroyed(this.destroyRef));
+    }
     let payload = {
       attemptId: this.authState().attemptId!,
       consentType: this.authState().activeMode!,
@@ -152,8 +160,8 @@ export class CkycAuthStateService {
       payload = { ...payload, mobileNumber: this.otpState().mobileNumber };
     }
     // this.authState.update((s) => ({ ...s, activeMode: payload.consentType }));
-    this.otpState.update((s) => ({ ...s, loading: true, error: null }));
     return defer(() => {
+      this.otpState.update((s) => ({ ...s, loading: true, error: null }));
       const attemptId = payload.searchAttemptedPhase === SearchAttemptedPhase.DIGITAL_VERIFICATION
         ? ++this.nextConsentAttemptId
         : null;
@@ -188,6 +196,7 @@ export class CkycAuthStateService {
             generated: true,
             expiresAt: Date.now() + CKYC_OTP_TTL_SECONDS * 1000,
           }));
+          if (this.isOtpWithFaceMode()) this.flow.goToStep('otp');
           // SOURCE GAP: the exact counter update and closing lines around 145-149
           // are partially cropped in the provided photographs.
         }
@@ -198,6 +207,11 @@ export class CkycAuthStateService {
         return of(false);
       }),
       finalize(() => {
+        // A failed call may have already started the next DV factor request.
+        if (
+          (this.isOtpWithFaceMode() || this.isManualWithFaceMode()) &&
+          this.consentAttempts().some((attempt) => attempt.status === 'Calling')
+        ) return;
         this.otpState.update((s) => ({ ...s, loading: false }));
       }),
       takeUntilDestroyed(this.destroyRef),

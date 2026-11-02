@@ -1,23 +1,30 @@
-// Angular Material 3 system tokens (--mat-sys-*) come from mat.theme() (v19+).
-// Fallbacks are M3 baseline light values, used only if those tokens aren't emitted.
+// Colours: Material roles come from your theme (--mat-sys-*); brand colours
+// (navy title, teal info) are local because M3 has no role for them.
+// Hex values were sampled from screenshots — replace with your brand values.
 
 :host {
+  --ckyc-title: #2b2d5c;
+  --ckyc-text: var(--mat-sys-on-surface, #2e3040);
+  --ckyc-card: var(--mat-sys-surface-container-lowest, #ffffff);
+  --ckyc-border: var(--mat-sys-outline-variant, #dde1ea);
+  --ckyc-info-bg: #d5edf3;
+  --ckyc-info-text: #23435c;
+  --ckyc-radius: 12px;
+  --ckyc-radius-sm: 6px;
+
   display: block;
 }
 
+// Not a card on purpose: its children (consent overview, Search Criteria,
+// Enquiry history) are already cards, so this only spaces them.
 .dv-flow {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding: 24px;
-  background: var(--mat-sys-surface-container-low, #f7f2fa);
-  color: var(--mat-sys-on-surface, #1d1b20);
-  border: 1px solid var(--mat-sys-outline-variant, #cac4d0);
-  border-radius: var(--mat-sys-corner-large, 16px);
-  font: var(--mat-sys-body-medium, 400 0.875rem / 1.25rem Roboto, sans-serif);
-  letter-spacing: var(--mat-sys-body-medium-tracking, 0.016rem);
+  gap: 24px;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--ckyc-text);
 
-  // Child components render as inline host elements by default
   &__overview,
   &__child {
     display: block;
@@ -26,7 +33,7 @@
   &__body {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 24px;
 
     &:empty {
       display: none;
@@ -34,23 +41,21 @@
   }
 
   &__consent {
-    padding: 8px 16px 8px 4px;
-    background: var(--mat-sys-secondary-container, #e8def8);
-    color: var(--mat-sys-on-secondary-container, #1d192b);
-    border-radius: var(--mat-sys-corner-medium, 12px);
+    padding: 10px 16px 10px 6px;
+    background: var(--ckyc-info-bg);
+    border-radius: var(--ckyc-radius-sm);
   }
 
   &__consent-checkbox {
-    --mat-checkbox-label-text-color: var(--mat-sys-on-secondary-container, #1d192b);
+    --mat-checkbox-label-text-color: var(--ckyc-info-text);
     --mat-checkbox-label-text-size: 0.875rem;
     --mat-checkbox-label-text-line-height: 1.25rem;
+    --mat-checkbox-label-text-weight: 500;
   }
 
   &__footer {
     display: flex;
     justify-content: flex-end;
-    padding-top: 16px;
-    border-top: 1px solid var(--mat-sys-outline-variant, #cac4d0);
   }
 
   &__action {
@@ -58,7 +63,6 @@
   }
 
   @media (max-width: 599.98px) {
-    padding: 16px;
     gap: 16px;
 
     &__action {
@@ -72,11 +76,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 16px 20px;
-  background: var(--mat-sys-surface-container-low, #f7f2fa);
-  color: var(--mat-sys-on-surface, #1d1b20);
-  border: 1px solid var(--mat-sys-outline-variant, #cac4d0);
-  border-radius: var(--mat-sys-corner-large, 16px);
+  padding: 16px 24px;
+  background: var(--ckyc-card);
+  border: 1px solid var(--ckyc-border);
+  border-radius: var(--ckyc-radius);
 
   &__meta {
     display: flex;
@@ -86,24 +89,35 @@
   }
 
   &__label {
-    font: var(--mat-sys-label-medium, 500 0.75rem / 1rem Roboto, sans-serif);
-    letter-spacing: var(--mat-sys-label-medium-tracking, 0.031rem);
-    color: var(--mat-sys-on-surface-variant, #49454f);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ckyc-title);
   }
 
   &__value {
-    font: var(--mat-sys-title-medium, 500 1rem / 1.5rem Roboto, sans-serif);
+    font-size: 1rem;
+    line-height: 1.5rem;
+    font-weight: 500;
     letter-spacing: 0.04em;
     font-variant-numeric: tabular-nums;
+    color: var(--ckyc-text);
     overflow-wrap: anywhere;
   }
 
   &__chip {
     flex-shrink: 0;
-    padding: 4px 12px;
-    font: var(--mat-sys-label-medium, 500 0.75rem / 1rem Roboto, sans-serif);
-    background: var(--mat-sys-primary-container, #eaddff);
-    color: var(--mat-sys-on-primary-container, #21005d);
-    border-radius: var(--mat-sys-corner-full, 9999px);
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 12px;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 600;
+    white-space: nowrap;
+    background: var(--ckyc-info-bg);
+    color: var(--ckyc-info-text);
   }
 }

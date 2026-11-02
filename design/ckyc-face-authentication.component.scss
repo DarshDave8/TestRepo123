@@ -1,0 +1,155 @@
+// Angular Material 3 system tokens (--mat-sys-*), with M3 baseline light fallbacks.
+// M3 has no "success" role, so success colours are local tokens: override them in
+// your theme file (including dark mode) if you have a brand green.
+
+:host {
+  --consent-success-container: #c8ecd0;
+  --consent-on-success-container: #0b3d1c;
+
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.consent-alert {
+  margin: 0;
+  padding: 12px 16px;
+  background: var(--mat-sys-error-container, #f9dedc);
+  color: var(--mat-sys-on-error-container, #410e0b);
+  border-radius: var(--mat-sys-corner-medium, 12px);
+  font: var(--mat-sys-body-medium, 400 0.875rem / 1.25rem Roboto, sans-serif);
+}
+
+// Scroll container: keeps the table usable on narrow screens
+.consent-status {
+  overflow-x: auto;
+  background: var(--mat-sys-surface, #fef7ff);
+  border: 1px solid var(--mat-sys-outline-variant, #cac4d0);
+  border-radius: var(--mat-sys-corner-large, 16px);
+
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-primary, #6750a4);
+    outline-offset: 2px;
+  }
+}
+
+.consent-table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+  color: var(--mat-sys-on-surface, #1d1b20);
+  font: var(--mat-sys-body-medium, 400 0.875rem / 1.25rem Roboto, sans-serif);
+  letter-spacing: var(--mat-sys-body-medium-tracking, 0.016rem);
+
+  &__caption {
+    caption-side: top;
+    padding: 16px 16px 12px;
+    text-align: left;
+    font: var(--mat-sys-title-medium, 500 1rem / 1.5rem Roboto, sans-serif);
+  }
+
+  th,
+  td {
+    padding: 12px 16px;
+    text-align: left;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--mat-sys-outline-variant, #cac4d0);
+  }
+
+  thead th {
+    background: var(--mat-sys-surface-container, #f3edf7);
+    color: var(--mat-sys-on-surface-variant, #49454f);
+    font: var(--mat-sys-label-large, 500 0.875rem / 1.25rem Roboto, sans-serif);
+    white-space: nowrap;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  tbody tr:hover td {
+    background: var(--mat-sys-surface-container-low, #f7f2fa);
+  }
+
+  // The pending "Trigger OTP" row is the next step, so it gets a quiet highlight
+  &__row--pending td,
+  tbody &__row--pending:hover td {
+    background: var(--mat-sys-surface-container-low, #f7f2fa);
+  }
+
+  &__index {
+    width: 48px;
+    color: var(--mat-sys-on-surface-variant, #49454f);
+    font-variant-numeric: tabular-nums;
+  }
+
+  th.consent-table__action,
+  td.consent-table__action {
+    width: 1%;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  &__none {
+    padding-inline-end: 16px;
+    color: var(--mat-sys-on-surface-variant, #49454f);
+  }
+}
+
+.consent-request {
+  &__type {
+    display: block;
+    font-weight: 500;
+  }
+
+  &__factor {
+    display: block;
+    color: var(--mat-sys-on-surface-variant, #49454f);
+    font: var(--mat-sys-body-small, 400 0.75rem / 1rem Roboto, sans-serif);
+
+    &:empty {
+      display: none;
+    }
+  }
+}
+
+// Status pill: neutral by default, so statuses other than Success/Failed still look intentional
+.consent-result {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 10px;
+  background: var(--mat-sys-surface-container-high, #ece6f0);
+  color: var(--mat-sys-on-surface-variant, #49454f);
+  border-radius: var(--mat-sys-corner-full, 9999px);
+  font: var(--mat-sys-label-medium, 500 0.75rem / 1rem Roboto, sans-serif);
+  white-space: nowrap;
+
+  &::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  &--success {
+    background: var(--consent-success-container);
+    color: var(--consent-on-success-container);
+  }
+
+  &--failed {
+    background: var(--mat-sys-error-container, #f9dedc);
+    color: var(--mat-sys-on-error-container, #410e0b);
+  }
+
+  &--pending {
+    background: var(--mat-sys-primary-container, #eaddff);
+    color: var(--mat-sys-on-primary-container, #21005d);
+  }
+}
+
+.consent-actions {
+  display: flex;
+  justify-content: flex-start;
+}

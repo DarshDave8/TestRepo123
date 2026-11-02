@@ -1,10 +1,24 @@
-// Angular Material 3 system tokens (--mat-sys-*), with M3 baseline light fallbacks.
-// M3 has no "success" role, so success colours are local tokens: override them in
-// your theme file (including dark mode) if you have a brand green.
+// Colours: Material roles come from your theme (--mat-sys-*); brand colours
+// (navy title, success green) are local because M3 has no role for them.
+// Hex values were sampled from screenshots — replace with your brand values.
 
 :host {
-  --consent-success-container: #c8ecd0;
-  --consent-on-success-container: #0b3d1c;
+  --ckyc-title: #2b2d5c;
+  --ckyc-text: var(--mat-sys-on-surface, #2e3040);
+  --ckyc-text-muted: var(--mat-sys-on-surface-variant, #676b7c);
+  --ckyc-card: var(--mat-sys-surface-container-lowest, #ffffff);
+  --ckyc-card-alt: var(--mat-sys-surface-container-low, #f6f7fb);
+  --ckyc-head: var(--mat-sys-surface-container, #f1f2f7);
+  --ckyc-border: var(--mat-sys-outline-variant, #dde1ea);
+  --ckyc-focus: var(--mat-sys-primary, #6a55a8);
+  --ckyc-success-bg: #e1f3e5;
+  --ckyc-success-text: #2f7a4a;
+  --ckyc-error-bg: var(--mat-sys-error-container, #fde4e4);
+  --ckyc-error-text: var(--mat-sys-on-error-container, #9b1c22);
+  --ckyc-pending-bg: var(--mat-sys-primary-container, #ece6f7);
+  --ckyc-pending-text: var(--mat-sys-on-primary-container, #3b2a6e);
+  --ckyc-radius: 12px;
+  --ckyc-radius-sm: 6px;
 
   display: flex;
   flex-direction: column;
@@ -14,21 +28,22 @@
 .consent-alert {
   margin: 0;
   padding: 12px 16px;
-  background: var(--mat-sys-error-container, #f9dedc);
-  color: var(--mat-sys-on-error-container, #410e0b);
-  border-radius: var(--mat-sys-corner-medium, 12px);
-  font: var(--mat-sys-body-medium, 400 0.875rem / 1.25rem Roboto, sans-serif);
+  border-radius: var(--ckyc-radius-sm);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  background: var(--ckyc-error-bg);
+  color: var(--ckyc-error-text);
 }
 
-// Scroll container: keeps the table usable on narrow screens
+// Card-styled, keyboard-focusable scroll container
 .consent-status {
   overflow-x: auto;
-  background: var(--mat-sys-surface, #fef7ff);
-  border: 1px solid var(--mat-sys-outline-variant, #cac4d0);
-  border-radius: var(--mat-sys-corner-large, 16px);
+  background: var(--ckyc-card);
+  border: 1px solid var(--ckyc-border);
+  border-radius: var(--ckyc-radius);
 
   &:focus-visible {
-    outline: 2px solid var(--mat-sys-primary, #6750a4);
+    outline: 2px solid var(--ckyc-focus);
     outline-offset: 2px;
   }
 }
@@ -37,15 +52,18 @@
   width: 100%;
   min-width: 560px;
   border-collapse: collapse;
-  color: var(--mat-sys-on-surface, #1d1b20);
-  font: var(--mat-sys-body-medium, 400 0.875rem / 1.25rem Roboto, sans-serif);
-  letter-spacing: var(--mat-sys-body-medium-tracking, 0.016rem);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--ckyc-text);
 
   &__caption {
     caption-side: top;
-    padding: 16px 16px 12px;
+    padding: 20px 20px 12px;
     text-align: left;
-    font: var(--mat-sys-title-medium, 500 1rem / 1.5rem Roboto, sans-serif);
+    font-size: 1.125rem;
+    line-height: 1.5rem;
+    font-weight: 600;
+    color: var(--ckyc-title);
   }
 
   th,
@@ -53,13 +71,17 @@
     padding: 12px 16px;
     text-align: left;
     vertical-align: middle;
-    border-bottom: 1px solid var(--mat-sys-outline-variant, #cac4d0);
+    border-bottom: 1px solid var(--ckyc-border);
   }
 
   thead th {
-    background: var(--mat-sys-surface-container, #f3edf7);
-    color: var(--mat-sys-on-surface-variant, #49454f);
-    font: var(--mat-sys-label-large, 500 0.875rem / 1.25rem Roboto, sans-serif);
+    background: var(--ckyc-head);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ckyc-title);
     white-space: nowrap;
   }
 
@@ -68,18 +90,17 @@
   }
 
   tbody tr:hover td {
-    background: var(--mat-sys-surface-container-low, #f7f2fa);
+    background: var(--ckyc-card-alt);
   }
 
   // The pending "Trigger OTP" row is the next step, so it gets a quiet highlight
-  &__row--pending td,
-  tbody &__row--pending:hover td {
-    background: var(--mat-sys-surface-container-low, #f7f2fa);
+  tbody tr.consent-table__row--pending td {
+    background: var(--ckyc-card-alt);
   }
 
   &__index {
     width: 48px;
-    color: var(--mat-sys-on-surface-variant, #49454f);
+    color: var(--ckyc-text-muted);
     font-variant-numeric: tabular-nums;
   }
 
@@ -92,7 +113,7 @@
 
   &__none {
     padding-inline-end: 16px;
-    color: var(--mat-sys-on-surface-variant, #49454f);
+    color: var(--ckyc-text-muted);
   }
 }
 
@@ -104,8 +125,9 @@
 
   &__factor {
     display: block;
-    color: var(--mat-sys-on-surface-variant, #49454f);
-    font: var(--mat-sys-body-small, 400 0.75rem / 1rem Roboto, sans-serif);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    color: var(--ckyc-text-muted);
 
     &:empty {
       display: none;
@@ -113,39 +135,34 @@
   }
 }
 
-// Status pill: neutral by default, so statuses other than Success/Failed still look intentional
+// Status badge, styled like your "ACTIVE" badge
 .consent-result {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 2px 10px;
-  background: var(--mat-sys-surface-container-high, #ece6f0);
-  color: var(--mat-sys-on-surface-variant, #49454f);
-  border-radius: var(--mat-sys-corner-full, 9999px);
-  font: var(--mat-sys-label-medium, 500 0.75rem / 1rem Roboto, sans-serif);
+  padding: 3px 10px;
+  border-radius: var(--ckyc-radius-sm);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   white-space: nowrap;
-
-  &::before {
-    content: "";
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: currentColor;
-  }
+  background: var(--ckyc-head);
+  color: var(--ckyc-text-muted);
 
   &--success {
-    background: var(--consent-success-container);
-    color: var(--consent-on-success-container);
+    background: var(--ckyc-success-bg);
+    color: var(--ckyc-success-text);
   }
 
   &--failed {
-    background: var(--mat-sys-error-container, #f9dedc);
-    color: var(--mat-sys-on-error-container, #410e0b);
+    background: var(--ckyc-error-bg);
+    color: var(--ckyc-error-text);
   }
 
   &--pending {
-    background: var(--mat-sys-primary-container, #eaddff);
-    color: var(--mat-sys-on-primary-container, #21005d);
+    background: var(--ckyc-pending-bg);
+    color: var(--ckyc-pending-text);
   }
 }
 

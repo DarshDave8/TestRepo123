@@ -1,0 +1,69 @@
+@if (isShowCkycFlow()) {
+  <section class="dv-flow">
+    @if (leadDetails()?.customerProfile?.profileProvider === "MANUAL") {
+      <app-ckyc-consent-overview class="dv-flow__overview" />
+
+      @if (isShowEnquiries) {
+        <div class="dv-flow__body">
+          @if (validatedDetails(); as details) {
+            <app-ckyc-validated-card [details]="details" class="dv-flow__child" />
+          } @else {
+            @if (leadDetails()) {
+              <app-ckyc-onboarding
+                class="dv-flow__child"
+                [searchAttemptedPhase]="searchAttemptedPhase()!"
+                [leadId]="leadDetails()?.leadId"
+                (customerBasicDetailsFetch)="onCustomerBasicDetailsFetch($event)"
+              />
+
+              @if (flowState.displayedEnquiries().length > 0 && !flowState.isAtleastOneOVDRecordPresent()) {
+                <div class="dv-flow__consent">
+                  <!-- (change), not (click): (click) on mat-checkbox fires twice when the label text is clicked -->
+                  <mat-checkbox
+                    id="consentCheckbox"
+                    class="dv-flow__consent-checkbox ckyc-not-applicable"
+                    (change)="toggleEnableSubmit()"
+                  >
+                    I have reviewed the provided information and confirmed that none of these records
+                    pertains to the customer.
+                  </mat-checkbox>
+                </div>
+              }
+            }
+          }
+        </div>
+      }
+    }
+
+    <div class="dv-flow__footer">
+      <button
+        mat-flat-button
+        class="dv-flow__action"
+        [disabled]="!sharedService.isDvCkycSubmitEnabled()"
+        (click)="onSubmit()"
+      >
+        Submit CKYC
+      </button>
+    </div>
+  </section>
+} @else if (leadDetails()?.customerProfile?.profileProvider === "CKYC") {
+  <div class="dv-ckyc-summary">
+    <div class="dv-ckyc-summary__meta">
+      <span class="dv-ckyc-summary__label">CKYC number</span>
+      <span class="dv-ckyc-summary__value">
+        {{ leadDetails()?.customerProfile?.ckycDetails?.ckycNumber ?? "—" }}
+      </span>
+    </div>
+    <span class="dv-ckyc-summary__chip">CKYC</span>
+  </div>
+} @else if (leadDetails()?.customerProfile?.profileProvider === "AADHAAR") {
+  <div class="dv-ckyc-summary">
+    <div class="dv-ckyc-summary__meta">
+      <span class="dv-ckyc-summary__label">CKYC number</span>
+      <span class="dv-ckyc-summary__value">
+        {{ leadDetails()?.customerProfile?.ckycDetails?.ckycNumber ?? "—" }}
+      </span>
+    </div>
+    <span class="dv-ckyc-summary__chip">Aadhaar</span>
+  </div>
+}

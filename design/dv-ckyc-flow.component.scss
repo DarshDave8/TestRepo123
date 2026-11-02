@@ -1,0 +1,109 @@
+// Angular Material 3 system tokens (--mat-sys-*) come from mat.theme() (v19+).
+// Fallbacks are M3 baseline light values, used only if those tokens aren't emitted.
+
+:host {
+  display: block;
+}
+
+.dv-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+  background: var(--mat-sys-surface-container-low, #f7f2fa);
+  color: var(--mat-sys-on-surface, #1d1b20);
+  border: 1px solid var(--mat-sys-outline-variant, #cac4d0);
+  border-radius: var(--mat-sys-corner-large, 16px);
+  font: var(--mat-sys-body-medium, 400 0.875rem / 1.25rem Roboto, sans-serif);
+  letter-spacing: var(--mat-sys-body-medium-tracking, 0.016rem);
+
+  // Child components render as inline host elements by default
+  &__overview,
+  &__child {
+    display: block;
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    &:empty {
+      display: none;
+    }
+  }
+
+  &__consent {
+    padding: 8px 16px 8px 4px;
+    background: var(--mat-sys-secondary-container, #e8def8);
+    color: var(--mat-sys-on-secondary-container, #1d192b);
+    border-radius: var(--mat-sys-corner-medium, 12px);
+  }
+
+  &__consent-checkbox {
+    --mat-checkbox-label-text-color: var(--mat-sys-on-secondary-container, #1d192b);
+    --mat-checkbox-label-text-size: 0.875rem;
+    --mat-checkbox-label-text-line-height: 1.25rem;
+  }
+
+  &__footer {
+    display: flex;
+    justify-content: flex-end;
+    padding-top: 16px;
+    border-top: 1px solid var(--mat-sys-outline-variant, #cac4d0);
+  }
+
+  &__action {
+    min-width: 160px;
+  }
+
+  @media (max-width: 599.98px) {
+    padding: 16px;
+    gap: 16px;
+
+    &__action {
+      width: 100%;
+    }
+  }
+}
+
+.dv-ckyc-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--mat-sys-surface-container-low, #f7f2fa);
+  color: var(--mat-sys-on-surface, #1d1b20);
+  border: 1px solid var(--mat-sys-outline-variant, #cac4d0);
+  border-radius: var(--mat-sys-corner-large, 16px);
+
+  &__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  &__label {
+    font: var(--mat-sys-label-medium, 500 0.75rem / 1rem Roboto, sans-serif);
+    letter-spacing: var(--mat-sys-label-medium-tracking, 0.031rem);
+    color: var(--mat-sys-on-surface-variant, #49454f);
+  }
+
+  &__value {
+    font: var(--mat-sys-title-medium, 500 1rem / 1.5rem Roboto, sans-serif);
+    letter-spacing: 0.04em;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+
+  &__chip {
+    flex-shrink: 0;
+    padding: 4px 12px;
+    font: var(--mat-sys-label-medium, 500 0.75rem / 1rem Roboto, sans-serif);
+    background: var(--mat-sys-primary-container, #eaddff);
+    color: var(--mat-sys-on-primary-container, #21005d);
+    border-radius: var(--mat-sys-corner-full, 9999px);
+  }
+}

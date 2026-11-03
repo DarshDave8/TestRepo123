@@ -37,7 +37,6 @@ import { CkycEnquiryDetailsComponent } from './ckyc-enquiry-list/ckyc-enquiry-de
     CkycErrorAlertComponent,
     CkycEnquiryDetailsComponent,
   ],
-  providers: [CkycFlowStateService, CkycAuthStateService],
   templateUrl: './ckyc-onboarding.component.html',
   styleUrl: './ckyc-onboarding.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -74,8 +73,16 @@ export class CkycOnboardingComponent implements OnInit {
         });
       }
     });
+    // The flow and auth services are app-wide, so leaving the page resets them for the next visit.
     this.destroyRef.onDestroy(() => {
       this.ckycSharedStateService.setManualVerificationEnabled(false);
+      if (this.searchAttemptedPhase() === SearchAttemptedPhase.PROFILE_CREATION) {
+        this.flow.activeMatchSelection.set(null);
+        this.flow.goToStep('search');
+      }
+      this.flow.enquiryError.set(null);
+      this.flow.historyError.set(null);
+      this.ckycAuthState.resetAuth();
     });
   }
   ngOnInit(): void {

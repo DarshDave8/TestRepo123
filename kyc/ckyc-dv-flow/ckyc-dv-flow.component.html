@@ -1,32 +1,44 @@
-<!-- Recovered from screenshot 147112 (right pane).
-     CAUTION: the original photo had a hard-coded leadId, which is redacted in this
-     public archival copy. Replace only from an authorized original source. -->
-<div class="container">
-  @if (leadDetails()?.customerProfile?.profileProvider === "MANUAL") {
-    <app-ckyc-consent-overview></app-ckyc-consent-overview>
-    @if (validatedDetails(); as details) {
-      <!-- Consent validated: show the fetched details only; the onboarding widget (and its table) is removed. -->
-      <app-ckyc-validated-card [details]="details" />
-    } @else {
-      <app-ckyc-onboarding [searchAttemptedPhase]="searchAttemptedPhase()"
-        leadId="[REDACTED_LEAD_ID]"
-        (customerBasicDetailsFetch)="onCustomerBasicDetailsFetch($event)"
-      />
+<!-- From commit 9689250e (diff photograph, 2026-11-03). -->
+@if (isShowCkycFlow()) {
+  <div class="dv-flow">
+    @if (leadDetails()?.customerProfile?.profileProvider === "MANUAL") {
+      <app-ckyc-consent-overview></app-ckyc-consent-overview>
+      @if (isShowEnquiries) {
+        @if (validatedDetails(); as details) {
+          <app-ckyc-validated-card [details]="details" class="dv-flow__child" />
+        } @else {
+          @if (leadDetails()) {
+            <app-ckyc-onboarding
+              [searchAttemptedPhase]="searchAttemptedPhase()!"
+              [leadId]="leadDetails()?.leadId"
+              (customerBasicDetailsFetch)="onCustomerBasicDetailsFetch($event)"
+              class="dv-flow__child"
+            />
+            @if (flowState.displayedEnquiries().length > 0 && !flowState.isAtleastOneOVDRecordPresent()) {
+              <div class="dv-flow__checkbox-container">
+                <input id="consentCheckbox" type="checkbox" (click)="toggleEnableSubmit()" />
+                <!-- 9689250e had two class attributes on this label; merged into one. -->
+                <label class="ckyc-not-applicable dv-flow__checkbox-text" for="consentCheckbox"
+                  >I have reviewed the provided information and confirmed that none of these records pertains to the
+                  customer.
+                </label>
+              </div>
+            }
+          }
+        }
+      }
     }
-    <label class="ckyc-not-applicable">
-      <input type="checkbox" />
-      It doesn't pertain to me
-    </label>
-
-    @if (leadDetails()?.isCkyc2AttemptedByCustomer) {}
-    <!-- @else {
-      <app-ckyc-flow />
-    } -->
-  } @else if (leadDetails()?.customerProfile?.profileProvider === "CKYC") {
-    Display CKYC : {{ leadDetails()?.customerProfile?.ckycDetails?.ckycNumber }}
-  } @else if (leadDetails()?.customerProfile?.profileProvider === "AADHAAR") {
-    Display CKYC : {{ leadDetails()?.customerProfile?.ckycDetails?.ckycNumber }}
-  }
-</div>
-<!-- SOURCE WARNING: the screenshot displays an apparently unclosed
-     <app-ckyc-onboarding> start tag. That anomaly is preserved here. -->
+    <button
+      mat-flat-button
+      [disabled]="!sharedService.isDvCkycSubmitEnabled()"
+      class="dv-flow__action"
+      (click)="onSubmit()"
+    >
+      Submit CKYC
+    </button>
+  </div>
+} @else if (leadDetails()?.customerProfile?.profileProvider === "CKYC") {
+  Display CKYC : {{ leadDetails()?.customerProfile?.ckycDetails?.ckycNumber }}
+} @else if (leadDetails()?.customerProfile?.profileProvider === "AADHAAR") {
+  Display CKYC : {{ leadDetails()?.customerProfile?.ckycDetails?.ckycNumber }}
+}

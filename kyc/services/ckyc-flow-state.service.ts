@@ -1,8 +1,10 @@
-// Screenshot transcription: images 3 and 4 (2026-10-29).
+// Screenshot transcription: images 3 and 4 (2026-10-29), plus the DV submit logic of commit 9689250e.
 // SOURCE GAP: not every original line is visible. Do not treat this as build-ready.
+// SOURCE GAP: the real file also has triggerEnquiries() and triggerEnquiriesResponse (seen only in part in
+// 9689250e); they are not transcribed here.
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Subject, finalize, type Observable } from 'rxjs';
+import { Subject, catchError, finalize, map, of, switchMap, type Observable } from 'rxjs';
 import { CkycOnboardingService } from './ckyc-onboarding.service';
 import {
   CkycSearchAction,
@@ -22,10 +24,13 @@ import { ICkycEnquiryListResponseBody, ICkycSearchResponse } from '../models/cky
 import { CkycEnquiriesRequest, CkycSearchRequest } from '../models/ckyc-search-request.model';
 import { ICustomerBasicDetails } from '../../../model/customer-basic-details.model';
 import { CkycSharedStateService } from './ckyc-shared-state.service';
+import { ISubmitCkycRequest, IUpdateEnquiry, IUpdateEnquiryRequest } from '../models/ckyc-consent-request.model';
 
 type ServiceSearchRequest = Parameters<CkycOnboardingService['enquireCkyc']>[0];
 
-@Injectable()
+// App-wide since 9689250e removed the onboarding component's providers (the DV flow screen injects it too).
+// INFERRED: the real decorator was not photographed.
+@Injectable({ providedIn: 'root' })
 export class CkycFlowStateService {
   private readonly destroyRef = inject(DestroyRef);
   private readonly ckycApi = inject(CkycOnboardingService);
@@ -39,6 +44,7 @@ export class CkycFlowStateService {
   // base signals
   readonly enquiries = signal<readonly ICkycEnquiryListResponseBody[]>([]);
   readonly activeMatchSelection = signal<IActiveMatchSelection | null>(null);
+  readonly isTriggerEnquiriesSuccess = signal<boolean>(false); // set by triggerEnquiries() (not transcribed)
 
   // status signal
   readonly historyLoading = signal<boolean>(false);
@@ -70,6 +76,9 @@ export class CkycFlowStateService {
     }),
   );
 
+  readonly isAtleastOneOVDRecordPresent = computed<boolean>(() =>
+    this.enquiries().some((eachEnquiry) => eachEnquiry.enquiryRequest.searchOption === CkycSearchOption.OVD),
+  );
   readonly enquiryGroups = computed<CkycEnquiryGroups>(() => {
     const grouped: CkycEnquiryGroups = {};
     for (const enquiry of this.displayedEnquiries()) {
@@ -83,6 +92,78 @@ export class CkycFlowStateService {
     }
     return grouped;
   });
+
+  // Submit action for the CKYC flow in DV.
+  // If the user confirmed that none of the enquiries pertains to the customer, mark them so with update-enquiry
+  // first, then submit; otherwise (or when there is nothing to mark) submit directly.
+  ckycDvSubmit(): Observable<boolean> {
+    if (!this.ckycSharedStateService.isCkycConsentChecked() || this.enquiries().length === 0) {
+      return this.submitCkyc();
+    }
+    const updateEnquiryArray: IUpdateEnquiry[] = [];
+    this.enquiries().forEach((eachResult) => {
+      eachResult.results.forEach((eachEnquiry) => {
+        if (eachEnquiry) {
+          updateEnquiryArray.push({
+            enquiryId: eachEnquiry.enquiryId!,
+            enquiryResponseId: eachEnquiry.enquiryResponseId!,
+            isEnquiryBelongsCustomer: !this.ckycSharedStateService.isCkycConsentChecked(),
+          });
+        }
+      });
+    });
+    const updateEnquiryRequest: IUpdateEnquiryRequest = {
+      enquiries: updateEnquiryArray,
+      searchAttemptedPhase: this.ckycSharedStateService.searchAttemptedPhase()!,
+      leadId: this.ckycSharedStateService.leadDetails()?.leadId!,
+    };
+    return this.ckycApi.updateEnquiries(updateEnquiryRequest).pipe(
+      // Submit only after the update succeeded.
+      switchMap((res) => (res && res.success ? this.submitCkyc() : of(false))),
+      catchError(() => {
+        this.enquiryError.set('Unable to complete the request');
+        return of(false);
+      }),
+      finalize(() => this.historyLoading.set(false)),
+      takeUntilDestroyed(this.destroyRef),
+    );
+  }
+
+  submitCkyc(): Observable<boolean> {
+    const submitRequest: ISubmitCkycRequest = {
+      enquiryId: '',
+      enquiryResponseId: null,
+      attemptId: null,
+      leadId: this.ckycSharedStateService.leadDetails()?.leadId!, // both paths (9689250e set it only for a match)
+    };
+    if (this.activeMatchSelection()) {
+      submitRequest.enquiryId = this.activeMatchSelection()?.enquiryId!;
+      submitRequest.enquiryResponseId = this.activeMatchSelection()?.enquiryResponseId!;
+      submitRequest.attemptId = this.activeMatchSelection()?.attemptId!;
+    } else {
+      // No active match selection (non-OVD): take the enquiry id of any OVD search.
+      this.enquiries().some((enquiry) => {
+        if (enquiry.enquiryRequest.searchOption === CkycSearchOption.OVD) {
+          enquiry.results.some((eachResult) => {
+            if (eachResult.enquiryId) {
+              submitRequest.enquiryId = eachResult.enquiryId;
+              return true;
+            } else return false;
+          });
+          return true;
+        } else return false;
+      });
+    }
+    return this.ckycApi.submit(submitRequest).pipe(
+      map((res) => Boolean(res && res.success)),
+      catchError(() => {
+        this.enquiryError.set('Unable to complete the request');
+        return of(false);
+      }),
+      finalize(() => this.historyLoading.set(false)),
+      takeUntilDestroyed(this.destroyRef),
+    );
+  }
 
   loadEnquiries(): void {
     this.historyLoading.set(true);
@@ -100,7 +181,12 @@ export class CkycFlowStateService {
       .subscribe({
         next: (response) => {
           if (response?.success) {
-            this.enquiries.set(response.body);
+            if (response.body) {
+              this.enquiries.set(response.body);
+              if (response.body.length === 0) {
+                this.ckycSharedStateService.setIsDvCkycSubmitEnabled(true); // no enquiries found: enable the DV CKYC submit button
+              }
+            }
           } else {
             this.historyError.set(response?.messages ? response?.messages.join(',') : 'Unable to load CKYC enquiries.');
           }
@@ -180,7 +266,9 @@ export class CkycFlowStateService {
   emitValidatedDetails(details: ICustomerBasicDetails): void {
     this.validatedDetailsSubject.next(details);
   }
+  // Back from the auth screens: also drop the match, so a later "Submit CKYC" never sends an abandoned match.
   returnToEnquiryReceived(): void {
+    this.activeMatchSelection.set(null);
     this.stepManager.goTo('enquiryReceived');
   }
 }

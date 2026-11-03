@@ -64,3 +64,20 @@ export enum OtpIdentifierEnum {
   MOBILE = 'MOBILE',
 }
 export type OtpIdentifier = OtpIdentifierEnum; // right-hand side cut off in the photograph; INFERRED as the enum
+// DV submit (commit 9689250e): mark enquiries as not the customer's, then submit.
+export interface IUpdateEnquiry {
+  enquiryId: string;
+  enquiryResponseId: string;
+  isEnquiryBelongsCustomer: boolean;
+}
+export interface IUpdateEnquiryRequest {
+  enquiries: IUpdateEnquiry[];
+  searchAttemptedPhase: SearchAttemptedPhase;
+  leadId: string;
+}
+export interface ISubmitCkycRequest {
+  enquiryId: string;
+  enquiryResponseId: string | null;
+  attemptId: string | null;
+  leadId: string;
+}

@@ -4,12 +4,16 @@ import { Observable } from 'rxjs';
 import { NRI_FLOW } from 'src/app/constants/api.constants';
 import type {
   IGetApplicableConsentTypesRequest,
+  ISubmitCkycRequest,
   ITriggerConsentRequest,
+  IUpdateEnquiryRequest,
   IValidateConsentRequest,
 } from '../models/ckyc-consent-request.model';
 import type {
   IGetApplicableConsentTypesResponse,
+  ISubmitCkycResponse,
   ITriggerConsentResponse,
+  IUpdateEnquiryResponse,
   IValidateConsentResponse,
 } from '../models/ckyc-consent-response.model';
 import type { CkycEnquiriesRequest, CkycSearchRequest } from '../models/ckyc-search-request.model';
@@ -45,5 +49,11 @@ export class CkycOnboardingService {
   }
   triggerEnquiries(req: ITriggerEnquiriesRequest): Observable<ITriggerEnquiriesResponse> {
     return this.httpClient.post<ITriggerEnquiriesResponse>(NRI_FLOW.CKYC_FLOW_V2.TRIGGER_ENQUIRIES_URL, req);
+  }
+  updateEnquiries(req: IUpdateEnquiryRequest): Observable<IUpdateEnquiryResponse> {
+    return this.httpClient.post<IUpdateEnquiryResponse>(NRI_FLOW.CKYC_FLOW_V2.UPDATE_ENQUIRY_URL, req);
+  }
+  submit(req: ISubmitCkycRequest): Observable<ISubmitCkycResponse> {
+    return this.httpClient.post<ISubmitCkycResponse>(NRI_FLOW.CKYC_FLOW_V2.SUBMIT_URL, req);
   }
 }

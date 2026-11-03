@@ -2,6 +2,7 @@
 import type { IResponse } from 'src/app/models/base-response.model';
 import type { AuthenticationMode } from '../constants/ckyc-onboarding.constants';
 import type { ICustomerBasicDetails } from '../model/customer-basic-details.model';
+import type { IUpdateEnquiry } from './ckyc-consent-request.model';
 
 export interface IGetApplicableConsentTypesResponse extends IResponse {
   body: IGetApplicableConsentTypesResponseBody;
@@ -27,4 +28,21 @@ export interface ITriggerConsentResponseBody {
 }
 export interface IValidateConsentResponse extends IResponse {
   body: ICustomerBasicDetails;
+}
+// DV submit (commit 9689250e).
+export interface IUpdateEnquiryResponse {
+  body: IUpdateEnquiryResponseBody;
+  success: boolean;
+}
+export interface IUpdateEnquiryResponseBody {
+  enquiries: IUpdateEnquiry[];
+}
+export interface ISubmitCkycResponse {
+  body: ISubmitCkycResponseBody;
+  success: boolean;
+}
+export interface ISubmitCkycResponseBody {
+  ckycNotFoundSearchKeyInEnquiryResponse: string;
+  enquiryId: string;
+  enquiryResponseId: string;
 }

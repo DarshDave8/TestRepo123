@@ -26,6 +26,7 @@ This folder contains a **best-effort transcription**, not a verified build of an
 ## Important limitations
 - Some screenshots were clipped or blurry; uncertain sections are marked with comments such as `SOURCE GAP`. Some closing syntax was reconstructed for readability, and may differ from the exact original.
 - The original digital-verification template screenshot shows an apparently unclosed `app-ckyc-onboarding` tag. **The anomaly is preserved.**
+- `ckyc-dv-flow/` was later rebuilt from the diff of commit 9689250e (DV submit logic); lines that diff did not show are marked `SOURCE GAP`.
 - A literal lead identifier visible on the monitor was replaced with `[REDACTED_LEAD_ID]` in the public archive. Restore it only from an authorized source, not this reconstruction.
 - External constants, Angular modules, SCSS, dialog components, consent models, child components, and project infrastructure are not included unless explicitly shown in the photographs.
 - Some imports and domain types might not compile, and the images themselves show possible business-logic inconsistencies. No attempt was made to silently correct those defects.

@@ -212,9 +212,9 @@ export class CkycAuthStateService {
             response?.messages?.join(', ') || 'Unable to validate consent. Please try again.',
           );
         }
+        // Keep the queue and screens as they are: the flow is done. The host resets when it leaves the page.
         this.updateNode(node.id, { validateSuccess: true, lastError: null });
         this.flow.emitValidatedDetails(response.body);
-        this.resetAuth();
         return true;
       }),
       catchError(() => of(this.onValidateFailure(node.id, 'Unable to validate consent. Please try again.'))),
@@ -229,18 +229,20 @@ export class CkycAuthStateService {
     return node.id === this.currentNode()?.id && node.status === 'SUCCESS' && node.validateSuccess !== true;
   }
 
-  /**
-   * Back from the auth screens: stop every running call for this match (no further queued calls),
-   * clear its queue and state, and return to the enquiry list, so the next "Download Data" starts clean.
-   */
+  // Back from the auth screens: reset everything for this match and return to the enquiry list.
   cancelConsentFlow(): void {
-    this.cancelConsent$.next();
-    this.clearQueue();
     this.resetAuth();
     this.flow.returnToEnquiryReceived();
   }
 
+  /**
+   * Full reset: stop every running consent / validate call (including calls the queue started by itself),
+   * clear the queue and the auth / OTP state. The service is app-wide, so the onboarding and DV flow screens
+   * call this when they are destroyed; otherwise a late response could act on the next session.
+   */
   resetAuth(): void {
+    this.cancelConsent$.next();
+    this.clearQueue();
     this.authState.set(INITIAL_AUTH_STATE);
     this.otpState.set(INITIAL_OTP_STATE);
   }

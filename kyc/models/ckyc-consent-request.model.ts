@@ -67,10 +67,9 @@ export interface CkycConsentAttempt {
   readonly authFactor: AuthFactor | null;
   readonly status: 'Calling' | 'Success' | 'Failed' | 'Cancelled';
 }
-export type OtpIdentifier = string; // INFERRED: exact type not photographed.
-// INFERRED from ckyc-step-otp.component.ts (2026-11-03 photograph), which imports it from this file.
-// Member values are a guess; replace with the real enum.
+// Confirmed from the model photograph supplied 2026-11-03.
 export enum OtpIdentifierEnum {
   EMAIL = 'EMAIL',
   MOBILE = 'MOBILE',
 }
+export type OtpIdentifier = OtpIdentifierEnum; // right-hand side cut off in the photograph; INFERRED as the enum

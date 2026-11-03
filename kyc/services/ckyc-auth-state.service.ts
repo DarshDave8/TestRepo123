@@ -1,4 +1,5 @@
 // Screenshot transcription, compared with five additional photographs supplied on 2026-11-03; not a verified application build.
+// Refactored to a queue-driven flow: every consent call is a node in authNodes, built from AUTH_CONFIG.
 import { Injectable, inject, signal, computed, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { defer, Observable, of, Subject } from 'rxjs';
@@ -10,14 +11,13 @@ import {
   AUTH_MODE_LABELS,
   AuthenticationMode,
   AuthFactor,
-  CKYC_DV_FACTOR_FLAGS,
-  CKYC_OTP_MAX_ATTEMPTS,
   CKYC_OTP_TTL_SECONDS,
   ModeConfiguration,
   SearchAttemptedPhase,
 } from '../constants/ckyc-onboarding.constants';
 import {
   AuthDomainState,
+  AuthNodeStatus,
   ICkycAuthNodeConfig,
   ITriggerConsentRequest,
   IValidateConsentRequest,
@@ -27,36 +27,51 @@ import { CkycFlowStateService } from './ckyc-flow-state.service';
 import { CkycSharedStateService } from './ckyc-shared-state.service';
 import { CkycConsentAttempt, OtpIdentifier } from '../models/ckyc-consent-request.model';
 
+// Step 3a compatibility: today's screens still render consentAttempts. Removed in 3b.
+const ATTEMPT_STATUS: Record<Exclude<AuthNodeStatus, 'PENDING'>, CkycConsentAttempt['status']> = {
+  IN_PROGRESS: 'Calling',
+  SUCCESS: 'Success',
+  FAILED: 'Failed',
+};
+
 @Injectable({ providedIn: 'root' })
 export class CkycAuthStateService {
   private readonly ckycSharedStateService = inject(CkycSharedStateService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly ckycApi = inject(CkycOnboardingService);
   private readonly flow = inject(CkycFlowStateService);
-  private currentFactor: AuthFactor | null = null;
-  // readonly searchAttemptedPhase = signal<SearchAttemptedPhase | null>(null);
 
-  private nextConsentAttemptId = 0;
-  private readonly _consentAttempts = signal<readonly CkycConsentAttempt[]>([]);
-  readonly consentAttempts = this._consentAttempts.asReadonly();
-  // DV OTP + FACE: true once every face factor has failed and the "Trigger OTP" row must be shown.
-  // Set at the same point as the "Falling back to OTP" message, so the row can never miss it.
-  private readonly _otpFallbackPending = signal(false);
-  readonly otpFallbackPending = this._otpFallbackPending.asReadonly();
-  // Fired by cancelConsentFlow(): stops every running consent / validate call, including the
-  // follow-up calls that handleAuthFailure subscribes to (those outlive the component that started them).
+  // Fired by cancelConsentFlow(): stops every running consent / validate call, including the follow-up
+  // calls the queue starts by itself (those outlive the component that started the first one).
   private readonly cancelConsent$ = new Subject<void>();
 
   // Auth queue for the current match: one node per consent call, in fallback order (built from AUTH_CONFIG).
-  // Step 2: built for every match, but the existing flow below does not read or update it yet.
   private readonly _authNodes = signal<readonly ICkycAuthNodeConfig[]>([]);
   readonly authNodes = this._authNodes.asReadonly();
-  // Index of the node the flow is on; null = no queue.
+  // Index of the node the flow is on; null = no queue, or every node is used up.
   private readonly _currentNodeIndex = signal<number | null>(null);
   readonly currentNode = computed<ICkycAuthNodeConfig | null>(() => {
     const index = this._currentNodeIndex();
     return index === null ? null : (this._authNodes()[index] ?? null);
   });
+  // The current node waits for the user to send it (autoTrigger false), e.g. the "Trigger OTP" button.
+  readonly awaitingUserTrigger = computed(() => {
+    const node = this.currentNode();
+    return node !== null && !node.autoTrigger && (node.status === 'PENDING' || node.status === 'FAILED');
+  });
+
+  // ---- Step 3a compatibility for today's screens (removed in 3b, when the screens read the nodes) ----
+  readonly consentAttempts = computed<readonly CkycConsentAttempt[]>(() =>
+    this._authNodes()
+      .filter((node) => node.status !== 'PENDING')
+      .map((node) => ({
+        id: node.order,
+        consentType: node.mode,
+        authFactor: node.subType,
+        status: ATTEMPT_STATUS[node.status as Exclude<AuthNodeStatus, 'PENDING'>],
+      })),
+  );
+  readonly otpFallbackPending = this.awaitingUserTrigger;
 
   readonly authState = signal<AuthDomainState>({
     loading: false,
@@ -78,9 +93,8 @@ export class CkycAuthStateService {
   });
 
   /**
-   * Mode Discovery with Page/Phase Filtering Rules:
-   * - PROFILE_CREATION: Filter strictly for OTP only.
-   * - DIGITAL_VERIFICATION: Allow all backend-returned modes.
+   * Loads the modes the backend allows for this match and builds the auth queue from them.
+   * AUTH_CONFIG decides which of those modes are used per phase (Profile Creation: OTP only).
    */
   loadApplicableModes(
     enquiryId: string,
@@ -88,9 +102,6 @@ export class CkycAuthStateService {
     leadId: string | null,
     phase: SearchAttemptedPhase,
   ): Observable<boolean> {
-    this.currentFactor = null;
-    this._consentAttempts.set([]);
-    this._otpFallbackPending.set(false);
     this.clearQueue();
     this.authState.update((s) => ({ ...s, loading: true, error: null }));
     return this.ckycApi
@@ -107,19 +118,18 @@ export class CkycAuthStateService {
             this.ckycSharedStateService.setManualVerificationEnabled(true);
             return;
           }
-          const rawModes = res.body?.applicableConsentTypes || [];
           this.otpState.update((s) => ({
             ...s,
             hasMobileNumber: res.body?.hasMobileNumber,
             hasEmailAddress: res.body?.hasEmailAddress,
           }));
-          this.buildLinearQueue(phase, rawModes);
-          const { modes, activeMode } = this.determineAuthModes(rawModes, phase);
+          this.buildLinearQueue(phase, res.body?.applicableConsentTypes || []);
+          const queuedModes = [...new Set(this._authNodes().map((node) => node.mode))];
           this.authState.update((s) => ({
             ...s,
-            activeMode,
+            activeMode: this.currentNode()?.mode ?? null,
             attemptId: res.body.attemptId,
-            applicableModes: modes,
+            applicableModes: queuedModes,
           }));
         }),
         map((res) => Boolean(res?.success)),
@@ -132,302 +142,101 @@ export class CkycAuthStateService {
       );
   }
 
-  /**
-   * Resolves initial starting mode according to requirements:
-   * - DIGITAL_VERIFICATION: FACE -> OTP -> MANUAL
-   * - PROFILE_CREATION: Strictly OTP
-   */
-  resolveStartingMode(modes: AuthenticationMode[], phase: SearchAttemptedPhase): AuthenticationMode | null {
-    if (phase === 'PROFILE_CREATION') {
-      return modes.includes(AuthenticationMode.OTP) ? AuthenticationMode.OTP : null;
-    }
-
-    if (phase === SearchAttemptedPhase.DIGITAL_VERIFICATION) {
-      if (modes.includes(AuthenticationMode.OTP) && modes.includes(AuthenticationMode.FACEAUTH)) {
-        return AuthenticationMode.FACEAUTH;
-      } else if (modes.includes(AuthenticationMode.MANUAL)) {
-        return AuthenticationMode.MANUAL;
-      }
-    }
-    if (modes.includes(AuthenticationMode.FACEAUTH)) return AuthenticationMode.FACEAUTH;
-    if (modes.includes(AuthenticationMode.OTP)) return AuthenticationMode.OTP;
-    if (modes.includes(AuthenticationMode.MANUAL)) return AuthenticationMode.MANUAL;
-
-    return null;
+  // Step 3a compatibility: the enquiry details screen still asks for the starting mode. Removed in 3b.
+  resolveStartingMode(_modes: AuthenticationMode[], _phase: SearchAttemptedPhase): AuthenticationMode | null {
+    return this.currentNode()?.mode ?? null;
   }
 
+  /**
+   * Sends the consent call for the current node.
+   * - Success: the node waits for validation ("Download Data" / OTP entry).
+   * - Failure: retried by the user while the node has trigger attempts left, otherwise the queue moves on
+   *   (and sends the next node itself when that node is autoTrigger).
+   */
   triggerConsent(): Observable<boolean> {
-    console.log('DV_CHECK_TRIGGER_CONSENT', {
-      activeMode: this.authState().activeMode,
-      modes: this.authState().applicableModes,
-      phase: this.ckycSharedStateService.searchAttemptedPhase(),
-      currentFactor: this.currentFactor,
-      otpWithFace: this.isOtpWithFaceMode(),
-      manualWithFace: this.isManualWithFaceMode(),
-      flags: CKYC_DV_FACTOR_FLAGS,
-    });
-    // First consent call of a DV factor chain (FACE in OTP + FACE; PHYSICAL or FACE in PHYSICAL + FACE):
-    // start with the first enabled factor.
-    if (
-      this.currentFactor === null &&
-      ((this.authState().activeMode === AuthenticationMode.FACEAUTH && this.isOtpWithFaceMode()) ||
-        ([AuthenticationMode.MANUAL, AuthenticationMode.FACEAUTH].includes(this.authState().activeMode!) &&
-          this.isManualWithFaceMode()))
-    ) {
-      this.currentFactor = this.nextFactor(null);
-    }
-    if (
-      this.authState().activeMode === AuthenticationMode.FACEAUTH &&
-      this.isOtpWithFaceMode() &&
-      CKYC_DV_FACTOR_FLAGS.masterEnabled &&
-      this.currentFactor === null
-    ) {
-      // Master ON with no enabled factors goes directly to the Trigger OTP step.
-      return defer(() => this.handleAuthFailure()).pipe(takeUntilDestroyed(this.destroyRef));
-    }
-    // Guarantee the first call of every DV factor chain carries the first enabled factor,
-    // including PHYSICAL calls in PHYSICAL + FACE (they were going out with authFactor null).
-    if (this.currentFactor === null && this.isDvFactorChainCall()) {
-      this.currentFactor = this.nextFactor(null);
-    }
+    const node = this.currentNode();
+    if (!node) return of(false);
     let payload = {
       attemptId: this.authState().attemptId!,
-      consentType: this.authState().activeMode!,
+      consentType: node.mode,
       leadId: this.ckycSharedStateService.leadId(),
-      authFactor: this.currentFactor,
+      authFactor: node.subType,
       searchAttemptedPhase: this.ckycSharedStateService.searchAttemptedPhase(),
     } as ITriggerConsentRequest;
     if (this.otpState().mobileNumber) {
       payload = { ...payload, mobileNumber: this.otpState().mobileNumber };
     }
-    // this.authState.update((s) => ({ ...s, activeMode: payload.consentType }));
     return defer(() => {
+      this.updateNode(node.id, { status: 'IN_PROGRESS', lastError: null });
       this.otpState.update((s) => ({ ...s, loading: true, error: null }));
-      // DV OTP + FACE: every OTP (re-)trigger re-uses the one OTP row instead of adding a row per try.
-      const existingOtpRow =
-        payload.consentType === AuthenticationMode.OTP && this.isOtpWithFaceMode()
-          ? this.consentAttempts().find((attempt) => attempt.consentType === AuthenticationMode.OTP)
-          : undefined;
-      const attemptId = existingOtpRow
-        ? existingOtpRow.id
-        : payload.searchAttemptedPhase === SearchAttemptedPhase.DIGITAL_VERIFICATION
-          ? ++this.nextConsentAttemptId
-          : null;
-      if (existingOtpRow) {
-        this._consentAttempts.update((attempts) =>
-          attempts.map((attempt) => (attempt.id === existingOtpRow.id ? { ...attempt, status: 'Calling' } : attempt)),
-        );
-      } else if (attemptId !== null) {
-        this._consentAttempts.update((attempts) => [
-          ...attempts,
-          {
-            id: attemptId,
-            consentType: payload.consentType,
-            authFactor: payload.authFactor,
-            status: 'Calling',
-          },
-        ]);
-      }
-      return this.ckycApi.triggerConsent(payload).pipe(
-        // Record this request's result before handleAuthFailure starts the next one.
-        tap({
-          next: (response) => this.setConsentAttemptStatus(attemptId, response?.success ? 'Success' : 'Failed'),
-          error: () => this.setConsentAttemptStatus(attemptId, 'Failed'),
-        }),
-        finalize(() => this.setConsentAttemptStatus(attemptId, 'Cancelled')),
-      );
+      return this.ckycApi.triggerConsent(payload);
     }).pipe(
       map((response) => {
-        if (!response || !response.success) {
-          this.handleAuthFailure().subscribe();
-          // DV factor chains are not over after one failed call (next factor / FACE / OTP row follow),
-          // so only flag manual verification here outside those chains; handleAuthFailure flags it at the end.
-          if (!this.isOtpWithFaceMode() && !this.isManualWithFaceMode()) {
-            this.ckycSharedStateService.setManualVerificationEnabled(true); //error occured so set manual true
-          }
+        if (!response?.success) {
+          this.onTriggerFailure(node.id, response?.messages?.join(', ') || `${node.label} failed.`);
           return false;
         }
-        if (payload.consentType === AuthenticationMode.OTP) {
-          this.otpState.update((s) => ({
-            ...s,
-            generated: true,
-            expiresAt: Date.now() + CKYC_OTP_TTL_SECONDS * 1000,
-          }));
-          const currentOtpAttemptedCount = this.otpState().otpAttemptCount;
-          this.otpState.update((s) => ({ ...s, otpAttemptCount: currentOtpAttemptedCount + 1 }));
-        }
+        this.onTriggerSuccess(node.id);
         return true;
       }),
       catchError(() => {
-        this.handleAuthFailure().subscribe();
+        this.onTriggerFailure(node.id, `${node.label} failed.`);
         return of(false);
       }),
       finalize(() => {
-        // A failed call may have already started the next DV factor request.
-        if (
-          (this.isOtpWithFaceMode() || this.isManualWithFaceMode()) &&
-          this.consentAttempts().some((attempt) => attempt.status === 'Calling')
-        )
-          return;
-        this.otpState.update((s) => ({ ...s, loading: false }));
+        // Unsubscribed before a response (Back, or the screen closed): the call never finished.
+        if (this.findNode(node.id)?.status === 'IN_PROGRESS') this.updateNode(node.id, { status: 'PENDING' });
+        // A failed call may already have started the next node's call.
+        if (!this._authNodes().some((n) => n.status === 'IN_PROGRESS')) {
+          this.otpState.update((s) => ({ ...s, loading: false }));
+        }
       }),
       takeUntil(this.cancelConsent$),
       takeUntilDestroyed(this.destroyRef),
     );
   }
 
-  /**
-   * Fallback Manager Engine:
-   * - Face fails -> Fallback to OTP (or Manual)
-   * - OTP fails < 3 times -> Retry
-   * - OTP fails 3rd time -> Fallback to Manual (if available in backend list)
-   */
-
-  //TODO: logic to be redefined and call to be move from triggerConsent to validate consent
-  handleAuthFailure(): Observable<boolean> {
-    console.log('DV_CHECK_HANDLE_AUTH_FAILURE', {
-      activeMode: this.authState().activeMode,
-      modes: this.authState().applicableModes,
-      phase: this.ckycSharedStateService.searchAttemptedPhase(),
-      currentFactor: this.currentFactor,
-      otpWithFace: this.isOtpWithFaceMode(),
-      manualWithFace: this.isManualWithFaceMode(),
-      flags: CKYC_DV_FACTOR_FLAGS,
-    });
-    const currentMode = this.authState().activeMode;
-    const available = this.authState().applicableModes;
-    // DV without OTP: finish MANUAL factors, then FACE factors, and stop.
-    if (
-      this.isManualWithFaceMode() &&
-      (currentMode === AuthenticationMode.MANUAL || currentMode === AuthenticationMode.FACEAUTH)
-    ) {
-      if (this.currentFactor !== null) {
-        const next = this.nextFactor(this.currentFactor);
-        if (next !== null) {
-          this.currentFactor = next;
-          return this.triggerConsent();
-        }
-      }
-      this.currentFactor = null;
-      if (currentMode === AuthenticationMode.MANUAL) {
-        this.startFaceConsent();
-        return of(false);
-      }
-      this.authState.update((s) => ({ ...s, error: 'Face authentication failed. No authentication factors remain.' }));
-      this.ckycSharedStateService.setManualVerificationEnabled(true); // PHYSICAL + FACE chain exhausted
-      return of(false);
-    }
-    // Rule 1: Face Auth Failed -> Fallback to OTP or MANUAL
-    if (currentMode === AuthenticationMode.FACEAUTH) {
-      if (this.isOtpWithFaceMode()) {
-        const next = this.nextFactor(this.currentFactor);
-        if (next !== null) {
-          this.currentFactor = next;
-          return this.triggerConsent();
-        }
-        // No factor left -> clear it and use the OTP fallback below.
-        this.currentFactor = null;
-      }
-      if (available.includes(AuthenticationMode.OTP)) {
-        this.authState.update((s) => ({ ...s, error: 'Face authentication failed. Falling back to OTP.' }));
-        this.authState.update((s) => ({ ...s, activeMode: AuthenticationMode.OTP }));
-        this.otpState.update((s) => ({ ...s, generated: false, expiresAt: null }));
-        if (this.isOtpWithFaceMode()) {
-          // DV OTP + FACE: stop the face chain and show the "Trigger OTP" row; the user starts the OTP call.
-          this.showOtpFallbackRow();
-          return of(false);
-        }
-        return this.triggerConsent();
-      } else if (available.includes(AuthenticationMode.MANUAL)) {
-        this.authState.update((s) => ({ ...s, error: 'Face authentication failed. Falling back to Manual.' }));
-        this.authState.update((s) => ({ ...s, activeMode: AuthenticationMode.MANUAL }));
-        return this.triggerConsent();
-      }
-    }
-    // Rule 2: OTP Auth Failed -> Check 3-Attempt Count
-    if (currentMode === AuthenticationMode.OTP) {
-      const nextCount = this.otpState().otpAttemptCount + 1;
-      this.authState.update((s) => ({ ...s, otpAttemptCount: nextCount }));
-      if (nextCount < CKYC_OTP_MAX_ATTEMPTS) {
-        this.otpState.update((s) => ({
-          ...s,
-          error: `Invalid OTP. Attempt ${nextCount} of ${CKYC_OTP_MAX_ATTEMPTS}.`,
-        }));
-        if (this.isOtpWithFaceMode()) {
-          // DV OTP + FACE: the OTP trigger itself failed, so offer the "Trigger OTP" row again.
-          this.authState.update((s) => ({ ...s, error: 'Unable to send OTP. Please try again.' }));
-          this.showOtpFallbackRow();
-        }
-        return of(false);
-      } else {
-        this.ckycSharedStateService.setManualVerificationEnabled(true); //set manual true as max otp attempt exausted
-        if (available.includes(AuthenticationMode.MANUAL)) {
-          this.authState.update((s) => ({
-            ...s,
-            error: 'Maximum OTP attempts reached. Falling back to Manual verification.',
-          }));
-          this.authState.update((s) => ({ ...s, activeMode: AuthenticationMode.MANUAL }));
-          return this.triggerConsent();
-        } else {
-          this.authState.update((s) => ({
-            ...s,
-            error: 'Maximum OTP attempts exceeded. Manual verification is not enabled.',
-          }));
-          return of(false);
-        }
-      }
-    }
-    this.authState.update((s) => ({ ...s, error: 'Authentication request failed.' }));
-    return of(false);
-  }
-
+  // Sends the OTP again. Sends never count as OTP attempts; only failed validations do.
   resendOtp(): Observable<boolean> {
     return this.triggerConsent();
   }
 
-  /**
-   * DV OTP + FACE: the "Trigger OTP" row's button. Sends the consent call with consentType OTP
-   * (no auth factor). It sets the OTP mode itself, so it does not depend on the state left by the face chain.
-   */
+  // Step 3a compatibility: the Face screen's "Trigger OTP" / "Re-trigger OTP" buttons. Removed in 3b.
   triggerOtpFallback(): Observable<boolean> {
-    if (!this._otpFallbackPending()) return of(false);
-    this._otpFallbackPending.set(false);
-    this.currentFactor = null;
-    this.authState.update((s) => ({ ...s, activeMode: AuthenticationMode.OTP, error: null }));
-    this.otpState.update((s) => ({ ...s, generated: false, expiresAt: null, error: null }));
+    if (!this.awaitingUserTrigger()) return of(false);
+    this.authState.update((s) => ({ ...s, error: null }));
     return this.triggerConsent();
   }
 
+  /**
+   * Validates the current node. A failure counts against the node's maxValidateAttempts (null = unlimited);
+   * once used up, the queue moves on. FACEAUTH / PHYSICAL show the error and stay, so "Download Data" can be retried.
+   */
   validate(otp?: string, otpIdentifier?: OtpIdentifier): Observable<boolean> {
+    const node = this.currentNode();
+    if (!node) return of(false);
     const request: IValidateConsentRequest = {
       attemptId: this.authState().attemptId!,
-      consentType: this.authState().activeMode!,
+      consentType: node.mode,
       leadId: this.ckycSharedStateService.leadId(),
-      // consentData: { otp: otp, otpIdentifier: otpIdentifier },
       consentData: otp ? { otp, otpIdentifier } : {},
       searchAttemptedPhase: this.ckycSharedStateService.searchAttemptedPhase()!,
     };
     this.authState.update((s) => ({ ...s, loading: true, error: null }));
-    const validationFailed = (message: string): boolean => {
-      // FACEAUTH and PHYSICAL: show the error and stay on this step, so "Download Data" can be retried.
-      // A failed validate never switches the mode (OTP fallback only follows failed trigger calls).
-      if (request.consentType !== AuthenticationMode.OTP) {
-        this.authState.update((s) => ({ ...s, error: message }));
-      }
-      return false;
-    };
     return this.ckycApi.validateConsent(request).pipe(
       map((response) => {
-        if (!response || !response.success) {
-          return validationFailed(response?.messages?.join(', ') || 'Unable to validate consent. Please try again.');
+        if (!response?.success) {
+          return this.onValidateFailure(
+            node.id,
+            response?.messages?.join(', ') || 'Unable to validate consent. Please try again.',
+          );
         }
+        this.updateNode(node.id, { validateSuccess: true, lastError: null });
         this.flow.emitValidatedDetails(response.body);
         this.resetAuth();
         return true;
       }),
-      catchError(() => {
-        return of(validationFailed('Unable to validate consent. Please try again.'));
-      }),
+      catchError(() => of(this.onValidateFailure(node.id, 'Unable to validate consent. Please try again.'))),
       finalize(() => this.authState.update((s) => ({ ...s, loading: false }))),
       takeUntil(this.cancelConsent$),
       takeUntilDestroyed(this.destroyRef),
@@ -435,20 +244,16 @@ export class CkycAuthStateService {
   }
 
   /**
-   * Back from the face / PHYSICAL step: stop the consent chain for this match (no further factor,
-   * FACE or OTP calls, no late navigation back to the face step) and clear its state, so the next
-   * "Download Data" starts clean.
+   * Back from an auth step: stop every running call for this match (no further queued calls, no late
+   * navigation) and clear its state, so the next "Download Data" starts clean.
    */
   cancelConsentFlow(): void {
     this.cancelConsent$.next();
-    this.currentFactor = null;
-    this._consentAttempts.set([]);
     this.clearQueue();
     this.resetAuth();
   }
 
   resetAuth(): void {
-    this._otpFallbackPending.set(false);
     this.authState.set({
       loading: false,
       attemptId: null,
@@ -468,36 +273,7 @@ export class CkycAuthStateService {
     });
   }
 
-  /**
-   * Helper method to process raw authentication modes and determine the active mode.
-   */
-  private determineAuthModes(
-    rawModes: AuthenticationMode[],
-    phase: SearchAttemptedPhase,
-  ): { modes: AuthenticationMode[]; activeMode: AuthenticationMode | null } {
-    // 1. Filter modes based on phase
-    const modes = phase === 'PROFILE_CREATION' ? rawModes.filter((m) => m === AuthenticationMode.OTP) : rawModes;
-
-    // 2. Evaluate priority conditions
-    const hasFace = modes.includes(AuthenticationMode.FACEAUTH);
-    const hasOtp = modes.includes(AuthenticationMode.OTP);
-    const hasManual = modes.includes(AuthenticationMode.MANUAL);
-
-    // Nullable, because the original fallback returns null for an empty array.
-    let activeMode: AuthenticationMode | null;
-
-    if (hasOtp && hasFace) {
-      activeMode = AuthenticationMode.FACEAUTH;
-    } else if (hasManual && hasFace) {
-      activeMode = AuthenticationMode.MANUAL;
-    } else {
-      activeMode = modes[0] ?? null;
-    }
-
-    return { modes, activeMode };
-  }
-
-  // ---- Auth queue ----
+  // ---- Auth queue: building ----
 
   /**
    * Builds this match's queue from AUTH_CONFIG[phase], in the configured fallback order:
@@ -549,90 +325,95 @@ export class CkycAuthStateService {
     this._currentNodeIndex.set(null);
   }
 
-  // ---- DV factor consent helpers ----
+  // ---- Auth queue: progress ----
 
-  // Ends the face chain for DV OTP + FACE: no call is running any more, show the "Trigger OTP" row.
-  private showOtpFallbackRow(): void {
-    this.otpState.update((s) => ({ ...s, loading: false }));
-    this._otpFallbackPending.set(true);
+  private onTriggerSuccess(nodeId: string): void {
+    const node = this.updateNode(nodeId, { status: 'SUCCESS', triggerSuccess: true, lastError: null });
+    if (node?.mode === AuthenticationMode.OTP) {
+      this.otpState.update((s) => ({ ...s, generated: true, expiresAt: Date.now() + CKYC_OTP_TTL_SECONDS * 1000 }));
+    }
   }
 
-  private startFaceConsent(): void {
-    this.currentFactor = null;
-    this.authState.update((s) => ({ ...s, activeMode: AuthenticationMode.FACEAUTH, error: null }));
-    // The face component's ngOnInit owns the first call after this handoff.
-    this.flow.goToStep('face');
+  private onTriggerFailure(nodeId: string, message: string): void {
+    const previous = this.findNode(nodeId);
+    if (!previous) return;
+    const node = this.updateNode(nodeId, {
+      status: 'FAILED',
+      triggerSuccess: false,
+      triggerAttemptCount: previous.triggerAttemptCount + 1,
+      lastError: message,
+    })!;
+    if (this.hasAttemptsLeft(node.triggerAttemptCount, node.maxTriggerAttempts)) {
+      // Stay on this node; the user sends it again (e.g. "Re-trigger OTP").
+      this.authState.update((s) => ({ ...s, error: `${node.label} failed. Please try again.` }));
+      return;
+    }
+    this.moveToNextNode(node);
   }
 
-  // Calls that go through the DV factor chain (DOB -> RELATION -> BIRTHYEARPINCODE):
-  // OTP + FACE -> the FACEAUTH calls; PHYSICAL + FACE -> the PHYSICAL calls, then the FACEAUTH calls.
-  private isDvFactorChainCall(): boolean {
-    const mode = this.authState().activeMode;
-    if (this.isOtpWithFaceMode()) return mode === AuthenticationMode.FACEAUTH;
-    if (this.isManualWithFaceMode()) return mode === AuthenticationMode.MANUAL || mode === AuthenticationMode.FACEAUTH;
+  // Returns false, so validate() can return it directly.
+  private onValidateFailure(nodeId: string, message: string): false {
+    const previous = this.findNode(nodeId);
+    if (!previous) return false;
+    const node = this.updateNode(nodeId, {
+      validateSuccess: false,
+      validateAttemptCount: previous.validateAttemptCount + 1,
+      lastError: message,
+    })!;
+    if (node.mode === AuthenticationMode.OTP) {
+      // Step 3a compatibility: the OTP screen still reads otpState.otpAttemptCount. Removed in 3b.
+      this.otpState.update((s) => ({ ...s, otpAttemptCount: node.validateAttemptCount }));
+    } else {
+      this.authState.update((s) => ({ ...s, error: message }));
+    }
+    if (!this.hasAttemptsLeft(node.validateAttemptCount, node.maxValidateAttempts)) {
+      this.updateNode(nodeId, { status: 'FAILED' });
+      this.moveToNextNode(node);
+    }
     return false;
   }
 
-  private isManualWithFaceMode(): boolean {
-    const modes = this.authState().applicableModes;
-    return (
-      this.ckycSharedStateService.searchAttemptedPhase() === SearchAttemptedPhase.DIGITAL_VERIFICATION &&
-      modes.includes(AuthenticationMode.MANUAL) &&
-      modes.includes(AuthenticationMode.FACEAUTH) &&
-      !modes.includes(AuthenticationMode.OTP)
-    );
-  }
-
-  // True only in Digital Verification when the backend allows both OTP and FACE.
-  private isOtpWithFaceMode(): boolean {
-    const modes = this.authState().applicableModes;
-    return (
-      this.ckycSharedStateService.searchAttemptedPhase() === SearchAttemptedPhase.DIGITAL_VERIFICATION &&
-      modes.includes(AuthenticationMode.OTP) &&
-      modes.includes(AuthenticationMode.FACEAUTH)
-    );
-  }
-
-  // Is this factor switched on? Master OFF means every factor is off.
-  private isEnabled(factor: AuthFactor): boolean {
-    if (!this.isManualWithFaceMode() && !CKYC_DV_FACTOR_FLAGS.masterEnabled) return false;
-    switch (factor) {
-      case AuthFactor.DOB:
-        return CKYC_DV_FACTOR_FLAGS.dob;
-      case AuthFactor.RELATION:
-        return CKYC_DV_FACTOR_FLAGS.relation;
-      case AuthFactor.BIRTHYEARPINCODE:
-        return CKYC_DV_FACTOR_FLAGS.birthYearPincode;
-      default:
-        return false;
+  /**
+   * Moves past a used-up node. No node left -> manual verification. Otherwise the next node becomes current,
+   * and is sent right away when it is autoTrigger (else it waits for the user).
+   */
+  private moveToNextNode(usedUp: ICkycAuthNodeConfig): void {
+    const next = this._authNodes()[usedUp.order + 1];
+    if (!next) {
+      this._currentNodeIndex.set(null);
+      this.authState.update((s) => ({ ...s, error: `${usedUp.label} failed. No authentication methods remain.` }));
+      this.ckycSharedStateService.setManualVerificationEnabled(true);
+      return;
+    }
+    this._currentNodeIndex.set(next.order);
+    if (next.mode !== usedUp.mode) {
+      this.authState.update((s) => ({
+        ...s,
+        activeMode: next.mode,
+        error: `${AUTH_MODE_LABELS[usedUp.mode]} failed. Falling back to ${AUTH_MODE_LABELS[next.mode]}.`,
+      }));
+      this.otpState.update((s) => ({ ...s, generated: false, expiresAt: null }));
+    }
+    if (next.autoTrigger) {
+      this.triggerConsent().subscribe();
+    }
+    // Step 3a compatibility: today only one auth screen shows at a time. Removed in 3b (stacked screens).
+    if (next.mode !== usedUp.mode && next.autoTrigger && next.mode === AuthenticationMode.FACEAUTH) {
+      this.flow.goToStep('face');
     }
   }
 
-  // Fixed order: DOB -> RELATION -> BIRTHYEARPINCODE.
-  // Pass null to get the first enabled factor. Returns null when no factor is left (-> OTP).
-  private nextFactor(current: AuthFactor | null): AuthFactor | null {
-    switch (current) {
-      case null:
-        if (this.isEnabled(AuthFactor.DOB)) return AuthFactor.DOB;
-        if (this.isEnabled(AuthFactor.RELATION)) return AuthFactor.RELATION;
-        if (this.isEnabled(AuthFactor.BIRTHYEARPINCODE)) return AuthFactor.BIRTHYEARPINCODE;
-        return null;
-      case AuthFactor.DOB:
-        if (this.isEnabled(AuthFactor.RELATION)) return AuthFactor.RELATION;
-        if (this.isEnabled(AuthFactor.BIRTHYEARPINCODE)) return AuthFactor.BIRTHYEARPINCODE;
-        return null;
-      case AuthFactor.RELATION:
-        if (this.isEnabled(AuthFactor.BIRTHYEARPINCODE)) return AuthFactor.BIRTHYEARPINCODE;
-        return null;
-      default:
-        return null;
-    }
+  private hasAttemptsLeft(used: number, max: number | null): boolean {
+    return max === null || used < max;
   }
 
-  private setConsentAttemptStatus(id: number | null, status: CkycConsentAttempt['status']): void {
-    if (id === null) return;
-    this._consentAttempts.update((attempts) =>
-      attempts.map((attempt) => (attempt.id === id && attempt.status === 'Calling' ? { ...attempt, status } : attempt)),
-    );
+  private findNode(nodeId: string): ICkycAuthNodeConfig | undefined {
+    return this._authNodes().find((node) => node.id === nodeId);
+  }
+
+  // Returns the updated node (undefined if the queue was cleared meanwhile).
+  private updateNode(nodeId: string, patch: Partial<ICkycAuthNodeConfig>): ICkycAuthNodeConfig | undefined {
+    this._authNodes.update((nodes) => nodes.map((node) => (node.id === nodeId ? { ...node, ...patch } : node)));
+    return this.findNode(nodeId);
   }
 }

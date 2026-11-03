@@ -41,7 +41,6 @@ export interface ITriggerConsentRequest {
   searchAttemptedPhase: SearchAttemptedPhase;
   leadId?: string;
   authFactor: AuthFactor | null;
-  mobileNumber?: string; // Selected CKYC OTP destination; backend contract pending.
 }
 
 export interface IValidateConsentRequest {
@@ -59,14 +58,6 @@ export interface IConsentData {
   file?: string;
 }
 
-// INFERRED from usage in the 2026-10-31 screenshots (auth service, face and non-OTP components import these
-// from this model). The model file itself was not photographed.
-export interface CkycConsentAttempt {
-  readonly id: number;
-  readonly consentType: AuthenticationMode;
-  readonly authFactor: AuthFactor | null;
-  readonly status: 'Calling' | 'Success' | 'Failed' | 'Cancelled';
-}
 // Confirmed from the model photograph supplied 2026-11-03.
 export enum OtpIdentifierEnum {
   EMAIL = 'EMAIL',

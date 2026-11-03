@@ -46,7 +46,6 @@ export class CkycOnboardingComponent implements OnInit {
   readonly flow = inject(CkycFlowStateService);
   readonly ckycAuthState = inject(CkycAuthStateService);
   private readonly destroyRef = inject(DestroyRef);
-  readonly registeredMobileNumber = input<string | undefined>();
   readonly searchAttemptedPhase = input<SearchAttemptedPhase>(SearchAttemptedPhase.PROFILE_CREATION);
   readonly leadId = input<string | null>();
   readonly customerBasicDetailsFetch = output<ICustomerBasicDetailsFetch>();
@@ -57,7 +56,6 @@ export class CkycOnboardingComponent implements OnInit {
   readonly hasAnyError = computed(() => {
     const enquiryListError = this.flow.historyError();
     const enquiryError = this.flow.enquiryError();
-    // const otpError = this.flow.otpError();
     return enquiryListError || enquiryError;
   });
   constructor() {
@@ -82,7 +80,6 @@ export class CkycOnboardingComponent implements OnInit {
   }
   ngOnInit(): void {
     this.ckycSharedStateService.setManualVerificationEnabled(false);
-    this.flow.registeredMobileNumber.set(this.registeredMobileNumber() ?? null);
     this.ckycSharedStateService.setSearchAttemptedPhase(this.searchAttemptedPhase());
     this.ckycSharedStateService.setLeadId(this.leadId()!);
     this.flow.validatedDetails$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((profileData) => {

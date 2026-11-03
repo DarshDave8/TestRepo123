@@ -2,19 +2,14 @@
 // SOURCE GAPS: the photo does not show the whole original model.
 // Keep this as an archival transcription, not a complete production module.
 import type { GENDER, ORIGIN_RELATION_BASED } from 'src/app/nri/profile-categorisation/constant/work-profile.constants';
-import type { TriggerConsentAuthFactor } from './ckyc-consent-request.model';
 import type { ICkycEnquiryListResponseBody, ICkycSearchResult } from './ckyc-search-response.model';
 import {
   AuthenticationMode,
   AuthFactor,
   CkycBusinessErrorPhase,
   CkycSearchOption,
-  CkycWorkflowStatus,
   SearchAttemptedPhase,
 } from '../constants/ckyc-onboarding.constants';
-import { CkycSearchRequest } from './ckyc-search-request.model';
-// The response body type is re-exported below; local use is type-only.
-import type { IGetApplicableConsentTypesResponseBody } from './ckyc-consent-response.model';
 import { IResponse } from 'src/app/models/base-response.model';
 
 export type CkycFlowStep = 'search' | 'enquiryReceived' | 'auth';
@@ -107,10 +102,6 @@ export interface CkycRelatedPersonName {
   readonly lastName?: string;
 }
 
-export interface NonOtpAuthenticationPayload {
-  readonly authFactors: readonly TriggerConsentAuthFactor[];
-  readonly file: File | null;
-}
 export type CkycGender = GENDER;
 
 // Continuation recovered from new screenshot 147110 (lines 121-195).
@@ -131,27 +122,6 @@ export type {
   IValidateConsentResponse,
 } from './ckyc-consent-response.model';
 
-// UI interface
-export interface CkycFlowState {
-  status: CkycWorkflowStatus | null;
-  businessError: CkycBusinessError | null;
-  // Search and enquiry data
-  searchQuery: CkycSearchRequest | null;
-  enquiries: ICkycEnquiryListResponseBody[] | [];
-  // selected enquiry representing the transaction
-  selectedEnquiry: ICkycEnquiryListResponseBody | null;
-  // which result is selected for authentication
-  selectedSearchResult: ICkycSearchResult | null;
-  // applicable authentication type on the above selected search result
-  applicableConsentTypes: IGetApplicableConsentTypesResponseBody | null;
-  // which authentication type is chosen
-  selectedAuthenticationMode: AuthenticationMode | null;
-  // otp related data
-  otpGenerated: boolean | null;
-  otpAttemptsMade: number | null;
-  otpExpiresAt: number | null;
-}
-
 export interface CkycBusinessError {
   phase: CkycBusinessErrorPhase;
   messages: string;
@@ -159,20 +129,15 @@ export interface CkycBusinessError {
 
 // auth related UI model
 export interface AuthDomainState {
-  loading: boolean;
-  error: string | null;
+  loading: boolean; // modes loading or a validate call running
+  error: string | null; // shown on the active auth screen
   attemptId: string | null; // may be it will be replaced with attemptid
-  applicableModes: AuthenticationMode[];
-  activeMode: AuthenticationMode | null;
 }
 
+// OTP send state and the channels the OTP can go to. Attempt counts live on the OTP node of the auth queue.
 export interface OtpDomainState {
-  loading: boolean;
-  error: string | null;
   generated: boolean;
   expiresAt: number | null;
-  mobileNumber: string | null;
-  otpAttemptCount: number;
   hasMobileNumber?: boolean; // INFERRED from screenshot usage
   hasEmailAddress?: boolean; // INFERRED from screenshot usage
 }

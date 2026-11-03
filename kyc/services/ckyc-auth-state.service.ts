@@ -26,6 +26,14 @@ import { CkycFlowStateService } from './ckyc-flow-state.service';
 import { CkycSharedStateService } from './ckyc-shared-state.service';
 import { OtpIdentifier } from '../models/ckyc-consent-request.model';
 
+const INITIAL_AUTH_STATE: AuthDomainState = { loading: false, attemptId: null, error: null };
+const INITIAL_OTP_STATE: OtpDomainState = {
+  generated: false,
+  expiresAt: null,
+  hasMobileNumber: false,
+  hasEmailAddress: false,
+};
+
 @Injectable({ providedIn: 'root' })
 export class CkycAuthStateService {
   private readonly ckycSharedStateService = inject(CkycSharedStateService);
@@ -36,6 +44,9 @@ export class CkycAuthStateService {
   // Fired by cancelConsentFlow(): stops every running consent / validate call, including the follow-up
   // calls the queue starts by itself (those outlive the component that started the first one).
   private readonly cancelConsent$ = new Subject<void>();
+
+  readonly authState = signal<AuthDomainState>(INITIAL_AUTH_STATE);
+  readonly otpState = signal<OtpDomainState>(INITIAL_OTP_STATE);
 
   // Auth queue for the current match: one node per consent call, in fallback order (built from AUTH_CONFIG).
   private readonly _authNodes = signal<readonly ICkycAuthNodeConfig[]>([]);
@@ -63,25 +74,6 @@ export class CkycAuthStateService {
   readonly isBusy = computed(
     () => this.authState().loading || this._authNodes().some((node) => node.status === 'IN_PROGRESS'),
   );
-
-  readonly authState = signal<AuthDomainState>({
-    loading: false,
-    attemptId: null,
-    error: null,
-    applicableModes: [],
-    activeMode: null,
-  });
-
-  readonly otpState = signal<OtpDomainState>({
-    loading: false,
-    error: null,
-    generated: false,
-    expiresAt: null,
-    mobileNumber: null,
-    otpAttemptCount: 0,
-    hasMobileNumber: false,
-    hasEmailAddress: false,
-  });
 
   /**
    * Loads the modes the backend allows for this match and builds the auth queue from them.
@@ -115,13 +107,7 @@ export class CkycAuthStateService {
             hasEmailAddress: res.body?.hasEmailAddress,
           }));
           this.buildLinearQueue(phase, res.body?.applicableConsentTypes || []);
-          const queuedModes = [...new Set(this._authNodes().map((node) => node.mode))];
-          this.authState.update((s) => ({
-            ...s,
-            activeMode: this.currentNode()?.mode ?? null,
-            attemptId: res.body.attemptId,
-            applicableModes: queuedModes,
-          }));
+          this.authState.update((s) => ({ ...s, attemptId: res.body.attemptId }));
         }),
         map((res) => Boolean(res?.success)),
         catchError(() => {
@@ -159,19 +145,15 @@ export class CkycAuthStateService {
   triggerConsent(): Observable<boolean> {
     const node = this.currentNode();
     if (!node) return of(false);
-    let payload = {
+    const payload = {
       attemptId: this.authState().attemptId!,
       consentType: node.mode,
       leadId: this.ckycSharedStateService.leadId(),
       authFactor: node.subType,
       searchAttemptedPhase: this.ckycSharedStateService.searchAttemptedPhase(),
     } as ITriggerConsentRequest;
-    if (this.otpState().mobileNumber) {
-      payload = { ...payload, mobileNumber: this.otpState().mobileNumber };
-    }
     return defer(() => {
       this.updateNode(node.id, { status: 'IN_PROGRESS', lastError: null });
-      this.otpState.update((s) => ({ ...s, loading: true, error: null }));
       return this.ckycApi.triggerConsent(payload);
     }).pipe(
       map((response) => {
@@ -189,10 +171,6 @@ export class CkycAuthStateService {
       finalize(() => {
         // Unsubscribed before a response (Back, or the screen closed): the call never finished.
         if (this.findNode(node.id)?.status === 'IN_PROGRESS') this.updateNode(node.id, { status: 'PENDING' });
-        // A failed call may already have started the next node's call.
-        if (!this._authNodes().some((n) => n.status === 'IN_PROGRESS')) {
-          this.otpState.update((s) => ({ ...s, loading: false }));
-        }
       }),
       takeUntil(this.cancelConsent$),
       takeUntilDestroyed(this.destroyRef),
@@ -263,23 +241,8 @@ export class CkycAuthStateService {
   }
 
   resetAuth(): void {
-    this.authState.set({
-      loading: false,
-      attemptId: null,
-      error: null,
-      applicableModes: [],
-      activeMode: null,
-    });
-    this.otpState.set({
-      loading: false,
-      error: null,
-      generated: false,
-      expiresAt: null,
-      mobileNumber: null,
-      otpAttemptCount: 0,
-      hasMobileNumber: false,
-      hasEmailAddress: false,
-    });
+    this.authState.set(INITIAL_AUTH_STATE);
+    this.otpState.set(INITIAL_OTP_STATE);
   }
 
   // ---- Auth queue: building ----
@@ -396,7 +359,6 @@ export class CkycAuthStateService {
     if (next.mode !== usedUp.mode) {
       this.authState.update((s) => ({
         ...s,
-        activeMode: next.mode,
         error: `${AUTH_MODE_LABELS[usedUp.mode]} failed. Falling back to ${AUTH_MODE_LABELS[next.mode]}.`,
       }));
       this.otpState.update((s) => ({ ...s, generated: false, expiresAt: null }));

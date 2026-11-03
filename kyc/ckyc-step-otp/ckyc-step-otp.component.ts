@@ -5,7 +5,7 @@ import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { finalize, interval, Subscription, tap, timer } from 'rxjs';
+import { finalize, interval, Subscription, tap } from 'rxjs';
 import { CkycAuthStateService } from '../services/ckyc-auth-state.service';
 import { AuthenticationMode } from '../constants/ckyc-onboarding.constants';
 import { CkycConsentStatusComponent } from '../ckyc-consent-status/ckyc-consent-status.component';
@@ -28,8 +28,6 @@ import { OtpIdentifier, OtpIdentifierEnum } from '../models/ckyc-consent-request
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CkycStepOtpComponent implements OnDestroy {
-  isDisabledEmail: boolean = false;
-  isDisabledMobile: boolean = false;
   readonly authMode = AuthenticationMode;
   readonly ckycAuthState = inject(CkycAuthStateService);
   private readonly destroyRef = inject(DestroyRef);
@@ -64,15 +62,10 @@ export class CkycStepOtpComponent implements OnDestroy {
       }
     });
   }
+  // Mobile only -> MOBILE; otherwise EMAIL. With both channels the user picks in the radio group.
   resolveDefaultOtpChannel(): OtpIdentifier {
-    if (this.ckycAuthState.otpState().hasEmailAddress && !this.ckycAuthState.otpState().hasMobileNumber) {
-      this.isDisabledEmail = true;
-      return this.otpIdentifierEnum.EMAIL;
-    } else if (this.ckycAuthState.otpState().hasMobileNumber && !this.ckycAuthState.otpState().hasEmailAddress) {
-      this.isDisabledMobile = true;
-      return this.otpIdentifierEnum.MOBILE;
-    }
-    return this.otpIdentifierEnum.EMAIL;
+    const { hasMobileNumber, hasEmailAddress } = this.ckycAuthState.otpState();
+    return hasMobileNumber && !hasEmailAddress ? OtpIdentifierEnum.MOBILE : OtpIdentifierEnum.EMAIL;
   }
 
   submit(): void {
@@ -106,13 +99,14 @@ export class CkycStepOtpComponent implements OnDestroy {
   }
   resend(): void {
     if (this.isSubmitting() || this.isMaxAttemptsReached()) return;
-    this.ckycAuthState.resendOtp().subscribe({
-      next: (success) => {
+    this.ckycAuthState
+      .resendOtp()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((success) => {
         if (success) {
           this.otpControl.reset('', { emitEvent: false });
         }
-      },
-    });
+      });
   }
   formatDisplayTime(seconds: number): string {
     const minutes = Math.floor(seconds / 60);

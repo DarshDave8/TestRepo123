@@ -28,16 +28,8 @@
       }
       @if (ckycAuthState.otpState().hasMobileNumber && ckycAuthState.otpState().hasEmailAddress) {
         <mat-radio-group [formControl]="radioControl">
-          @if (ckycAuthState.otpState().hasEmailAddress) {
-            <mat-radio-button [value]="otpIdentifierEnum.EMAIL" [disabled]="isDisabledEmail"
-              ><span>Email</span>
-            </mat-radio-button>
-          }
-          @if (ckycAuthState.otpState().hasMobileNumber) {
-            <mat-radio-button [value]="otpIdentifierEnum.MOBILE" [disabled]="isDisabledMobile"
-              ><span>Mobile</span>
-            </mat-radio-button>
-          }
+          <mat-radio-button [value]="otpIdentifierEnum.EMAIL"><span>Email</span></mat-radio-button>
+          <mat-radio-button [value]="otpIdentifierEnum.MOBILE"><span>Mobile</span></mat-radio-button>
         </mat-radio-group>
       }
       <mat-form-field class="ckyc-otp__field" appearance="outline">

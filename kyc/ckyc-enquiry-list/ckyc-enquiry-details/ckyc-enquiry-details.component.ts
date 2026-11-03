@@ -2,13 +2,9 @@
 // Some pre-existing type/flow inconsistencies are intentionally preserved.
 import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, input, signal } from '@angular/core';
-import { ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatRadioModule } from '@angular/material/radio';
 import { CkycFlowStateService } from '../../services/ckyc-flow-state.service';
 import { ICkycEnquiryListResponseBody, ICkycSearchResult } from '../../models/ckyc-search-response.model';
 import { UserType } from 'src/app/models/account.model';
@@ -18,31 +14,22 @@ import { CkycGetDedupInfoDialogComponent } from '../../../ckyc-flow/ckyc-get-ded
 import { CkycSearchRequest } from '../../models/ckyc-search-request.model';
 import { DocumentTypeEnum } from '../../../ckyc-flow/ckyc-flow.constants';
 import { CkycAuthStateService } from '../../services/ckyc-auth-state.service';
-import { filter, finalize, switchMap } from 'rxjs';
-import { CkycSearchPhaseService } from '../../services/ckyc-search-phase.service';
+import { finalize } from 'rxjs';
 import { CkycSharedStateService } from '../../services/ckyc-shared-state.service';
 import { SearchAttemptedPhase } from '../../constants/ckyc-onboarding.constants';
 
 @Component({
   selector: 'app-ckyc-enquiry-details',
   standalone: true,
-  imports: [
-    DatePipe,
-    MatButtonModule,
-    MatDialogModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatRadioModule,
-    ReactiveFormsModule,
-  ],
+  imports: [DatePipe, MatButtonModule, MatDialogModule],
   templateUrl: './ckyc-enquiry-details.component.html',
   styleUrl: './ckyc-enquiry-details.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CkycEnquiryDetailsComponent implements OnInit {
-  readonly ckycSearchPhaseService = inject(CkycSearchPhaseService);
-  // Phase and lead id set by the onboarding component; the consent calls use the same values.
+  // Phase and lead id are set by the onboarding component; the consent calls use the same values.
   private readonly ckycSharedStateService = inject(CkycSharedStateService);
+  readonly searchAttemptedPhase = this.ckycSharedStateService.searchAttemptedPhase;
   readonly enquiry = input.required<ICkycEnquiryListResponseBody>();
   readonly match = input.required<ICkycSearchResult>();
   readonly matchIndex = input.required<number>();

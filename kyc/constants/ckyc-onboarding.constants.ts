@@ -120,12 +120,6 @@ export const AUTH_FACTOR_LABELS: Record<AuthFactor, string> = {
 
 export const CKYC_CONSENT_TEXT = 'Placeholder CKYC consent text. The final approved consent declaration will replace this configuration without changing the flow.';
 
-export const NON_OTP_FACTORS = [
-  { value: AuthFactor.DOB, label: 'DOB' },
-  { value: AuthFactor.BIRTHYEARPINCODE, label: 'Year of birth and pincode' },
-  { value: AuthFactor.RELATION, label: 'Father / Mother / Spouse name' },
-] as const;
-
 export const CKYC_GENDER_OPTIONS = Object.values(GENDER).map((value) => ({
   value,
   label: GenderDesc[value],

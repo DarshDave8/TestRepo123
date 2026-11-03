@@ -91,7 +91,7 @@
   </div>
   <div class="ckyc-match__actions">
     @if (
-      ckycSearchPhaseService.searchAttemptedPhase() !== phase.DIGITAL_VERIFICATION &&
+      searchAttemptedPhase() !== phase.DIGITAL_VERIFICATION &&
       isStaff &&
       [CkycSearchOption.OVD, CkycSearchOption.MOBILE].includes(enquiry().enquiryRequest.searchOption)
     ) {
@@ -101,11 +101,6 @@
       <button mat-stroked-button color="primary" type="button" (click)="startAuthentication()">Download Data</button>
     }
   </div>
-  @if (flow.authenticationModesError()) {
-    <div class="ckyc-mobile-choice__error">
-      <p role="alert">{{ flow.authenticationModesError() }}</p>
-    </div>
-  }
   <!-- @if (isActive()) {
     <app-ckyc-authentication-types />
   } -->

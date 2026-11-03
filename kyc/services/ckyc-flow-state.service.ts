@@ -5,8 +5,6 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subject, finalize, type Observable } from 'rxjs';
 import { CkycOnboardingService } from './ckyc-onboarding.service';
 import {
-  AuthenticationMode,
-  CKYC_OTP_MAX_ATTEMPTS,
   CkycSearchAction,
   CkycSearchOption,
   // SearchAttemptedPhase,
@@ -19,15 +17,11 @@ import {
   CkycRelatedPersonName,
   CkycSavedOvd,
   IActiveMatchSelection,
-  IGetApplicableConsentTypesResponseBody,
-  ITriggerConsentResponse,
-  IValidateConsentResponse,
-  NonOtpAuthenticationPayload,
 } from '../models/ckyc-onboarding.model';
 import { ICkycEnquiryListResponseBody, ICkycSearchResponse } from '../models/ckyc-search-response.model';
 import { CkycEnquiriesRequest, CkycSearchRequest } from '../models/ckyc-search-request.model';
 import { ICustomerBasicDetails } from '../../../model/customer-basic-details.model';
-import { CkycSearchPhaseService } from './ckyc-search-phase.service';
+import { CkycSharedStateService } from './ckyc-shared-state.service';
 
 type ServiceSearchRequest = Parameters<CkycOnboardingService['enquireCkyc']>[0];
 
@@ -36,7 +30,7 @@ export class CkycFlowStateService {
   private readonly destroyRef = inject(DestroyRef);
   private readonly ckycApi = inject(CkycOnboardingService);
   private readonly stepManager = new CkycStepManager();
-  private readonly ckycSearchPhaseService = inject(CkycSearchPhaseService);
+  private readonly ckycSharedStateService = inject(CkycSharedStateService);
 
   // navigation
   readonly step = this.stepManager.step;
@@ -59,31 +53,7 @@ export class CkycFlowStateService {
   readonly searchValues = signal<CkycFieldValues>({});
   readonly relatedPersonValues = signal<CkycRelatedPersonName>({});
   readonly searchFileNames = signal<Readonly<Record<string, string>>>({});
-  readonly registeredMobileNumber = signal<string | null>(null);
-  readonly selectedOtpMobileNumber = signal<string | null>(null);
-  readonly authenticationModesError = signal<string | null>(null);
 
-  // search attempt phase
-  // readonly searchAttemptedPhase = signal<SearchAttemptedPhase | null>(null);
-
-  explicitNonOtpSelection = false;
-  readonly otpChannel = computed<'MOBILE' | 'EMAIL'>(() =>
-    this.selectedOtpMobileNumber() || this.applicableConsentTypes()?.hasMobileNumber ? 'MOBILE' : 'EMAIL',
-  );
-  readonly applicableConsentTypes = signal<IGetApplicableConsentTypesResponseBody | null>(null);
-  readonly applicableConsentTypesLoading = signal(false);
-  readonly applicableConsentTypesError = signal<string | null>(null);
-  readonly consentAccepted = signal(false);
-  readonly selectedAuthenticationType = signal<AuthenticationMode | null>(null);
-  readonly otpAttemptsMade = signal(0);
-  readonly otpMaxAttempts = CKYC_OTP_MAX_ATTEMPTS;
-  readonly otpGenerated = signal(false);
-  readonly otpTriggerResponse = signal<ITriggerConsentResponse | null>(null);
-  readonly otpError = signal<string | null>(null);
-  readonly otpExpiresAt = signal<number | null>(null);
-  readonly validatedCustomerDetails = signal<IValidateConsentResponse['body'] | null>(null);
-  readonly otpValidationSucceeded = computed(() => this.validatedCustomerDetails() !== null);
-  readonly manualPayload = signal<NonOtpAuthenticationPayload | null>(null);
   private clearFormSubject = new Subject<CkycSearchAction>();
   clearForm$ = this.clearFormSubject.asObservable();
 
@@ -114,24 +84,12 @@ export class CkycFlowStateService {
     return grouped;
   });
 
-  readonly otpExhausted = computed(() => this.otpAttemptsMade() >= this.otpMaxAttempts);
-  readonly remainingOtpAttempts = computed(() => Math.max(0, this.otpMaxAttempts - this.otpAttemptsMade()));
-  readonly availableAuthOptions = computed<readonly AuthenticationMode[]>(() => {
-    const response = this.applicableConsentTypes();
-    if (!response?.success || !Array.isArray(response.applicableConsentTypes)) return [];
-    const hasOtpChannel =
-      response.hasMobileNumber || response.hasEmailAddress || Boolean(this.selectedOtpMobileNumber());
-    return response.applicableConsentTypes.filter(
-      (mode) => mode !== AuthenticationMode.OTP || (hasOtpChannel && !this.otpExhausted()),
-    );
-  });
-
   loadEnquiries(): void {
     this.historyLoading.set(true);
     this.historyError.set(null);
     const request: CkycEnquiriesRequest = {
-      searchAttemptedPhase: this.ckycSearchPhaseService.searchAttemptedPhase(),
-      leadId: this.ckycSearchPhaseService.leadId() ?? '',
+      searchAttemptedPhase: this.ckycSharedStateService.searchAttemptedPhase(),
+      leadId: this.ckycSharedStateService.leadId() ?? '',
     };
     this.ckycApi
       .getEnquiries(request)
@@ -223,7 +181,6 @@ export class CkycFlowStateService {
     this.validatedDetailsSubject.next(details);
   }
   returnToEnquiryReceived(): void {
-    this.selectedAuthenticationType.set(null);
     this.stepManager.goTo('enquiryReceived');
   }
 }

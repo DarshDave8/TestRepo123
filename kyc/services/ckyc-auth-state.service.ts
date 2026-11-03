@@ -1,15 +1,19 @@
 // Screenshot transcription, compared with five additional photographs supplied on 2026-11-03; not a verified application build.
-import { Injectable, inject, signal, DestroyRef } from '@angular/core';
+import { Injectable, inject, signal, computed, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { defer, Observable, of, Subject } from 'rxjs';
 import { tap, catchError, finalize, map, takeUntil } from 'rxjs/operators';
 import { CkycOnboardingService } from './ckyc-onboarding.service';
 import {
+  AUTH_CONFIG,
+  AUTH_FACTOR_LABELS,
+  AUTH_MODE_LABELS,
   AuthenticationMode,
   AuthFactor,
   CKYC_DV_FACTOR_FLAGS,
   CKYC_OTP_MAX_ATTEMPTS,
   CKYC_OTP_TTL_SECONDS,
+  ModeConfiguration,
   SearchAttemptedPhase,
 } from '../constants/ckyc-onboarding.constants';
 import {
@@ -44,9 +48,15 @@ export class CkycAuthStateService {
   private readonly cancelConsent$ = new Subject<void>();
 
   // Auth queue for the current match: one node per consent call, in fallback order (built from AUTH_CONFIG).
-  // Step 1: declared only; the existing flow does not read or write it yet.
+  // Step 2: built for every match, but the existing flow below does not read or update it yet.
   private readonly _authNodes = signal<readonly ICkycAuthNodeConfig[]>([]);
   readonly authNodes = this._authNodes.asReadonly();
+  // Index of the node the flow is on; null = no queue.
+  private readonly _currentNodeIndex = signal<number | null>(null);
+  readonly currentNode = computed<ICkycAuthNodeConfig | null>(() => {
+    const index = this._currentNodeIndex();
+    return index === null ? null : (this._authNodes()[index] ?? null);
+  });
 
   readonly authState = signal<AuthDomainState>({
     loading: false,
@@ -81,6 +91,7 @@ export class CkycAuthStateService {
     this.currentFactor = null;
     this._consentAttempts.set([]);
     this._otpFallbackPending.set(false);
+    this.clearQueue();
     this.authState.update((s) => ({ ...s, loading: true, error: null }));
     return this.ckycApi
       .getApplicableAuthenticationModes({
@@ -102,6 +113,7 @@ export class CkycAuthStateService {
             hasMobileNumber: res.body?.hasMobileNumber,
             hasEmailAddress: res.body?.hasEmailAddress,
           }));
+          this.buildLinearQueue(phase, rawModes);
           const { modes, activeMode } = this.determineAuthModes(rawModes, phase);
           this.authState.update((s) => ({
             ...s,
@@ -431,6 +443,7 @@ export class CkycAuthStateService {
     this.cancelConsent$.next();
     this.currentFactor = null;
     this._consentAttempts.set([]);
+    this.clearQueue();
     this.resetAuth();
   }
 
@@ -482,6 +495,58 @@ export class CkycAuthStateService {
     }
 
     return { modes, activeMode };
+  }
+
+  // ---- Auth queue ----
+
+  /**
+   * Builds this match's queue from AUTH_CONFIG[phase], in the configured fallback order:
+   * - a mode is used only if the backend returned it and it is enabled;
+   * - a mode with factors gets one node per enabled factor (DOB -> RELATION -> BIRTHYEARPINCODE),
+   *   and is skipped when every factor is off;
+   * - a mode without factors (OTP) gets one node.
+   * The flow starts on the first node.
+   */
+  private buildLinearQueue(phase: SearchAttemptedPhase, applicableModes: readonly AuthenticationMode[]): void {
+    const nodes: ICkycAuthNodeConfig[] = [];
+    for (const config of AUTH_CONFIG[phase]) {
+      if (!config.enabled || !applicableModes.includes(config.mode)) continue;
+      if (!config.factors) {
+        nodes.push(this.buildAuthNode(config, null, nodes.length));
+        continue;
+      }
+      for (const factor of Object.values(AuthFactor)) {
+        if (config.factors[factor]) {
+          nodes.push(this.buildAuthNode(config, factor, nodes.length));
+        }
+      }
+    }
+    this._authNodes.set(nodes);
+    this._currentNodeIndex.set(nodes.length > 0 ? 0 : null);
+  }
+
+  private buildAuthNode(config: ModeConfiguration, subType: AuthFactor | null, order: number): ICkycAuthNodeConfig {
+    return {
+      id: subType ? `${config.mode}_${subType}` : config.mode,
+      mode: config.mode,
+      subType,
+      label: subType ? `${AUTH_MODE_LABELS[config.mode]} ${AUTH_FACTOR_LABELS[subType]}` : AUTH_MODE_LABELS[config.mode],
+      order,
+      status: 'PENDING',
+      autoTrigger: config.autoTrigger,
+      triggerSuccess: null,
+      validateSuccess: null,
+      triggerAttemptCount: 0,
+      maxTriggerAttempts: config.maxTriggerAttempts,
+      validateAttemptCount: 0,
+      maxValidateAttempts: config.maxValidateAttempts,
+      lastError: null,
+    };
+  }
+
+  private clearQueue(): void {
+    this._authNodes.set([]);
+    this._currentNodeIndex.set(null);
   }
 
   // ---- DV factor consent helpers ----

@@ -1,4 +1,4 @@
-// Screenshot transcription (2026-10-31 photographs of the working tree), not a verified source file.
+// Screenshot transcription, compared with five additional photographs supplied on 2026-11-03; not a verified application build.
 import { Injectable, inject, signal, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { defer, Observable, of, Subject } from 'rxjs';
@@ -139,6 +139,15 @@ export class CkycAuthStateService {
   }
 
   triggerConsent(): Observable<boolean> {
+    console.log('DV_CHECK_TRIGGER_CONSENT', {
+      activeMode: this.authState().activeMode,
+      modes: this.authState().applicableModes,
+      phase: this.ckycSharedStateService.searchAttemptedPhase(),
+      currentFactor: this.currentFactor,
+      otpWithFace: this.isOtpWithFaceMode(),
+      manualWithFace: this.isManualWithFaceMode(),
+      flags: CKYC_DV_FACTOR_FLAGS,
+    });
     // First consent call of a DV factor chain (FACE in OTP + FACE; PHYSICAL or FACE in PHYSICAL + FACE):
     // start with the first enabled factor.
     if (
@@ -258,6 +267,15 @@ export class CkycAuthStateService {
 
   //TODO: logic to be redefined and call to be move from triggerConsent to validate consent
   handleAuthFailure(): Observable<boolean> {
+    console.log('DV_CHECK_HANDLE_AUTH_FAILURE', {
+      activeMode: this.authState().activeMode,
+      modes: this.authState().applicableModes,
+      phase: this.ckycSharedStateService.searchAttemptedPhase(),
+      currentFactor: this.currentFactor,
+      otpWithFace: this.isOtpWithFaceMode(),
+      manualWithFace: this.isManualWithFaceMode(),
+      flags: CKYC_DV_FACTOR_FLAGS,
+    });
     const currentMode = this.authState().activeMode;
     const available = this.authState().applicableModes;
     // DV without OTP: finish MANUAL factors, then FACE factors, and stop.

@@ -17,7 +17,7 @@ import { CkycSearchRequest } from './ckyc-search-request.model';
 import type { IGetApplicableConsentTypesResponseBody } from './ckyc-consent-response.model';
 import { IResponse } from 'src/app/models/base-response.model';
 
-export type CkycFlowStep = 'search' | 'enquiryReceived' | 'otp' | 'face' | 'manual';
+export type CkycFlowStep = 'search' | 'enquiryReceived' | 'auth';
 export type CkycSearchRenderer = 'FORM' | 'OVD';
 export type CkycFieldType = 'text' | 'tel' | 'date' | 'select' | 'file';
 export type CkycSearchValue = string | Date | File | null;

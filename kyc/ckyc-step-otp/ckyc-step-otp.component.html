@@ -1,73 +1,92 @@
-<!-- Screenshot transcription of ckyc-step-otp.component.html (photograph supplied 2026-11-03). Not a verified build. -->
+<!-- Screenshot transcription of ckyc-step-otp.component.html (photograph supplied 2026-11-03), refactored for the auth queue. -->
 <section class="ckyc-otp" aria-labelledby="ckyc-otp-title">
+  <app-ckyc-consent-status [mode]="authMode.OTP" [downloadable]="false" />
   <div class="ckyc-otp__card">
     <p class="ckyc-otp__eyebrow">CKYC VERIFICATION</p>
     <h1 id="ckyc-otp-title">Verify OTP</h1>
-    @if (ckycAuthState.otpState().hasEmailAddress && ckycAuthState.otpState().hasMobileNumber) {
-      <mat-label class="field-label">Indicate which channel you are using to enter your code</mat-label>
-    } @else {
-      <mat-label class="field-label"
-        >Enter the OTP received on {{ ckycAuthState.otpState().hasMobileNumber ? "Mobile" : "Email" }}:</mat-label
-      >
-    }
-    @if (ckycAuthState.otpState().hasMobileNumber && ckycAuthState.otpState().hasEmailAddress) {
-      <mat-radio-group [formControl]="radioControl">
-        @if (ckycAuthState.otpState().hasEmailAddress) {
-          <mat-radio-button [value]="otpIdentifierEnum.EMAIL" [disabled]="isDisabledEmail"
-            ><span>Email</span>
-          </mat-radio-button>
-        }
-        @if (ckycAuthState.otpState().hasMobileNumber) {
-          <mat-radio-button [value]="otpIdentifierEnum.MOBILE" [disabled]="isDisabledMobile"
-            ><span>Mobile</span>
-          </mat-radio-button>
-        }
-      </mat-radio-group>
-    }
-    <mat-form-field class="ckyc-otp__field" appearance="outline">
-      <mat-label>6-DIGIT OTP</mat-label>
-      <input
-        matInput
-        type="text"
-        inputmode="numeric"
-        maxlength="6"
-        autocomplete="one-time-code"
-        [formControl]="otpControl"
-        [readonly]="isMaxAttemptsReached() || isSubmitting()"
-      />
-      @if (otpControl.invalid && otpControl.touched) {
-        <mat-error>Enter a valid 6-digit OTP.</mat-error>
+    @if (!ckycAuthState.otpState().generated) {
+      <!-- No OTP sent yet: the send button first (or the in-flight notice); the form appears once it is sent. -->
+      @if (ckycAuthState.awaitingUserTrigger()) {
+        <div class="ckyc-otp__actions">
+          <button mat-flat-button class="ckyc-otp__verify" type="button" (click)="triggerOtp()">
+            {{ otpNode()?.status === "FAILED" ? "Re-trigger OTP" : "Trigger OTP" }}
+          </button>
+          @if (isActive()) {
+            <button mat-button class="ckyc-otp__back" type="button" (click)="goBack()">Back to enquiry</button>
+          }
+        </div>
+      } @else if (isSending()) {
+        <div class="ckyc-otp__notice" role="status">Sending OTP…</div>
       }
-    </mat-form-field>
-    <div class="ckyc-otp__meta">
-      <span>Expires in <strong>{{ formatDisplayTime(countdown()) }}</strong></span>
-      <span>Attempts <strong>{{ ckycAuthState.otpState().otpAttemptCount }} / {{ maxAttempts }}</strong></span>
-    </div>
-    @if (countdown() === 0 && !isMaxAttemptsReached()) {
-      <div class="ckyc-otp__notice" role="status">OTP expired. Resend to continue.</div>
+    } @else {
+      @if (ckycAuthState.otpState().hasEmailAddress && ckycAuthState.otpState().hasMobileNumber) {
+        <mat-label class="field-label">Indicate which channel you are using to enter your code</mat-label>
+      } @else {
+        <mat-label class="field-label"
+          >Enter the OTP received on {{ ckycAuthState.otpState().hasMobileNumber ? "Mobile" : "Email" }}:</mat-label
+        >
+      }
+      @if (ckycAuthState.otpState().hasMobileNumber && ckycAuthState.otpState().hasEmailAddress) {
+        <mat-radio-group [formControl]="radioControl">
+          @if (ckycAuthState.otpState().hasEmailAddress) {
+            <mat-radio-button [value]="otpIdentifierEnum.EMAIL" [disabled]="isDisabledEmail"
+              ><span>Email</span>
+            </mat-radio-button>
+          }
+          @if (ckycAuthState.otpState().hasMobileNumber) {
+            <mat-radio-button [value]="otpIdentifierEnum.MOBILE" [disabled]="isDisabledMobile"
+              ><span>Mobile</span>
+            </mat-radio-button>
+          }
+        </mat-radio-group>
+      }
+      <mat-form-field class="ckyc-otp__field" appearance="outline">
+        <mat-label>6-DIGIT OTP</mat-label>
+        <input
+          matInput
+          type="text"
+          inputmode="numeric"
+          maxlength="6"
+          autocomplete="one-time-code"
+          [formControl]="otpControl"
+          [readonly]="isMaxAttemptsReached() || isSubmitting()"
+        />
+        @if (otpControl.invalid && otpControl.touched) {
+          <mat-error>Enter a valid 6-digit OTP.</mat-error>
+        }
+      </mat-form-field>
+      <div class="ckyc-otp__meta">
+        <span>Expires in <strong>{{ formatDisplayTime(countdown()) }}</strong></span>
+        @if (otpNode()?.maxValidateAttempts; as maxAttempts) {
+          <span>Attempts <strong>{{ otpNode()?.validateAttemptCount }} / {{ maxAttempts }}</strong></span>
+        }
+      </div>
+      @if (countdown() === 0 && !isMaxAttemptsReached()) {
+        <div class="ckyc-otp__notice" role="status">OTP expired. Resend to continue.</div>
+      }
+      <div class="ckyc-otp__actions">
+        <button
+          mat-flat-button
+          class="ckyc-otp__verify"
+          type="button"
+          [disabled]="radioControl.invalid || otpControl.invalid || countdown() === 0 || isMaxAttemptsReached()"
+          (click)="submit()"
+        >
+          Verify OTP
+        </button>
+        <button
+          mat-stroked-button
+          class="ckyc-otp__resend"
+          type="button"
+          [disabled]="countdown() > 0 || isMaxAttemptsReached()"
+          (click)="resend()"
+        >
+          {{ countdown() > 0 ? "Resend in " + formatDisplayTime(countdown()) : "Resend OTP" }}
+        </button>
+        @if (isActive()) {
+          <button mat-button class="ckyc-otp__back" type="button" (click)="goBack()">Back to enquiry</button>
+        }
+      </div>
     }
-    <div class="ckyc-otp__actions">
-      <button
-        mat-flat-button
-        class="ckyc-otp__verify"
-        type="button"
-        [disabled]="radioControl.invalid || otpControl.invalid || countdown() === 0 || isMaxAttemptsReached()"
-        (click)="submit()"
-      >
-        Verify OTP
-      </button>
-      <button
-        mat-stroked-button
-        class="ckyc-otp__resend"
-        type="button"
-        [disabled]="countdown() > 0 || isMaxAttemptsReached()"
-        (click)="resend()"
-      >
-        {{ countdown() > 0 ? "Resend in " + formatDisplayTime(countdown()) : "Resend OTP" }}
-      </button>
-      <button mat-button class="ckyc-otp__back" type="button" (click)="flow.returnToEnquiryReceived()">
-        Back to enquiry
-      </button>
-    </div>
   </div>
 </section>

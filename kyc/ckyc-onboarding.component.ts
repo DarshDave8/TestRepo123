@@ -19,7 +19,7 @@ import { CkycStepOtpComponent } from './ckyc-step-otp/ckyc-step-otp.component';
 import { NonOtpAuthenticationComponent } from './non-otp-authentication/non-otp-authentication.component';
 import { CkycFlowStateService } from './services/ckyc-flow-state.service';
 import { CkycSearchV2Component } from './ckyc-search-v2/ckyc-search-v2.component';
-import { SearchAttemptedPhase } from './constants/ckyc-onboarding.constants';
+import { AuthenticationMode, SearchAttemptedPhase } from './constants/ckyc-onboarding.constants';
 import { CkycAuthStateService } from './services/ckyc-auth-state.service';
 import { CkycErrorAlertComponent } from './ckyc-error-alert/ckyc-error-alert.component';
 import { CkycSharedStateService } from './services/ckyc-shared-state.service';
@@ -52,6 +52,7 @@ export class CkycOnboardingComponent implements OnInit {
   readonly customerBasicDetailsFetch = output<ICustomerBasicDetailsFetch>();
   readonly ckycSharedStateService = inject(CkycSharedStateService);
   phase = SearchAttemptedPhase;
+  readonly authMode = AuthenticationMode;
   // 2. Combine your signals into a single computed signal
   readonly hasAnyError = computed(() => {
     const enquiryListError = this.flow.historyError();

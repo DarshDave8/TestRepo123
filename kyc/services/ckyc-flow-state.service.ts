@@ -15,6 +15,7 @@ import { CkycStepManager } from '../ckyc-step-manager';
 import {
   CkycEnquiryGroups,
   CkycFieldValues,
+  CkycFlowStep,
   CkycRelatedPersonName,
   CkycSavedOvd,
   IActiveMatchSelection,
@@ -196,7 +197,7 @@ export class CkycFlowStateService {
   triggerSearchAction(action: CkycSearchAction) {
     this.clearFormSubject.next(action);
   }
-  goToStep(stepName: 'search' | 'enquiryReceived' | 'otp' | 'face' | 'manual'): void {
+  goToStep(stepName: CkycFlowStep): void {
     this.stepManager.goTo(stepName);
   }
   /**

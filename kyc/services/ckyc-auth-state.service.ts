@@ -17,7 +17,6 @@ import {
 } from '../constants/ckyc-onboarding.constants';
 import {
   AuthDomainState,
-  AuthNodeStatus,
   ICkycAuthNodeConfig,
   ITriggerConsentRequest,
   IValidateConsentRequest,
@@ -25,14 +24,7 @@ import {
 } from '../models/ckyc-onboarding.model';
 import { CkycFlowStateService } from './ckyc-flow-state.service';
 import { CkycSharedStateService } from './ckyc-shared-state.service';
-import { CkycConsentAttempt, OtpIdentifier } from '../models/ckyc-consent-request.model';
-
-// Step 3a compatibility: today's screens still render consentAttempts. Removed in 3b.
-const ATTEMPT_STATUS: Record<Exclude<AuthNodeStatus, 'PENDING'>, CkycConsentAttempt['status']> = {
-  IN_PROGRESS: 'Calling',
-  SUCCESS: 'Success',
-  FAILED: 'Failed',
-};
+import { OtpIdentifier } from '../models/ckyc-consent-request.model';
 
 @Injectable({ providedIn: 'root' })
 export class CkycAuthStateService {
@@ -59,19 +51,18 @@ export class CkycAuthStateService {
     const node = this.currentNode();
     return node !== null && !node.autoTrigger && (node.status === 'PENDING' || node.status === 'FAILED');
   });
-
-  // ---- Step 3a compatibility for today's screens (removed in 3b, when the screens read the nodes) ----
-  readonly consentAttempts = computed<readonly CkycConsentAttempt[]>(() =>
-    this._authNodes()
-      .filter((node) => node.status !== 'PENDING')
-      .map((node) => ({
-        id: node.order,
-        consentType: node.mode,
-        authFactor: node.subType,
-        status: ATTEMPT_STATUS[node.status as Exclude<AuthNodeStatus, 'PENDING'>],
-      })),
+  // Modes the flow has reached, in queue order. Each gets its screen, and earlier screens stay visible.
+  readonly reachedModes = computed<readonly AuthenticationMode[]>(() => {
+    const current = this._currentNodeIndex();
+    const reached = this._authNodes().filter((node) => node.status !== 'PENDING' || node.order === current);
+    return [...new Set(reached.map((node) => node.mode))];
+  });
+  // The last reached mode's screen is the active one: it shows the error message and the Back button.
+  readonly activeScreenMode = computed<AuthenticationMode | null>(() => this.reachedModes().at(-1) ?? null);
+  // A consent or validate call is running.
+  readonly isBusy = computed(
+    () => this.authState().loading || this._authNodes().some((node) => node.status === 'IN_PROGRESS'),
   );
-  readonly otpFallbackPending = this.awaitingUserTrigger;
 
   readonly authState = signal<AuthDomainState>({
     loading: false,
@@ -142,9 +133,21 @@ export class CkycAuthStateService {
       );
   }
 
-  // Step 3a compatibility: the enquiry details screen still asks for the starting mode. Removed in 3b.
-  resolveStartingMode(_modes: AuthenticationMode[], _phase: SearchAttemptedPhase): AuthenticationMode | null {
-    return this.currentNode()?.mode ?? null;
+  /**
+   * Starts this match's queue (after loadApplicableModes): sends the first node when it is autoTrigger,
+   * otherwise it waits for the user. Returns false when no node is usable; manual verification is flagged.
+   */
+  startQueue(): boolean {
+    const first = this.currentNode();
+    if (!first) {
+      this.authState.update((s) => ({ ...s, error: 'No authentication methods are available.' }));
+      this.ckycSharedStateService.setManualVerificationEnabled(true);
+      return false;
+    }
+    if (first.autoTrigger) {
+      this.triggerConsent().subscribe();
+    }
+    return true;
   }
 
   /**
@@ -201,8 +204,8 @@ export class CkycAuthStateService {
     return this.triggerConsent();
   }
 
-  // Step 3a compatibility: the Face screen's "Trigger OTP" / "Re-trigger OTP" buttons. Removed in 3b.
-  triggerOtpFallback(): Observable<boolean> {
+  // User-started send of a node that waits for the user ("Trigger OTP" / "Re-trigger OTP").
+  triggerAwaitingNode(): Observable<boolean> {
     if (!this.awaitingUserTrigger()) return of(false);
     this.authState.update((s) => ({ ...s, error: null }));
     return this.triggerConsent();
@@ -243,14 +246,20 @@ export class CkycAuthStateService {
     );
   }
 
+  // A node that consent was sent for, still current, and not validated yet: "Download Data" may validate it.
+  canValidate(node: ICkycAuthNodeConfig): boolean {
+    return node.id === this.currentNode()?.id && node.status === 'SUCCESS' && node.validateSuccess !== true;
+  }
+
   /**
-   * Back from an auth step: stop every running call for this match (no further queued calls, no late
-   * navigation) and clear its state, so the next "Download Data" starts clean.
+   * Back from the auth screens: stop every running call for this match (no further queued calls),
+   * clear its queue and state, and return to the enquiry list, so the next "Download Data" starts clean.
    */
   cancelConsentFlow(): void {
     this.cancelConsent$.next();
     this.clearQueue();
     this.resetAuth();
+    this.flow.returnToEnquiryReceived();
   }
 
   resetAuth(): void {
@@ -360,10 +369,8 @@ export class CkycAuthStateService {
       validateAttemptCount: previous.validateAttemptCount + 1,
       lastError: message,
     })!;
-    if (node.mode === AuthenticationMode.OTP) {
-      // Step 3a compatibility: the OTP screen still reads otpState.otpAttemptCount. Removed in 3b.
-      this.otpState.update((s) => ({ ...s, otpAttemptCount: node.validateAttemptCount }));
-    } else {
+    // The OTP screen shows its own attempt count; FACEAUTH / PHYSICAL show the error message.
+    if (node.mode !== AuthenticationMode.OTP) {
       this.authState.update((s) => ({ ...s, error: message }));
     }
     if (!this.hasAttemptsLeft(node.validateAttemptCount, node.maxValidateAttempts)) {
@@ -396,10 +403,6 @@ export class CkycAuthStateService {
     }
     if (next.autoTrigger) {
       this.triggerConsent().subscribe();
-    }
-    // Step 3a compatibility: today only one auth screen shows at a time. Removed in 3b (stacked screens).
-    if (next.mode !== usedUp.mode && next.autoTrigger && next.mode === AuthenticationMode.FACEAUTH) {
-      this.flow.goToStep('face');
     }
   }
 

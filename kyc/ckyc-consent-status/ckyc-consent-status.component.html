@@ -1,0 +1,44 @@
+@if (error(); as error) {
+  <p role="alert">{{ error }}</p>
+}
+<div class="consent-status" role="region" [attr.aria-labelledby]="captionId()" tabindex="0">
+  <table aria-live="polite">
+    <caption [id]="captionId()">{{ caption() }}</caption>
+    <thead>
+      <tr>
+        <th scope="col">#</th>
+        <th scope="col">Consent request</th>
+        <th scope="col">Status</th>
+        <th scope="col">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (node of rows(); track node.id; let index = $index) {
+        <tr>
+          <td>{{ index + 1 }}</td>
+          <td>{{ node.label }}</td>
+          <td>
+            <span
+              class="consent-result"
+              [class.consent-result--success]="node.status === 'SUCCESS'"
+              [class.consent-result--failed]="node.status === 'FAILED'"
+            >
+              {{ statusText[node.status] }}
+            </span>
+          </td>
+          <td>
+            @if (canDownload(node)) {
+              <button type="button" [disabled]="isBusy()" (click)="downloadData(node)">Download Data</button>
+            } @else {
+              —
+            }
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td colspan="4">No consent calls yet.</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

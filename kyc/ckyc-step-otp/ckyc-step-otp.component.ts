@@ -6,16 +6,23 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { finalize, interval, Subscription, tap, timer } from 'rxjs';
-import { CkycFlowStateService } from '../services/ckyc-flow-state.service';
 import { CkycAuthStateService } from '../services/ckyc-auth-state.service';
-import { CKYC_OTP_MAX_ATTEMPTS } from '../constants/ckyc-onboarding.constants';
+import { AuthenticationMode } from '../constants/ckyc-onboarding.constants';
+import { CkycConsentStatusComponent } from '../ckyc-consent-status/ckyc-consent-status.component';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatRadioModule } from '@angular/material/radio';
 import { OtpIdentifier, OtpIdentifierEnum } from '../models/ckyc-consent-request.model';
 @Component({
   selector: 'app-ckyc-step-otp',
   standalone: true,
-  imports: [ReactiveFormsModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatRadioModule],
+  imports: [
+    ReactiveFormsModule,
+    MatButtonModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatRadioModule,
+    CkycConsentStatusComponent,
+  ],
   templateUrl: './ckyc-step-otp.component.html',
   styleUrl: './ckyc-step-otp.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -23,15 +30,21 @@ import { OtpIdentifier, OtpIdentifierEnum } from '../models/ckyc-consent-request
 export class CkycStepOtpComponent implements OnDestroy {
   isDisabledEmail: boolean = false;
   isDisabledMobile: boolean = false;
-  readonly maxAttempts = CKYC_OTP_MAX_ATTEMPTS;
-  readonly flow = inject(CkycFlowStateService);
+  readonly authMode = AuthenticationMode;
   readonly ckycAuthState = inject(CkycAuthStateService);
   private readonly destroyRef = inject(DestroyRef);
   readonly countdown = signal(0);
   readonly isSubmitting = signal<boolean>(false);
   readonly otpIdentifierEnum = OtpIdentifierEnum;
+  // The OTP node of the auth queue: send status and failed-validation count (limit from AUTH_CONFIG).
+  readonly otpNode = computed(
+    () => this.ckycAuthState.authNodes().find((node) => node.mode === AuthenticationMode.OTP) ?? null,
+  );
+  readonly isActive = computed(() => this.ckycAuthState.activeScreenMode() === AuthenticationMode.OTP);
+  readonly isSending = computed(() => this.otpNode()?.status === 'IN_PROGRESS');
   readonly isMaxAttemptsReached = computed(() => {
-    return this.ckycAuthState.otpState().otpAttemptCount >= CKYC_OTP_MAX_ATTEMPTS;
+    const node = this.otpNode();
+    return node !== null && node.maxValidateAttempts !== null && node.validateAttemptCount >= node.maxValidateAttempts;
   });
   readonly otpControl = new FormControl('', {
     nonNullable: true,
@@ -81,6 +94,15 @@ export class CkycStepOtpComponent implements OnDestroy {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe();
+  }
+  // "Trigger OTP" / "Re-trigger OTP": shown until an OTP has been sent.
+  triggerOtp(): void {
+    if (this.isSending()) return;
+    this.ckycAuthState.triggerAwaitingNode().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
+  }
+  // Back to the enquiry list; also stops consent calls still running for this match.
+  goBack(): void {
+    this.ckycAuthState.cancelConsentFlow();
   }
   resend(): void {
     if (this.isSubmitting() || this.isMaxAttemptsReached()) return;

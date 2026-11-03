@@ -13,15 +13,18 @@
       [matchIndex]="flow.activeMatchSelection()?.matchIndex!"
     />
 
-    @switch (flow.step()) {
-      @case ("otp") {
-        <app-ckyc-step-otp />
-      }
-      @case ("face") {
-        <app-ckyc-face-authentication />
-      }
-      @case ("manual") {
-        <app-non-otp-authentication />
+    <!-- One screen per auth mode the queue has reached, in queue order; earlier screens stay visible. -->
+    @for (mode of ckycAuthState.reachedModes(); track mode) {
+      @switch (mode) {
+        @case (authMode.MANUAL) {
+          <app-non-otp-authentication />
+        }
+        @case (authMode.FACEAUTH) {
+          <app-ckyc-face-authentication />
+        }
+        @case (authMode.OTP) {
+          <app-ckyc-step-otp />
+        }
       }
     }
   }

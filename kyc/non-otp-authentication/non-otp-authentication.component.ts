@@ -1,78 +1,25 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, OnInit } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ReactiveFormsModule } from '@angular/forms';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { AuthenticationMode, AuthFactor } from '../constants/ckyc-onboarding.constants';
-import { CkycRelatedPersonFieldsComponent } from '../ckyc-related-person-fields/ckyc-related-person-fields.component';
-import { CkycConsentAttempt } from '../models/ckyc-consent-request.model';
+import { AuthenticationMode } from '../constants/ckyc-onboarding.constants';
+import { CkycConsentStatusComponent } from '../ckyc-consent-status/ckyc-consent-status.component';
 import { CkycAuthStateService } from '../services/ckyc-auth-state.service';
-import { CkycFlowStateService } from '../services/ckyc-flow-state.service';
 
+// Physical (manual) auth screen: its consent call history. The calls themselves are sent by the auth queue.
 @Component({
   selector: 'app-non-otp-authentication',
   standalone: true,
-  imports: [
-    ReactiveFormsModule,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    CkycRelatedPersonFieldsComponent,
-  ],
+  imports: [MatButtonModule, CkycConsentStatusComponent],
   templateUrl: './non-otp-authentication.component.html',
   styleUrl: './non-otp-authentication.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class NonOtpAuthenticationComponent implements OnInit {
+export class NonOtpAuthenticationComponent {
   private readonly authStore = inject(CkycAuthStateService);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly flow = inject(CkycFlowStateService);
+  readonly mode = AuthenticationMode.MANUAL;
+  readonly isActive = computed(() => this.authStore.activeScreenMode() === this.mode);
 
-  readonly consentAttempts = this.authStore.consentAttempts;
-  readonly authState = this.authStore.authState;
-  readonly otpState = this.authStore.otpState;
-  readonly authMode = AuthenticationMode;
-  readonly authFactor = AuthFactor;
-
-  ngOnInit(): void {
-    if (
-      this.authState().activeMode !== AuthenticationMode.MANUAL ||
-      (this.authState().applicableModes.includes(AuthenticationMode.FACEAUTH) &&
-        this.consentAttempts().some((attempt) => attempt.consentType === AuthenticationMode.MANUAL))
-    )
-      return;
-    this.authStore.triggerConsent().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
-  }
-
-  canDownload(attempt: CkycConsentAttempt): boolean {
-    const attempts = this.consentAttempts();
-    return (
-      attempt.status === 'Success' &&
-      attempt.consentType === AuthenticationMode.MANUAL &&
-      attempt.consentType === this.authState().activeMode &&
-      attempt.id === attempts[attempts.length - 1]?.id
-    );
-  }
-
-  isBusy(): boolean {
-    return (
-      this.authState().loading ||
-      this.otpState().loading ||
-      this.consentAttempts().some((attempt) => attempt.status === 'Calling')
-    );
-  }
-
-  downloadData(attempt: CkycConsentAttempt): void {
-    if (!this.canDownload(attempt) || this.isBusy()) return;
-    this.authStore.validate().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
-  }
-
-  // Back to the enquiry list, like the OTP step. Also stops consent calls still running for this match.
+  // Back to the enquiry list; also stops consent calls still running for this match.
   goBack(): void {
     this.authStore.cancelConsentFlow();
-    this.flow.returnToEnquiryReceived();
   }
 }

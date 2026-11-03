@@ -6,6 +6,7 @@ import type { TriggerConsentAuthFactor } from './ckyc-consent-request.model';
 import type { ICkycEnquiryListResponseBody, ICkycSearchResult } from './ckyc-search-response.model';
 import {
   AuthenticationMode,
+  AuthFactor,
   CkycBusinessErrorPhase,
   CkycSearchOption,
   CkycWorkflowStatus,
@@ -174,6 +175,28 @@ export interface OtpDomainState {
   otpAttemptCount: number;
   hasMobileNumber?: boolean; // INFERRED from screenshot usage
   hasEmailAddress?: boolean; // INFERRED from screenshot usage
+}
+
+// ---- CKYC auth queue ----
+// One node per consent call the flow may make (mode + factor), in fallback order.
+// Which nodes exist, their order and their limits come from AUTH_CONFIG; a node only records what happened.
+
+export type AuthNodeStatus = 'PENDING' | 'IN_PROGRESS' | 'SUCCESS' | 'FAILED';
+
+export interface ICkycAuthNodeConfig {
+  id: string; // `${mode}` or `${mode}_${factor}`, e.g. 'FACEAUTH_DOB', 'OTP'
+  mode: AuthenticationMode;
+  subType: AuthFactor | null; // null = mode without factors (OTP)
+  label: string; // shown in the consent status table
+  order: number; // position in the queue, 0-based
+  status: AuthNodeStatus;
+  triggerSuccess: boolean | null; // null = not triggered yet
+  validateSuccess: boolean | null; // null = not validated yet
+  triggerAttemptCount: number; // failed trigger calls
+  maxTriggerAttempts: number | null; // from AUTH_CONFIG; null = unlimited
+  validateAttemptCount: number; // failed validate calls
+  maxValidateAttempts: number | null; // from AUTH_CONFIG; null = unlimited
+  lastError: string | null;
 }
 
 // Trigger-Enquiries

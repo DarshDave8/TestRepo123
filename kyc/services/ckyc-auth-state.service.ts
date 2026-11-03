@@ -14,6 +14,7 @@ import {
 } from '../constants/ckyc-onboarding.constants';
 import {
   AuthDomainState,
+  ICkycAuthNodeConfig,
   ITriggerConsentRequest,
   IValidateConsentRequest,
   OtpDomainState,
@@ -41,6 +42,11 @@ export class CkycAuthStateService {
   // Fired by cancelConsentFlow(): stops every running consent / validate call, including the
   // follow-up calls that handleAuthFailure subscribes to (those outlive the component that started them).
   private readonly cancelConsent$ = new Subject<void>();
+
+  // Auth queue for the current match: one node per consent call, in fallback order (built from AUTH_CONFIG).
+  // Step 1: declared only; the existing flow does not read or write it yet.
+  private readonly _authNodes = signal<readonly ICkycAuthNodeConfig[]>([]);
+  readonly authNodes = this._authNodes.asReadonly();
 
   readonly authState = signal<AuthDomainState>({
     loading: false,

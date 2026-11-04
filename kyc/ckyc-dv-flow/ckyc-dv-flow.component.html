@@ -1,4 +1,4 @@
-<!-- From commit 9689250e (diff photograph, 2026-11-03). -->
+<!-- From commit 9689250e (diff photograph, 2026-11-03); UI step 6 (2026-11-04). -->
 @if (isShowCkycFlow()) {
   <div class="dv-flow">
     @if (leadDetails()?.customerProfile?.profileProvider === "MANUAL") {
@@ -15,30 +15,52 @@
               class="dv-flow__child"
             />
             @if (flowState.displayedEnquiries().length > 0 && !flowState.isAtleastOneOVDRecordPresent()) {
-              <div class="dv-flow__checkbox-container">
-                <input id="consentCheckbox" type="checkbox" (click)="toggleEnableSubmit()" />
-                <!-- 9689250e had two class attributes on this label; merged into one. -->
-                <label class="ckyc-not-applicable dv-flow__checkbox-text" for="consentCheckbox"
-                  >I have reviewed the provided information and confirmed that none of these records pertains to the
-                  customer.
-                </label>
-              </div>
+              <!-- The box follows the shared flag, so it cannot show unticked while Submit is enabled. -->
+              <label class="dv-flow__confirm" for="consentCheckbox">
+                <input
+                  id="consentCheckbox"
+                  class="dv-flow__checkbox"
+                  type="checkbox"
+                  [checked]="sharedService.isCkycConsentChecked()"
+                  (change)="setNoMatchConfirmed($any($event.target).checked)"
+                />
+                <span class="dv-flow__confirm-text">
+                  I have reviewed the provided information and confirm that none of these records pertains to the customer.
+                </span>
+              </label>
             }
           }
         }
       }
     }
-    <button
-      mat-flat-button
-      [disabled]="!sharedService.isDvCkycSubmitEnabled()"
-      class="dv-flow__action"
-      (click)="onSubmit()"
-    >
-      Submit CKYC
-    </button>
+    <div class="dv-flow__actions">
+      @if (!sharedService.isDvCkycSubmitEnabled()) {
+        <p class="dv-flow__hint" id="dv-flow-submit-hint">
+          @if (flowState.displayedEnquiries().length > 0 && !flowState.isAtleastOneOVDRecordPresent()) {
+            Authenticate a matching record, or confirm above that none of them belongs to the customer.
+          } @else {
+            Authenticate a matching record to submit.
+          }
+        </p>
+      }
+      <button
+        mat-flat-button
+        class="dv-flow__submit"
+        type="button"
+        [disabled]="!sharedService.isDvCkycSubmitEnabled()"
+        [attr.aria-describedby]="sharedService.isDvCkycSubmitEnabled() ? null : 'dv-flow-submit-hint'"
+        (click)="onSubmit()"
+      >
+        Submit CKYC
+      </button>
+    </div>
   </div>
-} @else if (leadDetails()?.customerProfile?.profileProvider === "CKYC") {
-  Display CKYC : {{ leadDetails()?.customerProfile?.ckycDetails?.ckycNumber }}
-} @else if (leadDetails()?.customerProfile?.profileProvider === "AADHAAR") {
-  Display CKYC : {{ leadDetails()?.customerProfile?.ckycDetails?.ckycNumber }}
+} @else if (
+  leadDetails()?.customerProfile?.profileProvider === "CKYC" ||
+  leadDetails()?.customerProfile?.profileProvider === "AADHAAR"
+) {
+  <div class="dv-flow__ckyc-number">
+    <span class="dv-flow__label">CKYC number</span>
+    <span class="dv-flow__value">{{ leadDetails()?.customerProfile?.ckycDetails?.ckycNumber ?? "Not available" }}</span>
+  </div>
 }

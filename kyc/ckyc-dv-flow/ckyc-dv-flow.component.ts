@@ -44,6 +44,8 @@ export class CkycDvFlowComponent implements OnChanges {
     // The flow and auth services are app-wide: reset them when this screen goes away.
     this.destroyRef.onDestroy(() => {
       this.sharedService.setLeadId(null);
+      this.sharedService.setIsDvCkycSubmitEnabled(false);
+      this.sharedService.setIsCkycConsentChecked(false);
       this.isShowCkycFlow.set(false);
       this.flowState.activeMatchSelection.set(null);
       this.authService.resetAuth();
@@ -78,18 +80,16 @@ export class CkycDvFlowComponent implements OnChanges {
   onCustomerBasicDetailsFetch(event: ICustomerBasicDetailsFetch): void {
     if (event.status === ProviderFetchStatus.SUCCESS && event.profileData) {
       this.validatedDetails.set(event.profileData);
+      // A record was authenticated, so "none of these records pertains to the customer" no longer holds.
+      this.sharedService.setIsCkycConsentChecked(false);
       this.sharedService.setIsDvCkycSubmitEnabled(true);
     }
   }
 
-  // "None of these records pertains to the customer" checkbox: enables Submit and records the confirmation.
-  toggleEnableSubmit() {
-    this.sharedService.isDvCkycSubmitEnabled()
-      ? this.sharedService.setIsDvCkycSubmitEnabled(false)
-      : this.sharedService.setIsDvCkycSubmitEnabled(true);
-    this.sharedService.isCkycConsentChecked()
-      ? this.sharedService.setIsCkycConsentChecked(false)
-      : this.sharedService.setIsCkycConsentChecked(true);
+  // "None of these records pertains to the customer" checkbox: Submit and the confirmation follow the box.
+  setNoMatchConfirmed(checked: boolean) {
+    this.sharedService.setIsCkycConsentChecked(checked);
+    this.sharedService.setIsDvCkycSubmitEnabled(checked);
   }
 
   onSubmit() {

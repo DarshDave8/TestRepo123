@@ -1,0 +1,112 @@
+@use "../styles/ckyc-onboarding.tokens" as t;
+
+:host {
+  display: block;
+}
+
+.dv-flow {
+  display: grid;
+  gap: t.$space-4;
+  min-width: 0;
+}
+
+// The children bring their own card styles; spacing comes from the grid gap above.
+.dv-flow__child {
+  display: block;
+  min-width: 0;
+  margin: 0;
+}
+
+// ---- "None of these records" confirmation ----
+.dv-flow__confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: t.$space-3;
+  padding: t.$space-4;
+  border: 1px solid t.$border;
+  border-radius: t.$radius-md;
+  background: t.$surface-muted;
+  color: t.$text;
+  font-size: t.$font-md;
+  line-height: 1.5;
+  cursor: pointer;
+
+  // ticked: the box takes the brand tint so the confirmation is visible at a glance
+  &:has(.dv-flow__checkbox:checked) {
+    border-color: t.$brand-purple;
+    background: t.$brand-blue-pale;
+  }
+}
+
+.dv-flow__checkbox {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0.125rem 0 0;
+  accent-color: t.$brand-purple;
+  cursor: pointer;
+  @include t.focus-ring;
+}
+
+.dv-flow__confirm-text {
+  min-width: 0;
+  font-weight: 500;
+}
+
+// ---- Submit ----
+.dv-flow__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: t.$space-3 t.$space-4;
+  padding-top: t.$space-4;
+  border-top: 1px solid t.$border;
+}
+
+.dv-flow__hint {
+  flex: 1 1 16rem;
+  margin: 0;
+  color: t.$text-muted;
+  font-size: t.$font-sm;
+}
+
+.dv-flow__submit {
+  @include t.button-primary;
+  min-width: 10rem;
+}
+
+// ---- CKYC / Aadhaar provider: the CKYC number already on the lead ----
+.dv-flow__ckyc-number {
+  display: grid;
+  gap: t.$space-1;
+  padding: t.$space-4 t.$space-6;
+  border: 1px solid t.$border;
+  border-radius: t.$radius-md;
+  background: t.$surface;
+}
+
+.dv-flow__label {
+  color: t.$text-muted;
+  font-size: t.$font-sm;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dv-flow__value {
+  color: t.$brand-purple;
+  font-size: t.$font-lg;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+@include t.phone {
+  .dv-flow__ckyc-number {
+    padding: t.$space-4;
+  }
+
+  .dv-flow__submit {
+    width: 100%;
+  }
+}

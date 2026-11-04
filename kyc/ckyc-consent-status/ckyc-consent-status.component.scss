@@ -104,6 +104,14 @@
   white-space: nowrap;
 }
 
+.consent-status__button-primary {
+  @include t.button-primary;
+}
+
+.consent-status__button-secondary {
+  @include t.button-secondary;
+}
+
 .consent-status__none {
   color: t.$text-muted;
 }

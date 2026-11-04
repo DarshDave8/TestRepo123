@@ -1,0 +1,150 @@
+@use "../styles/ckyc-onboarding.tokens" as t;
+
+// The OTP step: the status table (from ckyc-consent-status), then this card once an OTP has been sent.
+.ckyc-otp {
+  display: block;
+  min-width: 0;
+
+  &__card {
+    margin-top: t.$space-3;
+    padding: t.$space-8 t.$space-6;
+    border: 1px solid t.$border;
+    border-radius: t.$radius-md;
+    background: t.$surface;
+  }
+
+  // One centred column inside the card
+  &__panel {
+    display: grid;
+    justify-items: center;
+    gap: t.$space-4;
+    width: min(100%, 24rem);
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  &__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    background: t.$brand-blue-pale;
+    color: t.$brand-purple;
+  }
+
+  &__intro {
+    display: grid;
+    gap: t.$space-1;
+  }
+
+  &__title {
+    margin: 0;
+    color: t.$brand-purple;
+    font-size: t.$font-xl;
+    font-weight: 600;
+  }
+
+  &__help {
+    margin: 0;
+    color: t.$text-muted;
+    font-size: t.$font-md;
+    line-height: 1.5;
+  }
+
+  &__channels {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: t.$space-2 t.$space-6;
+  }
+
+  &__field {
+    width: 100%;
+  }
+
+  // 6 large, evenly spaced digits; the left padding balances the trailing letter-spacing so they sit centred
+  &__input {
+    padding-left: 0.5em;
+    font-size: t.$font-xl;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.5em;
+    text-align: center;
+  }
+
+  &__meta {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: t.$space-1 t.$space-6;
+    color: t.$text-muted;
+    font-size: t.$font-sm;
+
+    strong {
+      color: t.$text;
+      font-weight: 600;
+    }
+  }
+
+  &__notice {
+    box-sizing: border-box;
+    width: 100%;
+    padding: t.$space-3 t.$space-4;
+    border: 1px solid t.$border;
+    border-radius: t.$radius-sm;
+    background: t.$surface-muted;
+    color: t.$text;
+    font-size: t.$font-md;
+  }
+
+  &__notice--warning {
+    border-color: t.$error-bg;
+    background: t.$error-bg;
+    color: t.$error-text;
+  }
+
+  // Verify and Resend side by side, same width
+  &__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: t.$space-3;
+    width: 100%;
+
+    button {
+      width: 100%;
+    }
+  }
+
+  &__verify {
+    @include t.button-primary;
+  }
+
+  &__resend {
+    @include t.button-secondary;
+  }
+
+  &__back {
+    @include t.button-text;
+  }
+
+  // Before an OTP is sent there is no card: just Back under the table, as on the Face and Physical screens
+  &__back-row {
+    display: flex;
+    margin-top: t.$space-3;
+  }
+
+  &__back-outline {
+    @include t.button-secondary;
+  }
+
+  @include t.phone {
+    &__card {
+      padding: t.$space-6 t.$space-4;
+    }
+
+    &__actions {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+}

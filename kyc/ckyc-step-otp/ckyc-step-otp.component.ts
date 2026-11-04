@@ -43,6 +43,12 @@ export class CkycStepOtpComponent implements OnDestroy {
     const node = this.otpNode();
     return node !== null && node.maxValidateAttempts !== null && node.validateAttemptCount >= node.maxValidateAttempts;
   });
+  readonly remainingAttempts = computed(() => {
+    const node = this.otpNode();
+    return node?.maxValidateAttempts == null ? null : Math.max(0, node.maxValidateAttempts - node.validateAttemptCount);
+  });
+  // The last Verify did not succeed; cleared by the next Verify or a new OTP.
+  readonly verifyFailed = signal(false);
   readonly otpControl = new FormControl('', {
     nonNullable: true,
     validators: [Validators.required, Validators.pattern(/^[0-9]{6}$/)],
@@ -73,6 +79,7 @@ export class CkycStepOtpComponent implements OnDestroy {
       return;
     }
     this.isSubmitting.set(true);
+    this.verifyFailed.set(false);
     this.ckycAuthState
       .validate(this.otpControl.value, this.radioControl.value)
       .pipe(
@@ -80,6 +87,8 @@ export class CkycStepOtpComponent implements OnDestroy {
           if (success) {
             this.otpControl.reset('', { emitEvent: false });
             this.otpControl.disable({ emitEvent: false });
+          } else {
+            this.verifyFailed.set(true);
           }
         }),
         finalize(() => this.isSubmitting.set(false)),
@@ -98,6 +107,7 @@ export class CkycStepOtpComponent implements OnDestroy {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((success) => {
         if (success) {
+          this.verifyFailed.set(false);
           this.otpControl.reset('', { emitEvent: false });
         }
       });

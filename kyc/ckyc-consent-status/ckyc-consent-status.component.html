@@ -32,16 +32,16 @@
           </td>
           <td class="consent-status__action">
             @if (canDownload(node)) {
-              <button mat-stroked-button color="primary" type="button" [disabled]="isBusy()" (click)="downloadData(node)">
+              <button mat-stroked-button class="consent-status__button-secondary" type="button" [disabled]="isBusy()" (click)="downloadData(node)">
                 Download Data
               </button>
             } @else if (canTrigger(node)) {
               @if (node.status === "FAILED") {
-                <button mat-stroked-button color="primary" type="button" [disabled]="isBusy()" (click)="triggerNode(node)">
+                <button mat-stroked-button class="consent-status__button-secondary" type="button" [disabled]="isBusy()" (click)="triggerNode(node)">
                   Re-trigger
                 </button>
               } @else {
-                <button mat-flat-button color="primary" type="button" [disabled]="isBusy()" (click)="triggerNode(node)">
+                <button mat-flat-button class="consent-status__button-primary" type="button" [disabled]="isBusy()" (click)="triggerNode(node)">
                   Trigger
                 </button>
               }

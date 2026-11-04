@@ -52,3 +52,36 @@ $font-xl: 1.2rem;
     outline-offset: 2px;
   }
 }
+
+// Material (MDC) buttons in the CKYC brand colours. Include on a class that is on the button itself.
+// The brand colours apply only while the button is enabled, so a disabled button keeps Material's disabled look.
+@mixin button-primary {
+  min-height: 2.75rem;
+  border-radius: $radius-sm;
+  font-weight: 600;
+  @include focus-ring;
+  &.mat-mdc-unelevated-button:not(:disabled) {
+    background: $brand-purple;
+    color: $surface;
+  }
+}
+
+@mixin button-secondary {
+  min-height: 2.75rem;
+  border-radius: $radius-sm;
+  font-weight: 600;
+  @include focus-ring;
+  &.mat-mdc-outlined-button:not(:disabled) {
+    border: 1px solid $brand-purple;
+    color: $brand-purple;
+  }
+}
+
+@mixin button-text {
+  min-height: 2.75rem;
+  font-weight: 600;
+  @include focus-ring;
+  &.mat-mdc-button:not(:disabled) {
+    color: $brand-purple;
+  }
+}

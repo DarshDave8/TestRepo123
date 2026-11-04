@@ -1,3 +1,5 @@
+<!-- One auth mode's consent calls (compact redesign 2026-11-04): title, error of the active step, then the call rows. -->
+<h4 class="consent-step__title" [id]="captionId()">{{ caption() }}</h4>
 @if (error(); as error) {
   <div class="consent-alert" role="alert">
     <span class="consent-alert__icon" aria-hidden="true">!</span>
@@ -5,14 +7,13 @@
   </div>
 }
 <div class="consent-status" role="region" [attr.aria-labelledby]="captionId()" tabindex="0">
-  <table aria-live="polite">
-    <caption [id]="captionId()">{{ caption() }}</caption>
+  <table [attr.aria-labelledby]="captionId()" aria-live="polite">
     <thead>
       <tr>
         <th scope="col" class="consent-status__index">#</th>
         <th scope="col">Consent request</th>
         <th scope="col" class="consent-status__status">Status</th>
-        <th scope="col" class="consent-status__action">Action</th>
+        <th scope="col" class="consent-status__action"><span class="consent-status__sr">Action</span></th>
       </tr>
     </thead>
     <tbody>
@@ -33,7 +34,7 @@
           <td class="consent-status__action">
             @if (canDownload(node)) {
               <button mat-stroked-button class="consent-status__button-secondary" type="button" [disabled]="isBusy()" (click)="downloadData(node)">
-                Download Data
+                Download data
               </button>
             } @else if (canTrigger(node)) {
               @if (node.status === "FAILED") {
@@ -45,8 +46,6 @@
                   Trigger
                 </button>
               }
-            } @else {
-              <span class="consent-status__none" aria-label="No action">—</span>
             }
           </td>
         </tr>

@@ -1,61 +1,46 @@
 @use "../../styles/ckyc-onboarding.tokens" as t;
 
+// Compact redesign (2026-11-04): title row, then the fields in as many columns as fit.
 :host {
   display: block;
-  margin-top: t.$space-4;
 }
 
 .ckyc-validated {
-  padding: t.$space-4 t.$space-6 t.$space-6;
+  padding: t.$space-3;
   border: 1px solid t.$border;
+  border-left: 3px solid t.$success;
   border-radius: t.$radius-md;
   background: t.$surface;
-
-  @include t.phone {
-    padding: t.$space-4;
-  }
+  font-size: t.$font-md;
+  line-height: t.$line-height;
 }
 
 .ckyc-validated__header {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: t.$space-2 t.$space-3;
-  padding-bottom: t.$space-3;
-  margin-bottom: t.$space-4;
-  border-bottom: 1px solid t.$border;
+  gap: t.$space-2;
+  margin-bottom: t.$space-2;
 }
 
 .ckyc-validated__title {
   margin: 0;
+  color: t.$text;
   font-size: t.$font-lg;
   font-weight: 600;
-  color: t.$brand-purple;
 }
 
 .ckyc-validated__badge {
-  display: inline-flex;
-  align-items: center;
-  gap: t.$space-1;
-  padding: t.$space-1 t.$space-3;
-  border-radius: 999px;
+  @include t.chip;
   background: t.$success-bg;
   color: t.$success-text;
-  font-size: t.$font-sm;
-  font-weight: 600;
-  white-space: nowrap;
 }
 
 .ckyc-validated__details {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: t.$space-4 t.$space-6;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: t.$space-2 t.$space-4;
   margin: 0;
-
-  @include t.phone {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 .ckyc-validated__item {
@@ -63,24 +48,19 @@
 }
 
 .ckyc-validated__label {
-  margin: 0 0 t.$space-1;
-  font-size: t.$font-sm;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: t.$text-muted;
+  margin: 0;
+  @include t.label;
 }
 
 .ckyc-validated__value {
   margin: 0;
-  font-size: t.$font-md;
-  font-weight: 500;
   color: t.$text;
+  font-weight: 500;
   overflow-wrap: anywhere;
 }
 
 // "Not available": readable, but visibly not data.
 .ckyc-validated__value--empty {
-  font-weight: 400;
   color: t.$text-muted;
+  font-weight: 400;
 }

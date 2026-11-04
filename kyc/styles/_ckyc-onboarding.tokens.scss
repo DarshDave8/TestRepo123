@@ -24,15 +24,21 @@ $space-4: 1rem;
 $space-6: 1.5rem;
 $space-8: 2rem;
 
-$radius-sm: 0.5rem;
-$radius-md: 0.75rem;
-$radius-lg: 1rem;
+// Compact scale (2026-11-04 redesign): small radii, 13px body text, 32px controls.
+$radius-sm: 0.375rem; // 6px: controls, chips, alerts
+$radius-md: 0.5rem; // 8px: containers
+$radius-lg: 0.75rem;
 
-$font-xs: 0.7rem;
-$font-sm: 0.8rem;
-$font-md: 0.9rem;
-$font-lg: 1.1rem;
-$font-xl: 1.2rem;
+$font-xs: 0.6875rem; // 11px: labels, chips
+$font-sm: 0.75rem; // 12px: secondary text, table headers
+$font-md: 0.8125rem; // 13px: body
+$font-lg: 0.875rem; // 14px: section titles
+$font-xl: 1rem; // 16px: rarely
+
+$line-height: 1.4;
+$control-height: 2rem; // 32px buttons and inputs
+$control-height-sm: 1.75rem; // 28px buttons inside tables
+$control-height-touch: 2.5rem; // 40px on phones
 
 @mixin phone {
   @media (max-width: 767.98px) {
@@ -53,13 +59,60 @@ $font-xl: 1.2rem;
   }
 }
 
-// Material (MDC) buttons in the CKYC brand colours. Include on a class that is on the button itself.
-// The brand colours apply only while the button is enabled, so a disabled button keeps Material's disabled look.
-@mixin button-primary {
-  min-height: 2.75rem;
-  border-radius: $radius-sm;
+// Small uppercase label above or before a value.
+@mixin label {
+  color: $text-muted;
+  font-size: $font-xs;
   font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+// Pill for a status or a count; colours come from the caller.
+@mixin chip {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-1;
+  padding: 0.0625rem $space-2;
+  border-radius: 999px;
+  font-size: $font-xs;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+// Text for screen readers only.
+@mixin sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+// Material (MDC) buttons, compact, in the CKYC brand colours. Include on a class that is on the button itself.
+// The brand colours apply only while the button is enabled, so a disabled button keeps Material's disabled look.
+@mixin button-base {
+  height: $control-height;
+  min-height: $control-height;
+  padding: 0 $space-3;
+  border-radius: $radius-sm;
+  font-size: $font-md;
+  font-weight: 600;
+  letter-spacing: normal;
   @include focus-ring;
+  @include phone {
+    height: $control-height-touch;
+    min-height: $control-height-touch;
+  }
+}
+
+@mixin button-primary {
+  @include button-base;
   &.mat-mdc-unelevated-button:not(:disabled) {
     background: $brand-purple;
     color: $surface;
@@ -67,10 +120,7 @@ $font-xl: 1.2rem;
 }
 
 @mixin button-secondary {
-  min-height: 2.75rem;
-  border-radius: $radius-sm;
-  font-weight: 600;
-  @include focus-ring;
+  @include button-base;
   &.mat-mdc-outlined-button:not(:disabled) {
     border: 1px solid $brand-purple;
     color: $brand-purple;
@@ -78,10 +128,16 @@ $font-xl: 1.2rem;
 }
 
 @mixin button-text {
-  min-height: 2.75rem;
-  font-weight: 600;
-  @include focus-ring;
+  @include button-base;
   &.mat-mdc-button:not(:disabled) {
     color: $brand-purple;
   }
+}
+
+// Smaller buttons inside table rows. Include after button-primary / -secondary.
+@mixin button-small {
+  height: $control-height-sm;
+  min-height: $control-height-sm;
+  padding: 0 $space-2;
+  font-size: $font-sm;
 }

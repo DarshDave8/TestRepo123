@@ -1,79 +1,69 @@
-<!-- Recovered from screenshot 147113 (right pane); search summary and Dedup Check from commit 35dc8bd9. -->
-<section class="ckyc-history" aria-labelledby="enquiry-history-title">
-  <div class="ckyc-history__header">
-    <div>
-      <h1 id="enquiry-history-title">Enquiry history</h1>
-    </div>
-    <div class="ckyc-history__tools">
-      <span class="ckyc-history__total">{{ flow.displayedEnquiries().length }} enquiries</span>
-    </div>
-  </div>
+<!-- Enquiry history (compact redesign 2026-11-04): one collapsible row per enquiry, newest first, its records inside. -->
+<section class="ckyc-history" aria-labelledby="ckyc-history-title">
+  <header class="ckyc-history__head">
+    <h3 id="ckyc-history-title" class="ckyc-history__title">Enquiry history</h3>
+    @if (flow.displayedEnquiries().length; as count) {
+      <span class="ckyc-history__count">{{ count }} {{ count === 1 ? "enquiry" : "enquiries" }}</span>
+    }
+  </header>
+
   @if (flow.historyError()) {
-    <div class="ckyc-history__state ckyc-history__state--error" role="alert">
-      {{ flow.historyError() }}
-    </div>
+    <p class="ckyc-history__note ckyc-history__note--error" role="alert">{{ flow.historyError() }}</p>
+  } @else if (flow.historyLoading()) {
+    <p class="ckyc-history__note" role="status">Loading enquiries…</p>
+  } @else if (!flow.displayedEnquiries().length) {
+    <p class="ckyc-history__note">No CKYC records yet.</p>
   }
-  @for (group of flow.enquiryGroups() | keyvalue; track group.key; let isFirst = $first) {
-    <section class="ckyc-history__group">
-      <div class="ckyc-history__group-header">
-        <h2>Search Basis - {{ group.key }}</h2>
-        <span class="ckyc-history__group-count">
-          {{ group.value.length }}
-          {{ group.value.length === 1 ? "enquiry" : "enquiries" }}
-        </span>
-      </div>
-      <mat-accordion multi>
-        @for (enquiry of group.value; track enquiry ?? enquiryLabel(enquiry)) {
-          <mat-expansion-panel [expanded]="isFirst" class="ckyc-history__transaction">
-            <mat-expansion-panel-header class="ckyc-history__transaction-header">
-              <mat-panel-title class="ckyc-history__transaction-title">
-                @for (i of buildSummary(enquiry.transaction.enquiryRequest); track i.label) {
-                  <div class="ckyc-history__transaction-title-data-container">
-                    <dd>{{ i.label }}</dd>
-                    <dt>{{ i.value }}</dt>
-                  </div>
-                }
-              </mat-panel-title>
-              <mat-panel-description class="ckyc-history__transaction-meta">
-                <!-- @if (enquiryTimestamp(enquiry); as timestamp) {
-                  {{ timestamp | date: 'dd/MM/yyyy, h:mm a' }}
-                } -->
-              </mat-panel-description>
-            </mat-expansion-panel-header>
-            @if (enquiry.transaction.results.length === 0) {
-              <div class="ckyc-history__no-match">No CKYC record found.</div>
-            } @else {
-              <div class="dedup-container">
-                @if (
-                  ckycSharedStateService.searchAttemptedPhase() !== phase.DIGITAL_VERIFICATION &&
-                  isStaff &&
-                  [CkycSearchOption.OVD, CkycSearchOption.MOBILE].includes(enquiry.transaction.enquiryRequest.searchOption)
-                ) {
-                  <button
-                    mat-raised-button
-                    color="primary"
-                    type="button"
-                    (click)="openDedupDialog(enquiry.transaction.results[0].enquiryId, enquiry.transaction.enquiryRequest)"
-                  >
-                    Dedup Check
-                  </button>
-                }
-              </div>
-              <div class="ckyc-history__matches">
-                @for (
-                  match of enquiry.transaction.results;
-                  track match.enquiryId ?? match.ckycRefNo ?? $index;
-                  let matchIndex = $index
-                ) {
-                  <app-ckyc-enquiry-details [enquiry]="enquiry.transaction" [match]="match" [matchIndex]="matchIndex" />
-                }
+
+  <ul class="ckyc-history__list">
+    @for (enquiry of flow.displayedEnquiries(); track enquiry; let first = $first) {
+      <li>
+        <details class="ckyc-enq" [open]="first">
+          <summary class="ckyc-enq__summary">
+            <svg class="ckyc-enq__chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9 6l6 6-6 6" />
+            </svg>
+            <!-- What this enquiry searched with -->
+            <dl class="ckyc-enq__query">
+              @for (item of buildSummary(enquiry.enquiryRequest); track item.label) {
+                <div class="ckyc-enq__query-item">
+                  <dt>{{ item.label }}</dt>
+                  <dd>{{ item.value }}</dd>
+                </div>
+              }
+            </dl>
+            <span class="ckyc-enq__found">
+              {{ enquiry.results.length }} {{ enquiry.results.length === 1 ? "record" : "records" }}
+            </span>
+          </summary>
+
+          <div class="ckyc-enq__body">
+            @if (
+              ckycSharedStateService.searchAttemptedPhase() !== phase.DIGITAL_VERIFICATION &&
+              isStaff &&
+              [CkycSearchOption.OVD, CkycSearchOption.MOBILE].includes(enquiry.enquiryRequest.searchOption)
+            ) {
+              <div class="ckyc-enq__tools">
+                <button
+                  mat-button
+                  class="ckyc-enq__dedup"
+                  type="button"
+                  (click)="openDedupDialog(enquiry.results[0].enquiryId, enquiry.enquiryRequest)"
+                >
+                  Dedup check
+                </button>
               </div>
             }
-          </mat-expansion-panel>
-        }
-      </mat-accordion>
-    </section>
-  }
+            <ul class="ckyc-enq__matches">
+              @for (match of enquiry.results; track match.enquiryId ?? match.ckycRefNo ?? $index; let matchIndex = $index) {
+                <li>
+                  <app-ckyc-enquiry-details [enquiry]="enquiry" [match]="match" [matchIndex]="matchIndex" />
+                </li>
+              }
+            </ul>
+          </div>
+        </details>
+      </li>
+    }
+  </ul>
 </section>
-<!-- CAUTION: enquiryLabel(enquiry) receives a CkycTransaction although it accepts ICkycEnquiryListResponseBody;
-     it never runs, because `enquiry ??` is always non-null. -->

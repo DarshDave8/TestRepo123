@@ -1,33 +1,52 @@
+<!-- CKYC onboarding (compact redesign 2026-11-04): search and enquiry history, or the authentication of one record. -->
+<!-- No outer card: the host page (Profile Creation / DV) provides the container. -->
 <section class="ckyc-shell">
   @if (flow.step() === "search" || flow.step() === "enquiryReceived") {
-    <!-- <app-ckyc-search /> -->
     @if (searchAttemptedPhase() === phase.PROFILE_CREATION) {
       <app-ckyc-search-v2 />
       <app-ckyc-error-alert />
     }
     <app-ckyc-enquiry-list />
   } @else {
-    <app-ckyc-error-alert />
+    <div class="ckyc-auth">
+      <nav class="ckyc-auth__crumbs" aria-label="CKYC">
+        <button type="button" class="ckyc-auth__back" (click)="backToEnquiries()">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M15 6l-6 6 6 6" />
+          </svg>
+          Enquiry history
+        </button>
+        <span class="ckyc-auth__sep" aria-hidden="true">/</span>
+        <span class="ckyc-auth__current" aria-current="page">Authentication</span>
+      </nav>
 
-    <app-ckyc-enquiry-details
-      [enquiry]="flow.activeMatchSelection()?.parentEnquiry!"
-      [match]="flow.activeMatchSelection()?.selectedResult!"
-      [matchIndex]="flow.activeMatchSelection()?.matchIndex!"
-    />
+      <app-ckyc-error-alert />
 
-    <!-- One screen per auth mode the queue has reached, in queue order; earlier screens stay visible. -->
-    @for (mode of ckycAuthState.reachedModes(); track mode) {
-      @switch (mode) {
-        @case (authMode.MANUAL) {
-          <app-non-otp-authentication />
+      <!-- The record being authenticated (compact, no Authenticate button in this step). -->
+      <app-ckyc-enquiry-details
+        [enquiry]="flow.activeMatchSelection()?.parentEnquiry!"
+        [match]="flow.activeMatchSelection()?.selectedResult!"
+        [matchIndex]="flow.activeMatchSelection()?.matchIndex!"
+      />
+
+      <!-- One step per auth mode the queue has reached, in queue order; earlier steps stay visible. -->
+      <ol class="ckyc-auth__steps" aria-label="Authentication steps">
+        @for (mode of ckycAuthState.reachedModes(); track mode) {
+          <li class="ckyc-auth__step" [class.ckyc-auth__step--active]="mode === ckycAuthState.activeScreenMode()">
+            @switch (mode) {
+              @case (authMode.MANUAL) {
+                <app-non-otp-authentication />
+              }
+              @case (authMode.FACEAUTH) {
+                <app-ckyc-face-authentication />
+              }
+              @case (authMode.OTP) {
+                <app-ckyc-step-otp />
+              }
+            }
+          </li>
         }
-        @case (authMode.FACEAUTH) {
-          <app-ckyc-face-authentication />
-        }
-        @case (authMode.OTP) {
-          <app-ckyc-step-otp />
-        }
-      }
-    }
+      </ol>
+    </div>
   }
 </section>

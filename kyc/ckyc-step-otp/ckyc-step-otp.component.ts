@@ -3,26 +3,17 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
 import { finalize, interval, Subscription, tap } from 'rxjs';
 import { CkycAuthStateService } from '../services/ckyc-auth-state.service';
 import { AuthenticationMode } from '../constants/ckyc-onboarding.constants';
 import { CkycConsentStatusComponent } from '../ckyc-consent-status/ckyc-consent-status.component';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { MatRadioModule } from '@angular/material/radio';
 import { OtpIdentifier, OtpIdentifierEnum } from '../models/ckyc-consent-request.model';
 @Component({
   selector: 'app-ckyc-step-otp',
   standalone: true,
-  imports: [
-    ReactiveFormsModule,
-    MatButtonModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatRadioModule,
-    CkycConsentStatusComponent,
-  ],
+  // Compact redesign 2026-11-04: native OTP input and Email / Mobile radios, no Material form field.
+  imports: [ReactiveFormsModule, MatButtonModule, CkycConsentStatusComponent],
   templateUrl: './ckyc-step-otp.component.html',
   styleUrl: './ckyc-step-otp.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -38,7 +29,6 @@ export class CkycStepOtpComponent {
   readonly otpNode = computed(
     () => this.ckycAuthState.authNodes().find((node) => node.mode === AuthenticationMode.OTP) ?? null,
   );
-  readonly isActive = computed(() => this.ckycAuthState.activeScreenMode() === AuthenticationMode.OTP);
   readonly isMaxAttemptsReached = computed(() => {
     const node = this.otpNode();
     return node !== null && node.maxValidateAttempts !== null && node.validateAttemptCount >= node.maxValidateAttempts;
@@ -99,10 +89,6 @@ export class CkycStepOtpComponent {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe();
-  }
-  // Back to the enquiry list; also stops consent calls still running for this match.
-  goBack(): void {
-    this.ckycAuthState.cancelConsentFlow();
   }
   resend(): void {
     if (this.isSubmitting() || this.isMaxAttemptsReached()) return;

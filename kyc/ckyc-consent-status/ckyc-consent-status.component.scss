@@ -1,24 +1,32 @@
 @use "../styles/ckyc-onboarding.tokens" as t;
 
+// Compact redesign (2026-11-04): step title, one-line alert, 36px rows.
 :host {
-  display: block;
-  margin-top: t.$space-6;
+  display: grid;
+  gap: t.$space-2;
+  min-width: 0;
 }
 
-// ---- Error / fallback message (active screen only) ----
+.consent-step__title {
+  margin: 0;
+  color: t.$text;
+  font-size: t.$font-lg;
+  font-weight: 600;
+  line-height: 1.25rem;
+}
+
+// ---- Error / fallback message (active step only) ----
 .consent-alert {
   display: flex;
   align-items: flex-start;
   gap: t.$space-2;
-  margin-bottom: t.$space-3;
-  padding: t.$space-3 t.$space-4;
-  border: 1px solid t.$error-bg;
-  border-left: 4px solid t.$error;
+  padding: t.$space-2 t.$space-3;
+  border-left: 3px solid t.$error;
   border-radius: t.$radius-sm;
   background: t.$error-bg;
   color: t.$error-text;
   font-size: t.$font-md;
-  font-weight: 500;
+  line-height: t.$line-height;
 }
 
 .consent-alert__icon {
@@ -26,12 +34,13 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.125rem;
   border-radius: 50%;
   background: t.$error-text;
   color: t.$surface;
-  font-size: t.$font-sm;
+  font-size: t.$font-xs;
   font-weight: 700;
 }
 
@@ -45,37 +54,26 @@
 
   table {
     width: 100%;
-    table-layout: fixed; // same column widths in every stacked table (Face, OTP, Physical)
+    table-layout: fixed; // same column widths in every stacked table
     border-collapse: collapse;
     text-align: left;
     font-size: t.$font-md;
+    line-height: t.$line-height;
     color: t.$text;
-  }
-
-  caption {
-    caption-side: top; // keep the title above the table even if a global style moves captions
-    padding: t.$space-3 t.$space-4;
-    border-bottom: 1px solid t.$border;
-    text-align: left;
-    font-size: t.$font-lg;
-    font-weight: 600;
-    color: t.$brand-purple;
   }
 
   th,
   td {
-    padding: t.$space-3 t.$space-4;
+    height: 2.25rem;
+    padding: t.$space-1 t.$space-3;
     vertical-align: middle;
   }
 
   th {
+    height: 1.75rem;
     background: t.$surface-muted;
     border-bottom: 1px solid t.$border;
-    color: t.$text-muted;
-    font-size: t.$font-sm;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    @include t.label;
     white-space: nowrap;
   }
 
@@ -84,8 +82,12 @@
   }
 }
 
+.consent-status__sr {
+  @include t.sr-only;
+}
+
 .consent-status__index {
-  width: 2.5rem;
+  width: 2rem;
   color: t.$text-muted;
 }
 
@@ -95,69 +97,55 @@
 }
 
 .consent-status__status {
-  width: 10rem;
+  width: 8rem;
 }
 
 .consent-status__action {
-  width: 10rem;
+  width: 8.5rem;
   text-align: right;
   white-space: nowrap;
 }
 
 .consent-status__button-primary {
   @include t.button-primary;
+  @include t.button-small;
 }
 
 .consent-status__button-secondary {
   @include t.button-secondary;
-}
-
-.consent-status__none {
-  color: t.$text-muted;
+  @include t.button-small;
 }
 
 .consent-status__empty {
-  padding: t.$space-6 t.$space-4;
-  text-align: center;
   color: t.$text-muted;
+  text-align: center;
 }
 
 // ---- Status chip ----
 .consent-result {
-  display: inline-flex;
-  align-items: center;
-  gap: t.$space-1;
-  padding: t.$space-1 t.$space-3;
-  border: 1px solid t.$border;
-  border-radius: 999px;
+  @include t.chip;
   background: t.$surface-muted;
   color: t.$text-muted;
-  font-size: t.$font-sm;
-  font-weight: 600;
-  white-space: nowrap;
 
   &--success {
-    border-color: t.$success-bg;
     background: t.$success-bg;
     color: t.$success-text;
   }
 
   &--failed {
-    border-color: t.$error-bg;
     background: t.$error-bg;
     color: t.$error-text;
   }
 
   &--calling {
-    border-color: t.$brand-blue-pale;
     background: t.$brand-blue-pale;
     color: t.$brand-purple;
 
     // pulsing dot while the call is running
     &::before {
       content: "";
-      width: 0.5rem;
-      height: 0.5rem;
+      width: 0.375rem;
+      height: 0.375rem;
       border-radius: 50%;
       background: currentColor;
       animation: consent-pulse 1s ease-in-out infinite alternate;
@@ -180,22 +168,16 @@
   }
 }
 
-// ---- Phone: each row becomes a small card (request on top, status and action below) ----
+// ---- Phone: each row on two lines (request, then status and action) ----
 @include t.phone {
   .consent-status {
     table,
-    caption,
     tbody {
       display: block;
     }
 
     thead {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip: rect(0 0 0 0);
-      white-space: nowrap;
+      @include t.sr-only;
     }
 
     tr {
@@ -204,13 +186,14 @@
       grid-template-areas:
         "request request"
         "status action";
-      gap: t.$space-2 t.$space-3;
+      gap: t.$space-1 t.$space-3;
       align-items: center;
-      padding: t.$space-3 t.$space-4;
+      padding: t.$space-2 t.$space-3;
     }
 
     th,
     td {
+      height: auto;
       padding: 0;
     }
 
@@ -243,6 +226,5 @@
 
   .consent-status__empty {
     grid-column: 1 / -1;
-    padding: t.$space-4 0;
   }
 }

@@ -1,0 +1,155 @@
+@use "../styles/ckyc-onboarding.tokens" as t;
+
+// Compact redesign (2026-11-04): no outer card; one bordered row per enquiry.
+:host {
+  display: block;
+}
+
+.ckyc-history {
+  display: grid;
+  gap: t.$space-2;
+  min-width: 0;
+}
+
+.ckyc-history__head {
+  display: flex;
+  align-items: center;
+  gap: t.$space-2;
+}
+
+.ckyc-history__title {
+  margin: 0;
+  color: t.$text;
+  font-size: t.$font-lg;
+  font-weight: 600;
+}
+
+.ckyc-history__count {
+  @include t.chip;
+  background: t.$surface-muted;
+  color: t.$text-muted;
+}
+
+.ckyc-history__note {
+  margin: 0;
+  color: t.$text-muted;
+  font-size: t.$font-md;
+}
+
+.ckyc-history__note--error {
+  color: t.$error-text;
+}
+
+.ckyc-history__list,
+.ckyc-enq__matches {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ckyc-history__list {
+  display: grid;
+  gap: t.$space-2;
+}
+
+// ---- One enquiry ----
+.ckyc-enq {
+  min-width: 0;
+  border: 1px solid t.$border;
+  border-radius: t.$radius-md;
+  background: t.$surface;
+}
+
+.ckyc-enq__summary {
+  display: flex;
+  align-items: center;
+  gap: t.$space-3;
+  min-height: 2.5rem;
+  padding: t.$space-1 t.$space-3;
+  border-radius: t.$radius-md;
+  cursor: pointer;
+  list-style: none;
+  @include t.focus-ring;
+
+  &::-webkit-details-marker {
+    display: none;
+  }
+
+  &:hover {
+    background: t.$surface-muted;
+  }
+}
+
+.ckyc-enq__chevron {
+  flex: none;
+  color: t.$text-muted;
+  transition: transform 0.15s ease;
+}
+
+.ckyc-enq[open] .ckyc-enq__chevron {
+  transform: rotate(90deg);
+}
+
+.ckyc-enq[open] .ckyc-enq__summary {
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+// "Aadhaar xxxx xxxx 4821   PAN ABCDE1234F": label then value, on one line where it fits.
+.ckyc-enq__query {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: t.$space-1 t.$space-4;
+  min-width: 0;
+  margin: 0;
+}
+
+.ckyc-enq__query-item {
+  display: flex;
+  align-items: baseline;
+  gap: t.$space-2;
+  min-width: 0;
+
+  dt {
+    @include t.label;
+  }
+
+  dd {
+    margin: 0;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+}
+
+.ckyc-enq__found {
+  @include t.chip;
+  flex: none;
+  background: t.$brand-blue-pale;
+  color: t.$brand-purple;
+}
+
+.ckyc-enq__body {
+  border-top: 1px solid t.$border;
+}
+
+.ckyc-enq__tools {
+  display: flex;
+  justify-content: flex-end;
+  padding: t.$space-1 t.$space-2 0;
+}
+
+.ckyc-enq__dedup {
+  @include t.button-text;
+  @include t.button-small;
+}
+
+.ckyc-enq__matches > li + li {
+  border-top: 1px solid t.$border;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ckyc-enq__chevron {
+    transition: none;
+  }
+}

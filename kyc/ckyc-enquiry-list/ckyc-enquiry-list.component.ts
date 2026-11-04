@@ -1,16 +1,13 @@
 // Recovered from screenshot 147113 (left pane); search summary and per-enquiry Dedup Check from commit 35dc8bd9.
-import { CommonModule } from '@angular/common';
+// Compact redesign 2026-11-04: flat list of <details> rows, no Material expansion panels.
 import { ChangeDetectionStrategy, Component, OnInit, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
-import { MatExpansionModule } from '@angular/material/expansion';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuthService } from 'src/app/auth/auth.service';
 import { UserType } from 'src/app/models/account.model';
 import { CkycFlowStateService } from '../services/ckyc-flow-state.service';
 import { CkycSharedStateService } from '../services/ckyc-shared-state.service';
 import { CkycEnquiryDetailsComponent } from './ckyc-enquiry-details/ckyc-enquiry-details.component';
-import { ICkycEnquiryListResponseBody } from '../models/ckyc-search-response.model';
 import { CkycSearchRequest, IOvdDetail } from '../models/ckyc-search-request.model';
 import { CkycSearchOption, OvdType, SearchAttemptedPhase } from '../constants/ckyc-onboarding.constants';
 import { DocumentTypeEnum } from '../../ckyc-flow/ckyc-flow.constants';
@@ -24,7 +21,7 @@ interface CkycIdListSummaryItem {
 @Component({
   selector: 'app-ckyc-enquiry-list',
   standalone: true,
-  imports: [MatButtonModule, MatExpansionModule, MatProgressSpinnerModule, CkycEnquiryDetailsComponent, CommonModule],
+  imports: [MatButtonModule, CkycEnquiryDetailsComponent],
   templateUrl: './ckyc-enquiry-list.component.html',
   styleUrl: './ckyc-enquiry-list.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -41,19 +38,6 @@ export class CkycEnquiryListComponent implements OnInit {
   ngOnInit(): void {
     this.isStaff = this.authService.userIdentity?.userType === UserType.STAFF;
   }
-  enquiryLabel(enquiry: ICkycEnquiryListResponseBody): string {
-    return enquiry.searchKey;
-  }
-  enquiryTimestamp(enquiry: ICkycEnquiryListResponseBody): string | null {
-    let latest: string | null = null;
-    for (const result of enquiry.results) {
-      const candidate = result.enquiryTimestamp ?? result.lastUpdatedDate ?? null;
-      if (!candidate) continue;
-      if (!latest || Date.parse(candidate) > Date.parse(latest)) latest = candidate;
-    }
-    return latest;
-  }
-
   // Staff only: dedup check for one OVD / mobile enquiry (moved here from the enquiry details card).
   openDedupDialog(enquiryId: string | undefined, request: CkycSearchRequest) {
     const uid = this.getUid(request);

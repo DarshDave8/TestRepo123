@@ -57,17 +57,11 @@
             Not available
           } @else {
             @for (document of match().docSubmitted ?? []; track document.documentName + $index) {
-              @if (document.isMatchedOvd) {
-                <span>
-                  {{ document.documentName }} (Matched OVD
-                  @if (document.matchedOvdNumber) {
-                    - {{ document.matchedOvdNumber }}
-                  }
-                  )
-                  @if (!$last) {
-                    ,
-                  }
-                </span>
+              <span>
+                {{ document.documentName }}
+              </span>
+              @if (!$last) {
+                ,
               }
             }
           }
@@ -90,15 +84,8 @@
     }
   </div>
   <div class="ckyc-match__actions">
-    @if (
-      searchAttemptedPhase() !== phase.DIGITAL_VERIFICATION &&
-      isStaff &&
-      [CkycSearchOption.OVD, CkycSearchOption.MOBILE].includes(enquiry().enquiryRequest.searchOption)
-    ) {
-      <button mat-stroked-button color="warn" type="button" (click)="openDedupDialog()">Dedup Check</button>
-    }
     @if (flow.step() === 'search' || flow.step() === 'enquiryReceived') {
-      <button mat-stroked-button color="primary" type="button" (click)="startAuthentication()">Download Data</button>
+      <button mat-stroked-button color="primary" type="button" (click)="startAuthentication()">Authenticate</button>
     }
   </div>
   <!-- @if (isActive()) {

@@ -1,12 +1,14 @@
 <section class="ckyc-shell">
-  <app-ckyc-error-alert />
   @if (flow.step() === "search" || flow.step() === "enquiryReceived") {
     <!-- <app-ckyc-search /> -->
     @if (searchAttemptedPhase() === phase.PROFILE_CREATION) {
       <app-ckyc-search-v2 />
+      <app-ckyc-error-alert />
     }
     <app-ckyc-enquiry-list />
   } @else {
+    <app-ckyc-error-alert />
+
     <app-ckyc-enquiry-details
       [enquiry]="flow.activeMatchSelection()?.parentEnquiry!"
       [match]="flow.activeMatchSelection()?.selectedResult!"

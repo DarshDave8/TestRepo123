@@ -1,4 +1,4 @@
-<!-- Recovered from screenshot 147113 (right pane). -->
+<!-- Recovered from screenshot 147113 (right pane); search summary and Dedup Check from commit 35dc8bd9. -->
 <section class="ckyc-history" aria-labelledby="enquiry-history-title">
   <div class="ckyc-history__header">
     <div>
@@ -13,24 +13,26 @@
       {{ flow.historyError() }}
     </div>
   }
-  @for (group of flow.enquiryGroups() | keyvalue; track group.key) {
+  @for (group of flow.enquiryGroups() | keyvalue; track group.key; let isFirst = $first) {
     <section class="ckyc-history__group">
       <div class="ckyc-history__group-header">
-        <h2>{{ group.key }}</h2>
+        <h2>Search Basis - {{ group.key }}</h2>
         <span class="ckyc-history__group-count">
           {{ group.value.length }}
           {{ group.value.length === 1 ? "enquiry" : "enquiries" }}
         </span>
       </div>
       <mat-accordion multi>
-        @for (enquiry of group.value; track enquiryLabel(enquiry)) {
-          <mat-expansion-panel [expanded]="true" class="ckyc-history__transaction">
+        @for (enquiry of group.value; track enquiry ?? enquiryLabel(enquiry)) {
+          <mat-expansion-panel [expanded]="isFirst" class="ckyc-history__transaction">
             <mat-expansion-panel-header class="ckyc-history__transaction-header">
               <mat-panel-title class="ckyc-history__transaction-title">
-                <!-- {{ enquiryLabel(enquiry) }} -->
-                <span class="ckyc-history__badge" [class.ckyc-history__badge--empty]="matchCount(enquiry) === 0">
-                  {{ matchCount(enquiry) ? matchCount(enquiry) + " MATCHES" : "NO MATCH" }}
-                </span>
+                @for (i of buildSummary(enquiry.transaction.enquiryRequest); track i.label) {
+                  <div class="ckyc-history__transaction-title-data-container">
+                    <dd>{{ i.label }}</dd>
+                    <dt>{{ i.value }}</dt>
+                  </div>
+                }
               </mat-panel-title>
               <mat-panel-description class="ckyc-history__transaction-meta">
                 <!-- @if (enquiryTimestamp(enquiry); as timestamp) {
@@ -41,6 +43,22 @@
             @if (enquiry.transaction.results.length === 0) {
               <div class="ckyc-history__no-match">No CKYC record found.</div>
             } @else {
+              <div class="dedup-container">
+                @if (
+                  ckycSharedStateService.searchAttemptedPhase() !== phase.DIGITAL_VERIFICATION &&
+                  isStaff &&
+                  [CkycSearchOption.OVD, CkycSearchOption.MOBILE].includes(enquiry.transaction.enquiryRequest.searchOption)
+                ) {
+                  <button
+                    mat-raised-button
+                    color="primary"
+                    type="button"
+                    (click)="openDedupDialog(enquiry.transaction.results[0].enquiryId, enquiry.transaction.enquiryRequest)"
+                  >
+                    Dedup Check
+                  </button>
+                }
+              </div>
               <div class="ckyc-history__matches">
                 @for (
                   match of enquiry.transaction.results;
@@ -57,6 +75,5 @@
     </section>
   }
 </section>
-<!-- CAUTION: the source photograph appears to call matchCount(enquiry)
-     and enquiryLabel(enquiry) where enquiry is a CkycTransaction, despite
-     methods accepting ICkycEnquiryListResponseBody. No logic corrected. -->
+<!-- CAUTION: enquiryLabel(enquiry) receives a CkycTransaction although it accepts ICkycEnquiryListResponseBody;
+     it never runs, because `enquiry ??` is always non-null. -->

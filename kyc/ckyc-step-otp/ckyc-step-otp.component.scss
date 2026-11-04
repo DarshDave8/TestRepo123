@@ -1,150 +1,147 @@
 @use "../styles/ckyc-onboarding.tokens" as t;
 
-// Compact redesign (2026-11-04): table, one-line send message, one verify bar, one meta line.
+// The OTP step: the status table (from ckyc-consent-status), then this card once an OTP has been sent.
 .ckyc-otp {
-  display: grid;
-  gap: t.$space-2;
+  display: block;
   min-width: 0;
-  font-size: t.$font-md;
-  line-height: t.$line-height;
 
-  // "OTP sent" message from the trigger response
+  &__card {
+    margin-top: t.$space-3;
+    padding: t.$space-8 t.$space-6;
+    border: 1px solid t.$border;
+    border-radius: t.$radius-md;
+    background: t.$surface;
+  }
+
+  // "OTP sent" banner from the trigger response, between the status table and the card
   &__success {
     display: flex;
     align-items: flex-start;
     gap: t.$space-2;
-    padding: t.$space-2 t.$space-3;
-    border-left: 3px solid t.$success;
+    margin-top: t.$space-3;
+    padding: t.$space-3 t.$space-4;
+    border: 1px solid t.$success-bg;
+    border-left: 4px solid t.$success;
     border-radius: t.$radius-sm;
     background: t.$success-bg;
     color: t.$success-text;
+    font-size: t.$font-md;
     font-weight: 500;
   }
 
   &__success-icon {
+    display: inline-flex;
     flex: none;
-    margin-top: 0.0625rem;
-    color: t.$success-text;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 50%;
+    background: t.$success-text;
+    color: t.$surface;
   }
 
-  // ---- Verify bar: what to do on the left, the code and the buttons on the right ----
-  &__bar {
-    display: flex;
-    flex-wrap: wrap;
+  // One centred column inside the card
+  &__panel {
+    display: grid;
+    justify-items: center;
+    gap: t.$space-4;
+    width: min(100%, 24rem);
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  &__icon {
+    display: inline-flex;
     align-items: center;
-    justify-content: space-between;
-    gap: t.$space-2 t.$space-4;
-    padding: t.$space-2 t.$space-3;
-    border: 1px solid t.$border;
-    border-radius: t.$radius-md;
-    background: t.$surface-muted;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    background: t.$brand-blue-pale;
+    color: t.$brand-purple;
   }
 
   &__intro {
-    flex: 1 1 14rem;
-    min-width: 0;
+    display: grid;
+    gap: t.$space-1;
   }
 
   &__title {
     margin: 0;
-    color: t.$text;
+    color: t.$brand-purple;
+    font-size: t.$font-xl;
     font-weight: 600;
   }
 
   &__help {
     margin: 0;
     color: t.$text-muted;
-    font-size: t.$font-sm;
+    font-size: t.$font-md;
+    line-height: 1.5;
   }
 
-  &__controls {
+  &__channels {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
-    gap: t.$space-2;
+    justify-content: center;
+    gap: t.$space-2 t.$space-6;
   }
 
-  // Email / Mobile as one segmented control (native radios)
-  &__channels {
-    display: inline-flex;
-    overflow: hidden;
-    border: 1px solid t.$border-strong;
-    border-radius: t.$radius-sm;
-    background: t.$surface;
+  &__field {
+    width: 100%;
   }
 
-  &__channel {
-    position: relative;
-    display: block;
-
-    input {
-      @include t.sr-only;
-    }
-
-    span {
-      display: block;
-      padding: 0 t.$space-3;
-      color: t.$text-muted;
-      font-size: t.$font-sm;
-      font-weight: 600;
-      line-height: 1.875rem;
-      cursor: pointer;
-    }
-
-    input:checked + span {
-      background: t.$brand-purple;
-      color: t.$surface;
-    }
-
-    input:focus-visible + span {
-      outline: 2px solid t.$focus;
-      outline-offset: -2px;
-    }
-  }
-
-  &__channel + &__channel span {
-    border-left: 1px solid t.$border-strong;
-  }
-
-  &__sr {
-    @include t.sr-only;
-  }
-
+  // 6 large, evenly spaced digits; the left padding balances the trailing letter-spacing so they sit centred
   &__input {
-    box-sizing: border-box;
-    width: 7.5rem;
-    height: t.$control-height;
-    padding: 0 t.$space-2;
-    border: 1px solid t.$border-strong;
-    border-radius: t.$radius-sm;
-    background: t.$surface;
-    color: t.$text;
-    font: inherit;
-    font-size: t.$font-lg;
+    padding-left: 0.5em;
+    font-size: t.$font-xl;
     font-variant-numeric: tabular-nums;
-    font-weight: 600;
-    letter-spacing: 0.3em;
+    letter-spacing: 0.5em;
     text-align: center;
+  }
 
-    &::placeholder {
-      color: t.$border-strong;
-      letter-spacing: 0.2em;
-    }
+  &__meta {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: t.$space-1 t.$space-6;
+    color: t.$text-muted;
+    font-size: t.$font-sm;
 
-    &:focus {
-      border-color: t.$brand-purple;
-      outline: 2px solid t.$focus;
-      outline-offset: 1px;
-    }
-
-    &[readonly] {
-      background: t.$surface-muted;
-      color: t.$text-muted;
+    strong {
+      color: t.$text;
+      font-weight: 600;
     }
   }
 
-  &__input--invalid {
-    border-color: t.$error-text;
+  &__notice {
+    box-sizing: border-box;
+    width: 100%;
+    padding: t.$space-3 t.$space-4;
+    border: 1px solid t.$border;
+    border-radius: t.$radius-sm;
+    background: t.$surface-muted;
+    color: t.$text;
+    font-size: t.$font-md;
+  }
+
+  &__notice--warning {
+    border-color: t.$error-bg;
+    background: t.$error-bg;
+    color: t.$error-text;
+  }
+
+  // Verify and Resend side by side, same width
+  &__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: t.$space-3;
+    width: 100%;
+
+    button {
+      width: 100%;
+    }
   }
 
   &__verify {
@@ -155,64 +152,27 @@
     @include t.button-secondary;
   }
 
-  // ---- "Expires in 0:42 · Attempts 0 of 3" ----
-  &__meta {
+  &__back {
+    @include t.button-text;
+  }
+
+  // Before an OTP is sent there is no card: just Back under the table, as on the Face and Physical screens
+  &__back-row {
     display: flex;
-    flex-wrap: wrap;
-    gap: t.$space-1 t.$space-4;
-    margin: 0;
-    color: t.$text-muted;
-    font-size: t.$font-sm;
-
-    strong {
-      color: t.$text;
-      font-variant-numeric: tabular-nums;
-    }
+    margin-top: t.$space-3;
   }
 
-  &__meta-error {
-    color: t.$error-text;
-    font-weight: 600;
-  }
-
-  &__notice {
-    padding: t.$space-2 t.$space-3;
-    border-radius: t.$radius-sm;
-    background: t.$surface-muted;
-    color: t.$text;
-  }
-
-  &__notice--warning {
-    background: t.$error-bg;
-    color: t.$error-text;
+  &__back-outline {
+    @include t.button-secondary;
   }
 
   @include t.phone {
-    &__controls {
-      width: 100%;
+    &__card {
+      padding: t.$space-6 t.$space-4;
     }
 
-    &__input {
-      flex: 1 1 100%;
-      height: t.$control-height-touch;
-    }
-
-    &__verify,
-    &__resend {
-      flex: 1 1 0;
-    }
-
-    &__channels {
-      width: 100%;
-    }
-
-    &__channel {
-      flex: 1;
-      text-align: center;
-
-      span {
-        line-height: 2.375rem;
-      }
+    &__actions {
+      grid-template-columns: minmax(0, 1fr);
     }
   }
 }

@@ -1,2 +1,6 @@
-<!-- Consent call history of this mode; Back lives in the onboarding auth header (compact redesign 2026-11-04). -->
 <app-ckyc-consent-status [mode]="mode" />
+@if (isActive()) {
+  <div class="consent-actions">
+    <button mat-stroked-button class="consent-actions__back" type="button" (click)="goBack()">Back</button>
+  </div>
+}

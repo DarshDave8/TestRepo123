@@ -88,10 +88,6 @@ export class CkycOnboardingComponent implements OnInit {
       }
     });
   }
-  // "‹ Enquiry history" in the auth step: stops running consent calls and returns to the list.
-  backToEnquiries(): void {
-    this.ckycAuthState.cancelConsentFlow();
-  }
   ngOnInit(): void {
     this.ckycSharedStateService.setManualVerificationEnabled(false);
     this.ckycSharedStateService.setSearchAttemptedPhase(this.searchAttemptedPhase());

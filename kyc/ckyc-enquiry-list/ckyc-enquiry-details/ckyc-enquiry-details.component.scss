@@ -1,207 +1,214 @@
 @use "../../styles/ckyc-onboarding.tokens" as t;
 
-// Compact redesign (2026-11-04): one record per row.
-:host {
-  display: block;
-}
-
+// Match card: header (reference no. + status), details grid with the photo beside it, footer with Authenticate.
 .ckyc-match {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas: "main actions";
-  align-items: center;
-  gap: t.$space-3;
   min-width: 0;
-  padding: t.$space-2 t.$space-3;
-  font-size: t.$font-md;
-  line-height: t.$line-height;
-}
-
-.ckyc-match--with-photo {
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  grid-template-areas: "photo main actions";
-}
-
-// The record being authenticated: a framed row with a brand accent.
-.ckyc-match--selected {
+  overflow: hidden;
   border: 1px solid t.$border;
-  border-left: 3px solid t.$brand-purple;
   border-radius: t.$radius-md;
   background: t.$surface;
 }
 
-// ---- Photo (staff) ----
+// ---- Header ----
+.ckyc-match__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: t.$space-2 t.$space-3;
+  padding: t.$space-3 t.$space-6;
+  border-bottom: 1px solid t.$border;
+  background: t.$surface-muted;
+}
+
+.ckyc-match__ref {
+  display: grid;
+  gap: t.$space-1;
+  min-width: 0;
+}
+
+.ckyc-match__label,
+.ckyc-match__details dt {
+  color: t.$text-muted;
+  font-size: t.$font-sm;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ckyc-match__ref-value {
+  color: t.$brand-purple;
+  font-size: t.$font-lg;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  overflow-wrap: anywhere;
+}
+
+.ckyc-match__status {
+  padding: t.$space-1 t.$space-3;
+  border: 1px solid t.$border;
+  border-radius: 999px;
+  background: t.$surface;
+  color: t.$text-muted;
+  font-size: t.$font-sm;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ckyc-match__status--active {
+  border-color: t.$success-bg;
+  background: t.$success-bg;
+  color: t.$success-text;
+}
+
+// ---- Details and photo ----
+.ckyc-match__content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: t.$space-6;
+  padding: t.$space-4 t.$space-6;
+}
+
+.ckyc-match__details {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start; // rows keep their own height even when the photo column is taller
+  gap: t.$space-4 t.$space-6;
+  margin: 0;
+}
+
+.ckyc-match__details > div {
+  min-width: 0;
+}
+
+.ckyc-match__details dt {
+  margin-bottom: t.$space-1;
+}
+
+.ckyc-match__details dd {
+  margin: 0;
+  color: t.$text;
+  font-size: t.$font-md;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+// "Not available": readable, but visibly not data
+.ckyc-match__value--empty {
+  color: t.$text-muted;
+  font-weight: 400;
+}
+
+.ckyc-match__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: t.$space-2;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ckyc-match__document-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: t.$space-1;
+  padding: t.$space-1 t.$space-3;
+  border: 1px solid t.$border;
+  border-radius: 999px;
+  background: t.$surface-muted;
+  color: t.$brand-purple;
+  font-size: t.$font-sm;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.ckyc-match__document-chip--matched {
+  border-color: t.$success-bg;
+  background: t.$success-bg;
+  color: t.$success-text;
+}
+
+.ckyc-match__chip-note {
+  font-weight: 500;
+}
+
 .ckyc-match__photo {
-  grid-area: photo;
+  box-sizing: border-box;
   display: grid;
   place-items: center;
-  box-sizing: border-box;
-  width: 3.5rem;
-  height: 4.5rem;
+  width: 100%;
+  max-width: 9rem;
+  aspect-ratio: 3 / 4;
   margin: 0;
   overflow: hidden;
   border: 1px solid t.$border;
   border-radius: t.$radius-sm;
   background: t.$surface-muted;
-  color: t.$border-strong;
+  color: t.$text-muted;
+  font-size: t.$font-sm;
+  text-align: center;
 }
 
 .ckyc-match__photo-image {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: contain; // never crop the face on an ID photo
 }
 
-.ckyc-match__photo-empty {
-  display: block;
-}
-
-// ---- Name, reference, status ----
-.ckyc-match__main {
-  grid-area: main;
-  display: grid;
-  gap: t.$space-1;
-  min-width: 0;
-}
-
-.ckyc-match__head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: t.$space-1 t.$space-3;
-  min-width: 0;
-}
-
-.ckyc-match__name {
-  color: t.$text;
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-
-.ckyc-match__name--empty {
-  color: t.$text-muted;
-  font-weight: 500;
-}
-
-.ckyc-match__ref {
-  display: inline-flex;
-  align-items: baseline;
-  gap: t.$space-1;
-  color: t.$brand-purple;
-  font-size: t.$font-sm;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
-}
-
-.ckyc-match__ref-label {
-  @include t.label;
-}
-
-.ckyc-match__status {
-  @include t.chip;
-  background: t.$surface-muted;
-  color: t.$text-muted;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.ckyc-match__status--active {
-  background: t.$success-bg;
-  color: t.$success-text;
-}
-
-// ---- Details: "Gender M   Mobile 80******15   Email …" ----
-.ckyc-match__meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.125rem t.$space-4;
-  margin: 0;
-  font-size: t.$font-sm;
-
-  > div {
-    display: flex;
-    align-items: baseline;
-    gap: t.$space-1;
-    min-width: 0;
-  }
-
-  dt {
-    color: t.$text-muted;
-  }
-
-  dd {
-    margin: 0;
-    color: t.$text;
-    font-weight: 500;
-    overflow-wrap: anywhere;
-  }
-}
-
-// ---- Documents ----
-.ckyc-match__docs {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: t.$space-1 t.$space-2;
-}
-
-.ckyc-match__docs-label {
-  color: t.$text-muted;
-  font-size: t.$font-sm;
-}
-
-.ckyc-match__chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: t.$space-1;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.ckyc-match__chip {
-  @include t.chip;
-  border: 1px solid t.$border;
-  background: t.$surface;
-  color: t.$brand-purple;
-}
-
-.ckyc-match__chip--matched {
-  border-color: t.$success-bg;
-  background: t.$success-bg;
-  color: t.$success-text;
-}
-
-.ckyc-match__sr {
-  @include t.sr-only;
-}
-
-// ---- Action ----
+// ---- Footer ----
 .ckyc-match__actions {
-  grid-area: actions;
+  display: flex;
+  justify-content: flex-end;
+  padding: t.$space-3 t.$space-6;
+  border-top: 1px solid t.$border;
 }
 
 .ckyc-match__authenticate {
   @include t.button-primary;
 }
 
-@include t.phone {
-  .ckyc-match,
-  .ckyc-match--with-photo {
-    grid-template-columns: auto minmax(0, 1fr);
-    grid-template-areas:
-      "photo main"
-      "actions actions";
-    align-items: start;
+// ---- Layout by width ----
+@media (min-width: 768px) {
+  .ckyc-match__details {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .ckyc-match:not(.ckyc-match--with-photo) {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      "main"
-      "actions";
+  .ckyc-match__content--with-photo {
+    grid-template-columns: minmax(0, 1fr) 8rem;
+  }
+}
+
+@media (min-width: 992px) {
+  .ckyc-match__details {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .ckyc-match__content--with-photo {
+    grid-template-columns: minmax(0, 1fr) 9rem;
+  }
+}
+
+@include t.phone {
+  .ckyc-match__header,
+  .ckyc-match__content,
+  .ckyc-match__actions {
+    padding-right: t.$space-4;
+    padding-left: t.$space-4;
+  }
+
+  // Photo first, as a thumbnail; no photo is one short line instead of an empty box
+  .ckyc-match__photo {
+    order: -1;
+    max-width: 6rem;
+  }
+
+  .ckyc-match__photo--empty {
+    max-width: none;
+    aspect-ratio: auto;
+    justify-items: start;
+    padding: t.$space-2 t.$space-3;
   }
 
   .ckyc-match__authenticate {

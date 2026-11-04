@@ -1,3 +1,11 @@
-:host {
-  display: block;
+@use "../styles/ckyc-onboarding.tokens" as t;
+
+.consent-actions {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: t.$space-3;
+}
+
+.consent-actions__back {
+  @include t.button-secondary;
 }

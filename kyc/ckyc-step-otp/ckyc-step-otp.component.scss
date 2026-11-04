@@ -13,6 +13,34 @@
     background: t.$surface;
   }
 
+  // "OTP sent" banner from the trigger response, between the status table and the card
+  &__success {
+    display: flex;
+    align-items: flex-start;
+    gap: t.$space-2;
+    margin-top: t.$space-3;
+    padding: t.$space-3 t.$space-4;
+    border: 1px solid t.$success-bg;
+    border-left: 4px solid t.$success;
+    border-radius: t.$radius-sm;
+    background: t.$success-bg;
+    color: t.$success-text;
+    font-size: t.$font-md;
+    font-weight: 500;
+  }
+
+  &__success-icon {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    border-radius: 50%;
+    background: t.$success-text;
+    color: t.$surface;
+  }
+
   // One centred column inside the card
   &__panel {
     display: grid;

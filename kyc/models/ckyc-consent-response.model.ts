@@ -42,7 +42,10 @@ export interface ISubmitCkycResponse {
   success: boolean;
 }
 export interface ISubmitCkycResponseBody {
+  attemptId: string;
   ckycNotFoundSearchKeyInEnquiryResponse: string;
   enquiryId: string;
   enquiryResponseId: string;
+  messages: string[];
+  success: boolean; // false with success at the top level: the submit was refused, messages say why
 }

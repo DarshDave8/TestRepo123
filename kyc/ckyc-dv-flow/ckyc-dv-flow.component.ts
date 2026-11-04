@@ -50,6 +50,7 @@ export class CkycDvFlowComponent implements OnChanges {
       this.flowState.activeMatchSelection.set(null);
       this.authService.resetAuth();
       this.flowState.goToStep('search');
+      this.flowState.isTriggerEnquiriesSuccess.set(false);
     });
   }
 

@@ -63,21 +63,28 @@ export class CkycFlowStateService {
   private clearFormSubject = new Subject<CkycSearchAction>();
   clearForm$ = this.clearFormSubject.asObservable();
 
+  // Only enquiries that found at least one record, newest first.
   readonly displayedEnquiries = computed(() =>
-    [...(this.enquiries() ?? [])].sort((a, b) => {
-      const timestampA = this.getTimestamp(a);
-      const timestampB = this.getTimestamp(b);
-      // Enquiries without a valid timestamp go to the bottom
-      if (timestampA === null && timestampB === null) return 0;
-      if (timestampA === null) return 1;
-      if (timestampB === null) return -1;
-      // Newest first
-      return timestampB - timestampA;
-    }),
+    [...(this.enquiries() ?? [])]
+      .filter((enquiry) => (enquiry.results?.length ?? 0) > 0)
+      .sort((a, b) => {
+        const timestampA = this.getTimestamp(a);
+        const timestampB = this.getTimestamp(b);
+        // Enquiries without a valid timestamp go to the bottom
+        if (timestampA === null && timestampB === null) return 0;
+        if (timestampA === null) return 1;
+        if (timestampB === null) return -1;
+        // Newest first
+        return timestampB - timestampA;
+      }),
   );
 
+  // An OVD search that found at least one record.
   readonly isAtleastOneOVDRecordPresent = computed<boolean>(() =>
-    this.enquiries().some((eachEnquiry) => eachEnquiry.enquiryRequest.searchOption === CkycSearchOption.OVD),
+    this.enquiries().some(
+      (eachEnquiry) =>
+        eachEnquiry.enquiryRequest.searchOption === CkycSearchOption.OVD && (eachEnquiry.results?.length ?? 0) > 0,
+    ),
   );
   readonly enquiryGroups = computed<CkycEnquiryGroups>(() => {
     const grouped: CkycEnquiryGroups = {};
@@ -102,7 +109,7 @@ export class CkycFlowStateService {
     }
     const updateEnquiryArray: IUpdateEnquiry[] = [];
     this.enquiries().forEach((eachResult) => {
-      eachResult.results.forEach((eachEnquiry) => {
+      (eachResult.results ?? []).forEach((eachEnquiry) => {
         if (eachEnquiry) {
           updateEnquiryArray.push({
             enquiryId: eachEnquiry.enquiryId!,
@@ -141,21 +148,19 @@ export class CkycFlowStateService {
       submitRequest.enquiryResponseId = this.activeMatchSelection()?.enquiryResponseId!;
       submitRequest.attemptId = this.activeMatchSelection()?.attemptId!;
     } else {
-      // No active match selection (non-OVD): take the enquiry id of any OVD search.
-      this.enquiries().some((enquiry) => {
-        if (enquiry.enquiryRequest.searchOption === CkycSearchOption.OVD) {
-          enquiry.results.some((eachResult) => {
-            if (eachResult.enquiryId) {
-              submitRequest.enquiryId = eachResult.enquiryId;
-              return true;
-            } else return false;
-          });
-          return true;
-        } else return false;
-      });
+      // No active match selection (non-OVD): take the enquiry id of the first OVD search.
+      const ovdEnquiry = this.enquiries().find(
+        (enquiry) => enquiry.enquiryRequest.searchOption === CkycSearchOption.OVD,
+      );
+      if (ovdEnquiry) submitRequest.enquiryId = ovdEnquiry.enquiryId;
     }
     return this.ckycApi.submit(submitRequest).pipe(
-      map((res) => Boolean(res && res.success)),
+      map((res) => {
+        if (res?.success && res.body?.success) return true;
+        // Request accepted but the submit refused: show why.
+        if (res?.success) this.enquiryError.set(res.body?.messages?.join(', ') || 'Unable to submit CKYC.');
+        return false;
+      }),
       catchError(() => {
         this.enquiryError.set('Unable to complete the request');
         return of(false);
@@ -172,6 +177,7 @@ export class CkycFlowStateService {
       searchAttemptedPhase: this.ckycSharedStateService.searchAttemptedPhase(),
       leadId: this.ckycSharedStateService.leadId() ?? '',
     };
+    this.enquiries.set([]);
     this.ckycApi
       .getEnquiries(request)
       .pipe(
@@ -183,8 +189,13 @@ export class CkycFlowStateService {
           if (response?.success) {
             if (response.body) {
               this.enquiries.set(response.body);
-              if (response.body.length === 0) {
-                this.ckycSharedStateService.setIsDvCkycSubmitEnabled(true); // no enquiries found: enable the DV CKYC submit button
+              // Nothing to authenticate (no enquiry found a record, so the list and the "none of these" box are
+              // hidden): enable the DV Submit CKYC button.
+              const anyRecord = response.body.some(
+                (enquiry: ICkycEnquiryListResponseBody) => (enquiry.results?.length ?? 0) > 0,
+              );
+              if (!anyRecord) {
+                this.ckycSharedStateService.setIsDvCkycSubmitEnabled(true);
               }
             }
           } else {
@@ -209,6 +220,12 @@ export class CkycFlowStateService {
       .subscribe({
         next: (response: ICkycSearchResponse) => {
           if (response.success) {
+            // No record for this search: say so and allow manual verification
+            // (the list shows only enquiries with records).
+            if (!response.body?.results?.length) {
+              this.ckycSharedStateService.setManualVerificationEnabled(true);
+              this.enquiryError.set('No result for the current enquiry');
+            }
             this.stepManager.goTo('enquiryReceived');
             this.loadEnquiries();
           } else {

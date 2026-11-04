@@ -140,6 +140,7 @@ export interface OtpDomainState {
   expiresAt: number | null;
   hasMobileNumber?: boolean; // INFERRED from screenshot usage
   hasEmailAddress?: boolean; // INFERRED from screenshot usage
+  successMessage: string | null; // trigger-consent messages of the last OTP send, shown as a banner on the OTP screen
 }
 
 // ---- CKYC auth queue ----

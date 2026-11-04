@@ -20,6 +20,7 @@ export interface ICkycEnquiryListResponseBody {
   enquiryRequest: CkycSearchRequest;
   enquiryTimestamp?: string;
   lastUpdatedDate?: string;
+  enquiryId: string;
 }
 export interface ICkycSearchResult {
   enquiryId?: string;

@@ -1,5 +1,6 @@
 <!-- Screenshot transcription of ckyc-step-otp.component.html (photograph supplied 2026-11-03), refactored for the auth queue. -->
 <!-- The OTP row in the table carries Trigger / Re-trigger; the OTP card appears once an OTP has been sent. -->
+<!-- The send's success message (otpState().successMessage, e.g. "OTP sent to mobile") is a banner above the card. -->
 <section class="ckyc-otp" [attr.aria-labelledby]="ckycAuthState.otpState().generated ? 'ckyc-otp-title' : null">
   <app-ckyc-consent-status [mode]="authMode.OTP" [downloadable]="false" />
   @if (!ckycAuthState.otpState().generated) {
@@ -9,6 +10,18 @@
       </div>
     }
   } @else {
+    @if (ckycAuthState.otpState().successMessage; as successMessage) {
+      @if (!isMaxAttemptsReached()) {
+        <div class="ckyc-otp__success" role="status">
+          <span class="ckyc-otp__success-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12.5l4.5 4.5L19 7.5" />
+            </svg>
+          </span>
+          <span>{{ successMessage }}</span>
+        </div>
+      }
+    }
     <div class="ckyc-otp__card">
       <!-- One centred column: what to do, the code, its status, then the actions. -->
       <div class="ckyc-otp__panel">

@@ -32,6 +32,7 @@ const INITIAL_OTP_STATE: OtpDomainState = {
   expiresAt: null,
   hasMobileNumber: false,
   hasEmailAddress: false,
+  successMessage: null,
 };
 
 @Injectable({ providedIn: 'root' })
@@ -161,7 +162,7 @@ export class CkycAuthStateService {
           this.onTriggerFailure(node.id, response?.messages?.join(', ') || `${node.label} failed.`);
           return false;
         }
-        this.onTriggerSuccess(node.id);
+        this.onTriggerSuccess(node.id, response.messages);
         return true;
       }),
       catchError(() => {
@@ -214,6 +215,10 @@ export class CkycAuthStateService {
         }
         // Keep the queue and screens as they are: the flow is done. The host resets when it leaves the page.
         this.updateNode(node.id, { validateSuccess: true, lastError: null });
+        // Submit CKYC sends the validated attempt.
+        this.flow.activeMatchSelection.update((selection) =>
+          selection ? { ...selection, attemptId: response.body.attemptId } : selection,
+        );
         this.flow.emitValidatedDetails(response.body);
         return true;
       }),
@@ -301,10 +306,15 @@ export class CkycAuthStateService {
 
   // ---- Auth queue: progress ----
 
-  private onTriggerSuccess(nodeId: string): void {
+  private onTriggerSuccess(nodeId: string, messages?: string[]): void {
     const node = this.updateNode(nodeId, { status: 'SUCCESS', triggerSuccess: true, lastError: null });
     if (node?.mode === AuthenticationMode.OTP) {
-      this.otpState.update((s) => ({ ...s, generated: true, expiresAt: Date.now() + CKYC_OTP_TTL_SECONDS * 1000 }));
+      this.otpState.update((s) => ({
+        ...s,
+        generated: true,
+        expiresAt: Date.now() + CKYC_OTP_TTL_SECONDS * 1000,
+        successMessage: messages?.join(', ') || null,
+      }));
     }
   }
 
@@ -317,6 +327,8 @@ export class CkycAuthStateService {
       triggerAttemptCount: previous.triggerAttemptCount + 1,
       lastError: message,
     })!;
+    // The last send failed: drop the "OTP sent" banner of an earlier send.
+    if (node.mode === AuthenticationMode.OTP) this.otpState.update((s) => ({ ...s, successMessage: null }));
     if (this.hasAttemptsLeft(node.triggerAttemptCount, node.maxTriggerAttempts)) {
       // Stay on this node; the user sends it again (e.g. "Re-trigger OTP").
       this.authState.update((s) => ({ ...s, error: `${node.label} failed. Please try again.` }));
@@ -363,7 +375,7 @@ export class CkycAuthStateService {
         ...s,
         error: `${AUTH_MODE_LABELS[usedUp.mode]} failed. Falling back to ${AUTH_MODE_LABELS[next.mode]}.`,
       }));
-      this.otpState.update((s) => ({ ...s, generated: false, expiresAt: null }));
+      this.otpState.update((s) => ({ ...s, generated: false, expiresAt: null, successMessage: null }));
     }
     if (next.autoTrigger) {
       this.triggerConsent().subscribe();

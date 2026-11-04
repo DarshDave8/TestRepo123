@@ -39,7 +39,6 @@ export class CkycStepOtpComponent implements OnDestroy {
     () => this.ckycAuthState.authNodes().find((node) => node.mode === AuthenticationMode.OTP) ?? null,
   );
   readonly isActive = computed(() => this.ckycAuthState.activeScreenMode() === AuthenticationMode.OTP);
-  readonly isSending = computed(() => this.otpNode()?.status === 'IN_PROGRESS');
   readonly isMaxAttemptsReached = computed(() => {
     const node = this.otpNode();
     return node !== null && node.maxValidateAttempts !== null && node.validateAttemptCount >= node.maxValidateAttempts;
@@ -87,11 +86,6 @@ export class CkycStepOtpComponent implements OnDestroy {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe();
-  }
-  // "Trigger OTP" / "Re-trigger OTP": shown until an OTP has been sent.
-  triggerOtp(): void {
-    if (this.isSending()) return;
-    this.ckycAuthState.triggerAwaitingNode().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
   }
   // Back to the enquiry list; also stops consent calls still running for this match.
   goBack(): void {

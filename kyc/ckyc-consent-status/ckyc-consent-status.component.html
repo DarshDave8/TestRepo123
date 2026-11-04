@@ -29,6 +29,10 @@
           <td>
             @if (canDownload(node)) {
               <button type="button" [disabled]="isBusy()" (click)="downloadData(node)">Download Data</button>
+            } @else if (canTrigger(node)) {
+              <button type="button" [disabled]="isBusy()" (click)="triggerNode(node)">
+                {{ node.status === "FAILED" ? "Re-trigger" : "Trigger" }}
+              </button>
             } @else {
               —
             }

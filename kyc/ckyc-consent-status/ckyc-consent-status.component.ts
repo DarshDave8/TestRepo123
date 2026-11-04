@@ -6,14 +6,15 @@ import { AuthNodeStatus, ICkycAuthNodeConfig } from '../models/ckyc-onboarding.m
 import { CkycAuthStateService } from '../services/ckyc-auth-state.service';
 
 const STATUS_TEXT: Record<AuthNodeStatus, string> = {
-  PENDING: 'Pending',
+  PENDING: 'Awaiting action',
   IN_PROGRESS: 'Calling',
   SUCCESS: 'Success',
   FAILED: 'Failed',
 };
 
 /**
- * Consent call history for one auth mode: a row per node of that mode that has been sent.
+ * Consent call history for one auth mode: a row per node of that mode that has been sent, plus the node that
+ * waits for the user to send it (its row carries Trigger / Re-trigger).
  * Shown at the top of the Face, Physical and OTP screens. On the active screen it also shows the error message.
  */
 @Component({
@@ -34,8 +35,14 @@ export class CkycConsentStatusComponent {
 
   readonly captionId = computed(() => `consent-status-caption-${this.mode()}`);
   readonly caption = computed(() => `Consent call status: ${AUTH_MODE_LABELS[this.mode()]}`);
+  // The node waiting for the user's send (e.g. OTP after Face), if it belongs to this table.
+  private readonly awaitingNodeId = computed(() =>
+    this.authStore.awaitingUserTrigger() ? (this.authStore.currentNode()?.id ?? null) : null,
+  );
   readonly rows = computed(() =>
-    this.authStore.authNodes().filter((node) => node.mode === this.mode() && node.status !== 'PENDING'),
+    this.authStore
+      .authNodes()
+      .filter((node) => node.mode === this.mode() && (node.status !== 'PENDING' || node.id === this.awaitingNodeId())),
   );
   readonly error = computed(() =>
     this.authStore.activeScreenMode() === this.mode() ? this.authStore.authState().error : null,
@@ -50,5 +57,15 @@ export class CkycConsentStatusComponent {
   downloadData(node: ICkycAuthNodeConfig): void {
     if (!this.canDownload(node) || this.isBusy()) return;
     this.authStore.validate().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
+  }
+
+  // Trigger (not sent yet) / Re-trigger (last send failed) for the waiting node.
+  canTrigger(node: ICkycAuthNodeConfig): boolean {
+    return node.id === this.awaitingNodeId();
+  }
+
+  triggerNode(node: ICkycAuthNodeConfig): void {
+    if (!this.canTrigger(node) || this.isBusy()) return;
+    this.authStore.triggerAwaitingNode().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
   }
 }

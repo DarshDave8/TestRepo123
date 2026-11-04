@@ -1,24 +1,17 @@
 <!-- Screenshot transcription of ckyc-step-otp.component.html (photograph supplied 2026-11-03), refactored for the auth queue. -->
-<section class="ckyc-otp" aria-labelledby="ckyc-otp-title">
+<!-- The OTP row in the table carries Trigger / Re-trigger; the verify card appears once an OTP has been sent. -->
+<section class="ckyc-otp" [attr.aria-labelledby]="ckycAuthState.otpState().generated ? 'ckyc-otp-title' : null">
   <app-ckyc-consent-status [mode]="authMode.OTP" [downloadable]="false" />
-  <div class="ckyc-otp__card">
-    <p class="ckyc-otp__eyebrow">CKYC VERIFICATION</p>
-    <h1 id="ckyc-otp-title">Verify OTP</h1>
-    @if (!ckycAuthState.otpState().generated) {
-      <!-- No OTP sent yet: the send button first (or the in-flight notice); the form appears once it is sent. -->
-      @if (ckycAuthState.awaitingUserTrigger()) {
-        <div class="ckyc-otp__actions">
-          <button mat-flat-button class="ckyc-otp__verify" type="button" (click)="triggerOtp()">
-            {{ otpNode()?.status === "FAILED" ? "Re-trigger OTP" : "Trigger OTP" }}
-          </button>
-          @if (isActive()) {
-            <button mat-button class="ckyc-otp__back" type="button" (click)="goBack()">Back to enquiry</button>
-          }
-        </div>
-      } @else if (isSending()) {
-        <div class="ckyc-otp__notice" role="status">Sending OTP…</div>
-      }
-    } @else {
+  @if (!ckycAuthState.otpState().generated) {
+    @if (isActive()) {
+      <div class="ckyc-otp__actions">
+        <button mat-button class="ckyc-otp__back" type="button" (click)="goBack()">Back to enquiry</button>
+      </div>
+    }
+  } @else {
+    <div class="ckyc-otp__card">
+      <p class="ckyc-otp__eyebrow">CKYC VERIFICATION</p>
+      <h1 id="ckyc-otp-title">Verify OTP</h1>
       @if (ckycAuthState.otpState().hasEmailAddress && ckycAuthState.otpState().hasMobileNumber) {
         <mat-label class="field-label">Indicate which channel you are using to enter your code</mat-label>
       } @else {
@@ -79,6 +72,6 @@
           <button mat-button class="ckyc-otp__back" type="button" (click)="goBack()">Back to enquiry</button>
         }
       </div>
-    }
-  </div>
+    </div>
+  }
 </section>

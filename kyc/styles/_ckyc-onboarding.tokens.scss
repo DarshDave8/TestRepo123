@@ -1,0 +1,54 @@
+$primary: #311b92;
+$brand-blue: #00a9e0;
+$brand-purple: #280071;
+$brand-blue-pale: #e1f4ff;
+$success: #499b2c;
+$success-text: #045307;
+$success-bg: #eaf7e5;
+$error: #ff4343;
+$error-bg: #ffe8e8;
+$error-text: #b42318; // text on $error-bg / $surface ($error is 2.9:1 on $error-bg, too faint for text)
+$border: #e7e7e7;
+$border-strong: #898989;
+$surface: #fff;
+$surface-muted: #f8f9fa;
+$text: #000;
+$text-muted: #667085;
+$scroll-thumb: rgba(40, 0, 113, 0.25);
+$focus: #0077a8; // focus outline, 5:1 on $surface ($brand-blue is 2.7:1, below the 3:1 a focus ring needs)
+
+$space-1: 0.25rem;
+$space-2: 0.5rem;
+$space-3: 0.75rem;
+$space-4: 1rem;
+$space-6: 1.5rem;
+$space-8: 2rem;
+
+$radius-sm: 0.5rem;
+$radius-md: 0.75rem;
+$radius-lg: 1rem;
+
+$font-xs: 0.7rem;
+$font-sm: 0.8rem;
+$font-md: 0.9rem;
+$font-lg: 1.1rem;
+$font-xl: 1.2rem;
+
+@mixin phone {
+  @media (max-width: 767.98px) {
+    @content;
+  }
+}
+
+@mixin tablet {
+  @media (min-width: 768px) and (max-width: 991.98px) {
+    @content;
+  }
+}
+
+@mixin focus-ring {
+  &:focus-visible {
+    outline: 2px solid $focus;
+    outline-offset: 2px;
+  }
+}

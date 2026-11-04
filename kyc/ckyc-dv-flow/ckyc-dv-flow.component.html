@@ -47,11 +47,12 @@
         mat-flat-button
         class="dv-flow__submit"
         type="button"
-        [disabled]="!sharedService.isDvCkycSubmitEnabled()"
+        [disabled]="!sharedService.isDvCkycSubmitEnabled() || isSubmitting()"
         [attr.aria-describedby]="sharedService.isDvCkycSubmitEnabled() ? null : 'dv-flow-submit-hint'"
+        [attr.aria-busy]="isSubmitting()"
         (click)="onSubmit()"
       >
-        Submit CKYC
+        {{ isSubmitting() ? "Submitting…" : "Submit CKYC" }}
       </button>
     </div>
   </div>

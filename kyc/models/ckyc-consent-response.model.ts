@@ -1,7 +1,7 @@
 // Transcribed from the user-provided consent response model screenshot (2026-10-29).
 import type { IResponse } from 'src/app/models/base-response.model';
 import type { AuthenticationMode } from '../constants/ckyc-onboarding.constants';
-import type { ICustomerBasicDetails } from '../model/customer-basic-details.model';
+import type { ICustomerBasicDetails } from '../../model/customer-basic-details.model';
 import type { IUpdateEnquiry } from './ckyc-consent-request.model';
 
 export interface IGetApplicableConsentTypesResponse extends IResponse {

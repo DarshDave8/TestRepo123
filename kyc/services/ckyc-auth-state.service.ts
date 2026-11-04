@@ -1,7 +1,6 @@
 // Screenshot transcription, compared with five additional photographs supplied on 2026-11-03; not a verified application build.
 // Refactored to a queue-driven flow: every consent call is a node in authNodes, built from AUTH_CONFIG.
-import { Injectable, inject, signal, computed, DestroyRef } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Injectable, inject, signal, computed } from '@angular/core';
 import { defer, Observable, of, Subject } from 'rxjs';
 import { tap, catchError, finalize, map, takeUntil } from 'rxjs/operators';
 import { CkycOnboardingService } from './ckyc-onboarding.service';
@@ -38,12 +37,12 @@ const INITIAL_OTP_STATE: OtpDomainState = {
 @Injectable({ providedIn: 'root' })
 export class CkycAuthStateService {
   private readonly ckycSharedStateService = inject(CkycSharedStateService);
-  private readonly destroyRef = inject(DestroyRef);
   private readonly ckycApi = inject(CkycOnboardingService);
   private readonly flow = inject(CkycFlowStateService);
 
-  // Fired by cancelConsentFlow(): stops every running consent / validate call, including the follow-up
-  // calls the queue starts by itself (those outlive the component that started the first one).
+  // Fired by resetAuth(): stops every running modes / consent / validate call, including the follow-up calls the
+  // queue starts by itself (those outlive the component that started the first one). This is the teardown for
+  // the service's own calls: takeUntilDestroyed would never fire, an app-wide service is never destroyed.
   private readonly cancelConsent$ = new Subject<void>();
 
   readonly authState = signal<AuthDomainState>(INITIAL_AUTH_STATE);
@@ -116,7 +115,7 @@ export class CkycAuthStateService {
           return of(false);
         }),
         finalize(() => this.authState.update((s) => ({ ...s, loading: false }))),
-        takeUntilDestroyed(this.destroyRef),
+        takeUntil(this.cancelConsent$),
       );
   }
 
@@ -174,7 +173,6 @@ export class CkycAuthStateService {
         if (this.findNode(node.id)?.status === 'IN_PROGRESS') this.updateNode(node.id, { status: 'PENDING' });
       }),
       takeUntil(this.cancelConsent$),
-      takeUntilDestroyed(this.destroyRef),
     );
   }
 
@@ -204,8 +202,11 @@ export class CkycAuthStateService {
       consentData: otp ? { otp, otpIdentifier } : {},
       searchAttemptedPhase: this.ckycSharedStateService.searchAttemptedPhase()!,
     };
-    this.authState.update((s) => ({ ...s, loading: true, error: null }));
-    return this.ckycApi.validateConsent(request).pipe(
+    // Loading starts when the call does (on subscribe), like triggerConsent.
+    return defer(() => {
+      this.authState.update((s) => ({ ...s, loading: true, error: null }));
+      return this.ckycApi.validateConsent(request);
+    }).pipe(
       map((response) => {
         if (!response?.success) {
           return this.onValidateFailure(
@@ -225,7 +226,6 @@ export class CkycAuthStateService {
       catchError(() => of(this.onValidateFailure(node.id, 'Unable to validate consent. Please try again.'))),
       finalize(() => this.authState.update((s) => ({ ...s, loading: false }))),
       takeUntil(this.cancelConsent$),
-      takeUntilDestroyed(this.destroyRef),
     );
   }
 

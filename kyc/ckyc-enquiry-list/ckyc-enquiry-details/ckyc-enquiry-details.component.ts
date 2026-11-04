@@ -68,15 +68,14 @@ export class CkycEnquiryDetailsComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.isProcessing.set(false)),
       )
-      .subscribe({
-        next: (isSuccess) => {
-          if (isSuccess && this.authStore.startQueue()) {
-            this.flow.goToStep('auth');
-          }
-        },
-        error: (err) => {
-          console.error('Failed to load authentication modes:', err);
-        },
+      .subscribe((isSuccess) => {
+        // (loadApplicableModes catches its own errors and returns false.)
+        if (isSuccess && this.authStore.startQueue()) {
+          this.flow.goToStep('auth');
+        } else {
+          // Authentication did not start: drop the match, so Submit CKYC cannot send an unauthenticated match.
+          this.flow.activeMatchSelection.set(null);
+        }
       });
   }
 }

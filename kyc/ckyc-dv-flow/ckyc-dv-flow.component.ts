@@ -1,7 +1,10 @@
 // Rebuilt from commit 9689250e (diff photographs, 2026-11-03) over screenshot 147112.
 // SOURCE GAP: lines the diff did not show are marked below; take this file from that branch, not from here.
+// ngOnChanges and resolveCkycTrigger synced with the real file (photo 2026-11-04 17:27).
 import { Component, DestroyRef, OnChanges, SimpleChanges, effect, inject, input, output, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
+import { finalize } from 'rxjs';
 import { ProviderFetchStatus } from 'src/app/models/account.model';
 import type { ICustomerBasicDetailsFetch } from 'src/app/nri/profile-creation/ckyc-flow/ckyc-flow.model';
 import type { ICustomerBasicDetails } from 'src/app/nri/profile-creation/model/customer-basic-details.model';
@@ -34,6 +37,8 @@ export class CkycDvFlowComponent implements OnChanges {
 
   // Set when validate consent succeeds; the template then swaps the onboarding widget for the card.
   readonly validatedDetails = signal<ICustomerBasicDetails | null>(null);
+  // Update-enquiry / submit running: Submit CKYC is disabled, so a second click cannot send it twice.
+  readonly isSubmitting = signal(false);
 
   constructor() {
     effect(() => {
@@ -41,22 +46,18 @@ export class CkycDvFlowComponent implements OnChanges {
         // SOURCE GAP: effect body not shown in the diff (real lines 29-46).
       }
     });
-    // The flow and auth services are app-wide: reset them when this screen goes away.
+    // This screen owns the CKYC flow in DV. The services are app-wide, so their state does not die with the
+    // screen: reset all of it (and stop running calls) so the next lead starts clean.
     this.destroyRef.onDestroy(() => {
-      this.sharedService.setLeadId(null);
-      this.sharedService.setIsDvCkycSubmitEnabled(false);
-      this.sharedService.setIsCkycConsentChecked(false);
-      this.isShowCkycFlow.set(false);
-      this.flowState.activeMatchSelection.set(null);
       this.authService.resetAuth();
-      this.flowState.goToStep('search');
-      this.flowState.isTriggerEnquiriesSuccess.set(false);
+      this.flowState.reset();
+      this.sharedService.reset();
     });
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['leadDetails'] && changes['leadDetails'].currentValue) {
-      // SOURCE GAP: body not shown in the diff (real lines 60-62).
+      this.resolveCkycTrigger();
     }
   }
 
@@ -64,11 +65,12 @@ export class CkycDvFlowComponent implements OnChanges {
     if (this.leadDetails()) {
       this.sharedService.setLeadId(this.leadDetails()!.leadId);
       this.sharedService.setLeadDetails(this.leadDetails()!);
-      // only enable ckyc flow in dv if isCkyc2Attempted is false and isCkycNumberAvailable is false
+      //only enable ckyc flow in dv if isCkyc2Attempted is false and isCkycNumberAvailable is false
       if (
-        !this.leadDetails()!.customerProfile.ckycDetails?.isCkyc2Attempted
-        // SOURCE GAP: rest of the condition not shown in the diff (real lines 70-72).
+        !this.leadDetails()!.customerProfile.ckycDetails?.isCkyc2Attempted &&
+        !this.leadDetails()!.customerProfile.ckycDetails?.isCKycNumberAvailable
       ) {
+        //show ckyc section in DV screen
         this.isShowCkycFlow.set(true);
         // trigger logic
         // update lead
@@ -94,10 +96,19 @@ export class CkycDvFlowComponent implements OnChanges {
   }
 
   onSubmit() {
-    this.flowState.ckycDvSubmit().subscribe((res) => {
-      if (res) {
-        this.finalSubmitted.emit(true);
-      }
-    });
+    if (this.isSubmitting()) return;
+    this.isSubmitting.set(true);
+    this.flowState
+      .ckycDvSubmit()
+      .pipe(
+        finalize(() => this.isSubmitting.set(false)),
+        // Leaving the screen mid-submit: no emit on a destroyed output.
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((res) => {
+        if (res) {
+          this.finalSubmitted.emit(true);
+        }
+      });
   }
 }

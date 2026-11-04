@@ -39,4 +39,14 @@ export class CkycSharedStateService {
   setIsCkycConsentChecked(isChecked: boolean) {
     this._isCkycConsentChecked.set(isChecked);
   }
+  // App-wide, so nothing here dies with a screen: the screen that owns the flow (DV flow, or the onboarding
+  // screen in Profile Creation) calls this when it closes, so the next lead starts clean.
+  reset(): void {
+    this._searchAttemptedPhase.set(null);
+    this._leadId.set(null);
+    this._isManualVerificationEnabled.set(false);
+    this._isDvCkycSubmitEnabled.set(false);
+    this._leadDetails.set(null);
+    this._isCkycConsentChecked.set(false);
+  }
 }

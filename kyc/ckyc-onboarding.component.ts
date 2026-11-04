@@ -67,22 +67,25 @@ export class CkycOnboardingComponent implements OnInit {
     });
     effect(() => {
       if (this.ckycSharedStateService.isManualVerificationEnabled()) {
-        console.log('fired');
         untracked(() => {
           this.customerBasicDetailsFetch.emit({ status: ProviderFetchStatus.FAILURE });
         });
       }
     });
-    // The flow and auth services are app-wide, so leaving the page resets them for the next visit.
+    // The services are app-wide, so their state does not die with this screen.
     this.destroyRef.onDestroy(() => {
-      this.ckycSharedStateService.setManualVerificationEnabled(false);
-      if (this.searchAttemptedPhase() === SearchAttemptedPhase.PROFILE_CREATION) {
-        this.flow.activeMatchSelection.set(null);
-        this.flow.goToStep('search');
-      }
-      this.flow.enquiryError.set(null);
-      this.flow.historyError.set(null);
       this.ckycAuthState.resetAuth();
+      if (this.searchAttemptedPhase() === SearchAttemptedPhase.PROFILE_CREATION) {
+        // Profile Creation: this screen owns the flow; everything goes back to the start.
+        this.flow.reset();
+        this.ckycSharedStateService.reset();
+      } else {
+        // DV: the DV flow screen owns the flow and resets it when it closes. Keep the match and the enquiries,
+        // which Submit CKYC still needs after this screen is swapped for the validated card.
+        this.ckycSharedStateService.setManualVerificationEnabled(false);
+        this.flow.enquiryError.set(null);
+        this.flow.historyError.set(null);
+      }
     });
   }
   ngOnInit(): void {

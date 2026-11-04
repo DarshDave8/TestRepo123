@@ -2,9 +2,8 @@
 // SOURCE GAP: not every original line is visible. Do not treat this as build-ready.
 // SOURCE GAP: the real file also has triggerEnquiries() and triggerEnquiriesResponse (seen only in part in
 // 9689250e); they are not transcribed here.
-import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Subject, catchError, finalize, map, of, switchMap, type Observable } from 'rxjs';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { Subject, catchError, finalize, map, of, switchMap, takeUntil, type Observable } from 'rxjs';
 import { CkycOnboardingService } from './ckyc-onboarding.service';
 import {
   CkycSearchAction,
@@ -22,7 +21,7 @@ import {
 } from '../models/ckyc-onboarding.model';
 import { ICkycEnquiryListResponseBody, ICkycSearchResponse } from '../models/ckyc-search-response.model';
 import { CkycEnquiriesRequest, CkycSearchRequest } from '../models/ckyc-search-request.model';
-import { ICustomerBasicDetails } from '../../../model/customer-basic-details.model';
+import { ICustomerBasicDetails } from '../../model/customer-basic-details.model';
 import { CkycSharedStateService } from './ckyc-shared-state.service';
 import { ISubmitCkycRequest, IUpdateEnquiry, IUpdateEnquiryRequest } from '../models/ckyc-consent-request.model';
 
@@ -32,7 +31,6 @@ type ServiceSearchRequest = Parameters<CkycOnboardingService['enquireCkyc']>[0];
 // INFERRED: the real decorator was not photographed.
 @Injectable({ providedIn: 'root' })
 export class CkycFlowStateService {
-  private readonly destroyRef = inject(DestroyRef);
   private readonly ckycApi = inject(CkycOnboardingService);
   private readonly stepManager = new CkycStepManager();
   private readonly ckycSharedStateService = inject(CkycSharedStateService);
@@ -53,7 +51,7 @@ export class CkycFlowStateService {
   readonly enquiryError = signal<string | null>(null);
 
   private readonly validatedDetailsSubject = new Subject<ICustomerBasicDetails>();
-  readonly validatedDetails: Observable<ICustomerBasicDetails> = this.validatedDetailsSubject.asObservable();
+  readonly validatedDetails$: Observable<ICustomerBasicDetails> = this.validatedDetailsSubject.asObservable();
 
   readonly savedOvds = signal<readonly CkycSavedOvd[]>([]);
   readonly searchValues = signal<CkycFieldValues>({});
@@ -62,6 +60,10 @@ export class CkycFlowStateService {
 
   private clearFormSubject = new Subject<CkycSearchAction>();
   clearForm$ = this.clearFormSubject.asObservable();
+
+  // Fired by reset(): drops responses still on the way, so they cannot fill the next lead's screen.
+  // (takeUntilDestroyed would never fire here: an app-wide service is never destroyed.)
+  private readonly reset$ = new Subject<void>();
 
   // Only enquiries that found at least one record, newest first.
   readonly displayedEnquiries = computed(() =>
@@ -131,8 +133,7 @@ export class CkycFlowStateService {
         this.enquiryError.set('Unable to complete the request');
         return of(false);
       }),
-      finalize(() => this.historyLoading.set(false)),
-      takeUntilDestroyed(this.destroyRef),
+      takeUntil(this.reset$),
     );
   }
 
@@ -165,8 +166,7 @@ export class CkycFlowStateService {
         this.enquiryError.set('Unable to complete the request');
         return of(false);
       }),
-      finalize(() => this.historyLoading.set(false)),
-      takeUntilDestroyed(this.destroyRef),
+      takeUntil(this.reset$),
     );
   }
 
@@ -174,7 +174,7 @@ export class CkycFlowStateService {
     this.historyLoading.set(true);
     this.historyError.set(null);
     const request: CkycEnquiriesRequest = {
-      searchAttemptedPhase: this.ckycSharedStateService.searchAttemptedPhase(),
+      searchAttemptedPhase: this.ckycSharedStateService.searchAttemptedPhase()!,
       leadId: this.ckycSharedStateService.leadId() ?? '',
     };
     this.enquiries.set([]);
@@ -182,7 +182,7 @@ export class CkycFlowStateService {
       .getEnquiries(request)
       .pipe(
         finalize(() => this.historyLoading.set(false)),
-        takeUntilDestroyed(this.destroyRef),
+        takeUntil(this.reset$),
       )
       .subscribe({
         next: (response) => {
@@ -215,7 +215,7 @@ export class CkycFlowStateService {
       .enquireCkyc(request as ServiceSearchRequest)
       .pipe(
         finalize(() => this.enquiryLoading.set(false)),
-        takeUntilDestroyed(this.destroyRef),
+        takeUntil(this.reset$),
       )
       .subscribe({
         next: (response: ICkycSearchResponse) => {
@@ -287,5 +287,28 @@ export class CkycFlowStateService {
   returnToEnquiryReceived(): void {
     this.activeMatchSelection.set(null);
     this.stepManager.goTo('enquiryReceived');
+  }
+
+  /**
+   * Back to the start: stops running requests and clears every signal, including the search form values.
+   * Before 9689250e this service lived and died with the onboarding screen; it is app-wide now, so the screen
+   * that owns the flow (DV flow, or onboarding in Profile Creation) calls this when it closes.
+   * SOURCE GAP: the real file also has triggerEnquiriesResponse; reset it here too.
+   */
+  reset(): void {
+    this.reset$.next();
+    this.stepManager.goTo('search');
+    this.selectedSearchOption.set(CkycSearchOption.CKYC);
+    this.enquiries.set([]);
+    this.activeMatchSelection.set(null);
+    this.isTriggerEnquiriesSuccess.set(false);
+    this.historyLoading.set(false);
+    this.historyError.set(null);
+    this.enquiryLoading.set(false);
+    this.enquiryError.set(null);
+    this.savedOvds.set([]);
+    this.searchValues.set({});
+    this.relatedPersonValues.set({});
+    this.searchFileNames.set({});
   }
 }

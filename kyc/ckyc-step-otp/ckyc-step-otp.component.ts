@@ -1,6 +1,6 @@
 // Screenshot transcription of ckyc-step-otp.component.ts (photograph supplied 2026-11-03, branch ckyc2-approach-changed).
 // Not a verified build. The .scss file was not photographed.
-import { ChangeDetectionStrategy, Component, DestroyRef, OnDestroy, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -27,7 +27,7 @@ import { OtpIdentifier, OtpIdentifierEnum } from '../models/ckyc-consent-request
   styleUrl: './ckyc-step-otp.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class CkycStepOtpComponent implements OnDestroy {
+export class CkycStepOtpComponent {
   readonly authMode = AuthenticationMode;
   readonly ckycAuthState = inject(CkycAuthStateService);
   private readonly destroyRef = inject(DestroyRef);
@@ -64,6 +64,10 @@ export class CkycStepOtpComponent implements OnDestroy {
       if (expiresAt) {
         const remainingSecs = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
         this.startTimer(remainingSecs);
+      } else {
+        // No OTP any more (reset or another mode): stop the countdown.
+        this.clearTimer();
+        this.countdown.set(0);
       }
     });
   }
@@ -121,6 +125,7 @@ export class CkycStepOtpComponent implements OnDestroy {
     this.clearTimer();
     this.countdown.set(seconds);
     if (seconds <= 0) return;
+    // takeUntilDestroyed stops it with the component; clearTimer() stops it on restart.
     this.timerSubscription = interval(1000)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
@@ -132,9 +137,6 @@ export class CkycStepOtpComponent implements OnDestroy {
           this.clearTimer();
         }
       });
-  }
-  ngOnDestroy(): void {
-    this.clearTimer();
   }
   private clearTimer(): void {
     if (this.timerSubscription) {

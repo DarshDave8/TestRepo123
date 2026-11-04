@@ -1,4 +1,7 @@
+@use "../styles/ckyc-onboarding.tokens" as t;
+
 .consent-actions {
   display: flex;
-  margin-top: 16px;
+  justify-content: flex-start;
+  margin-top: t.$space-3;
 }

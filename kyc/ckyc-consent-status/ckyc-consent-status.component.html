@@ -1,46 +1,58 @@
 @if (error(); as error) {
-  <p role="alert">{{ error }}</p>
+  <div class="consent-alert" role="alert">
+    <span class="consent-alert__icon" aria-hidden="true">!</span>
+    <span>{{ error }}</span>
+  </div>
 }
 <div class="consent-status" role="region" [attr.aria-labelledby]="captionId()" tabindex="0">
   <table aria-live="polite">
     <caption [id]="captionId()">{{ caption() }}</caption>
     <thead>
       <tr>
-        <th scope="col">#</th>
+        <th scope="col" class="consent-status__index">#</th>
         <th scope="col">Consent request</th>
-        <th scope="col">Status</th>
-        <th scope="col">Action</th>
+        <th scope="col" class="consent-status__status">Status</th>
+        <th scope="col" class="consent-status__action">Action</th>
       </tr>
     </thead>
     <tbody>
       @for (node of rows(); track node.id; let index = $index) {
         <tr>
-          <td>{{ index + 1 }}</td>
-          <td>{{ node.label }}</td>
-          <td>
+          <td class="consent-status__index">{{ index + 1 }}</td>
+          <td class="consent-status__request">{{ node.label }}</td>
+          <td class="consent-status__status">
             <span
               class="consent-result"
               [class.consent-result--success]="node.status === 'SUCCESS'"
               [class.consent-result--failed]="node.status === 'FAILED'"
+              [class.consent-result--calling]="node.status === 'IN_PROGRESS'"
             >
               {{ statusText[node.status] }}
             </span>
           </td>
-          <td>
+          <td class="consent-status__action">
             @if (canDownload(node)) {
-              <button type="button" [disabled]="isBusy()" (click)="downloadData(node)">Download Data</button>
-            } @else if (canTrigger(node)) {
-              <button type="button" [disabled]="isBusy()" (click)="triggerNode(node)">
-                {{ node.status === "FAILED" ? "Re-trigger" : "Trigger" }}
+              <button mat-stroked-button color="primary" type="button" [disabled]="isBusy()" (click)="downloadData(node)">
+                Download Data
               </button>
+            } @else if (canTrigger(node)) {
+              @if (node.status === "FAILED") {
+                <button mat-stroked-button color="primary" type="button" [disabled]="isBusy()" (click)="triggerNode(node)">
+                  Re-trigger
+                </button>
+              } @else {
+                <button mat-flat-button color="primary" type="button" [disabled]="isBusy()" (click)="triggerNode(node)">
+                  Trigger
+                </button>
+              }
             } @else {
-              —
+              <span class="consent-status__none" aria-label="No action">—</span>
             }
           </td>
         </tr>
       } @empty {
         <tr>
-          <td colspan="4">No consent calls yet.</td>
+          <td colspan="4" class="consent-status__empty">No consent calls yet.</td>
         </tr>
       }
     </tbody>

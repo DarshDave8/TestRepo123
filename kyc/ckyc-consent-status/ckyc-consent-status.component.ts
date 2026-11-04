@@ -1,9 +1,16 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, input } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
-import { AUTH_MODE_LABELS, AuthenticationMode } from '../constants/ckyc-onboarding.constants';
+import { AuthenticationMode } from '../constants/ckyc-onboarding.constants';
 import { AuthNodeStatus, ICkycAuthNodeConfig } from '../models/ckyc-onboarding.model';
 import { CkycAuthStateService } from '../services/ckyc-auth-state.service';
+
+// Heading of each mode's table; the stacked screens read as steps.
+const MODE_TITLES: Record<AuthenticationMode, string> = {
+  [AuthenticationMode.MANUAL]: 'Manual authentication',
+  [AuthenticationMode.FACEAUTH]: 'Face authentication',
+  [AuthenticationMode.OTP]: 'OTP verification',
+};
 
 const STATUS_TEXT: Record<AuthNodeStatus, string> = {
   PENDING: 'Awaiting action',
@@ -34,7 +41,7 @@ export class CkycConsentStatusComponent {
   readonly downloadable = input(true);
 
   readonly captionId = computed(() => `consent-status-caption-${this.mode()}`);
-  readonly caption = computed(() => `Consent call status: ${AUTH_MODE_LABELS[this.mode()]}`);
+  readonly caption = computed(() => MODE_TITLES[this.mode()]);
   // The node waiting for the user's send (e.g. OTP after Face), if it belongs to this table.
   private readonly awaitingNodeId = computed(() =>
     this.authStore.awaitingUserTrigger() ? (this.authStore.currentNode()?.id ?? null) : null,

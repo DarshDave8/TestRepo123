@@ -1,21 +1,39 @@
 <article class="ckyc-validated" aria-labelledby="ckyc-validated-title">
   <header class="ckyc-validated__header">
     <h3 id="ckyc-validated-title" class="ckyc-validated__title">CKYC details</h3>
-    <span class="ckyc-validated__badge">Consent validated</span>
+    <span class="ckyc-validated__badge"><span aria-hidden="true">✓</span> Consent validated</span>
   </header>
-  @for (section of sections(); track section.title) {
-    <section class="ckyc-validated__section">
-      <h4 class="ckyc-validated__section-title">{{ section.title }}</h4>
-      <dl class="ckyc-validated__details">
-        @for (row of section.rows; track row.label) {
-          <div>
-            <dt>{{ row.label }}</dt>
-            <dd>{{ row.value }}</dd>
-          </div>
-        }
-      </dl>
-    </section>
-  } @empty {
-    <p class="ckyc-validated__empty">The validate response returned no details to show.</p>
-  }
+  <dl class="ckyc-validated__details">
+    <div class="ckyc-validated__item">
+      <dt class="ckyc-validated__label">Name</dt>
+      <dd class="ckyc-validated__value" [class.ckyc-validated__value--empty]="!fullName()">
+        {{ fullName() || "Not available" }}
+      </dd>
+    </div>
+    <div class="ckyc-validated__item">
+      <dt class="ckyc-validated__label">Date of birth</dt>
+      <!-- Angular reads a date-only "yyyy-MM-dd" as a local date, so the day never shifts with the timezone. -->
+      <dd class="ckyc-validated__value" [class.ckyc-validated__value--empty]="!view().dateOfBirth">
+        {{ (view().dateOfBirth | date: "dd/MM/yyyy") || "Not available" }}
+      </dd>
+    </div>
+    <div class="ckyc-validated__item">
+      <dt class="ckyc-validated__label">Gender</dt>
+      <dd class="ckyc-validated__value" [class.ckyc-validated__value--empty]="!gender()">
+        {{ gender() || "Not available" }}
+      </dd>
+    </div>
+    <div class="ckyc-validated__item">
+      <dt class="ckyc-validated__label">Mobile number</dt>
+      <dd class="ckyc-validated__value" [class.ckyc-validated__value--empty]="!view().mobileNumber">
+        {{ view().mobileNumber || "Not available" }}
+      </dd>
+    </div>
+    <div class="ckyc-validated__item">
+      <dt class="ckyc-validated__label">Email</dt>
+      <dd class="ckyc-validated__value" [class.ckyc-validated__value--empty]="!view().email">
+        {{ view().email || "Not available" }}
+      </dd>
+    </div>
+  </dl>
 </article>

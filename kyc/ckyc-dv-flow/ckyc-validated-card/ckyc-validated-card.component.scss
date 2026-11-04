@@ -1,76 +1,86 @@
+@use "../../styles/ckyc-onboarding.tokens" as t;
+
 :host {
   display: block;
-  margin-top: 16px;
+  margin-top: t.$space-4;
 }
 
 .ckyc-validated {
-  border: 1px solid #dfe3e8;
-  border-radius: 8px;
-  background: #fff;
-  padding: 16px 20px;
+  padding: t.$space-4 t.$space-6 t.$space-6;
+  border: 1px solid t.$border;
+  border-radius: t.$radius-md;
+  background: t.$surface;
+
+  @include t.phone {
+    padding: t.$space-4;
+  }
 }
 
 .ckyc-validated__header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: t.$space-2 t.$space-3;
+  padding-bottom: t.$space-3;
+  margin-bottom: t.$space-4;
+  border-bottom: 1px solid t.$border;
 }
 
 .ckyc-validated__title {
   margin: 0;
-  font-size: 15px;
-  font-weight: 700;
-  color: #1f2a44;
+  font-size: t.$font-lg;
+  font-weight: 600;
+  color: t.$brand-purple;
 }
 
 .ckyc-validated__badge {
-  padding: 2px 10px;
-  border-radius: 4px;
-  background: #e7f6ec;
-  color: #1e7b3c;
-  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: t.$space-1;
+  padding: t.$space-1 t.$space-3;
+  border-radius: 999px;
+  background: t.$success-bg;
+  color: t.$success-text;
+  font-size: t.$font-sm;
   font-weight: 600;
   white-space: nowrap;
 }
 
-.ckyc-validated__section + .ckyc-validated__section {
-  margin-top: 16px;
-  padding-top: 12px;
-  border-top: 1px solid #eef0f3;
-}
-
-.ckyc-validated__section-title {
-  margin: 0 0 10px;
-  font-size: 13px;
-  font-weight: 700;
-  color: #1f2a44;
-}
-
 .ckyc-validated__details {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 14px 24px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: t.$space-4 t.$space-6;
   margin: 0;
+
+  @include t.phone {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
-.ckyc-validated__details dt {
-  font-size: 11px;
+.ckyc-validated__item {
+  min-width: 0;
+}
+
+.ckyc-validated__label {
+  margin: 0 0 t.$space-1;
+  font-size: t.$font-sm;
   font-weight: 600;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #5f6b7a;
+  color: t.$text-muted;
 }
 
-.ckyc-validated__details dd {
-  margin: 4px 0 0;
-  font-size: 14px;
-  color: #1f2933;
+.ckyc-validated__value {
+  margin: 0;
+  font-size: t.$font-md;
+  font-weight: 500;
+  color: t.$text;
   overflow-wrap: anywhere;
 }
 
-.ckyc-validated__empty {
-  margin: 0;
-  color: #5f6b7a;
+// "Not available": readable, but visibly not data.
+.ckyc-validated__value--empty {
+  font-weight: 400;
+  color: t.$text-muted;
 }

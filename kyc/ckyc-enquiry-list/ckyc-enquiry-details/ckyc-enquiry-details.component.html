@@ -1,96 +1,90 @@
-<!-- Recovered from screenshot 147115 (right pane) and 147116.
-     Source lines 60-76 appear across the image boundary. -->
-<article class="ckyc-match">
-  <div class="ckyc-match__header">
-    <strong>
-      @if (match().docSubmitted?.length; as count) {
-        {{ count === 1 ? "Match:" : "Matches:" }}
-        <span>
-          @for (document of match().docSubmitted; track document.documentName + $index) {
-            {{ document.documentName }}
-            @if (document.isMatchedOvd && document.matchedOvdNumber) {
-              - {{ document.matchedOvdNumber }}
-            }
-            @if (!$last) {
-              ,
-            }
-          }
-        </span>
-      } @else if (match()) {
-        Match
-      } @else {
-        Not Matches
-      }
-    </strong>
-    <span>{{ match().status || "Not available" }}</span>
-  </div>
-  <div class="ckyc-match__content" [class.ckyc-match__content--full-width]="!isStaff || !photoSource()">
+<!-- Match card: one CKYC record found for an enquiry (UI step 4, 2026-11-04; rebuilt from the das-frontend screen). -->
+<article class="ckyc-match" [attr.aria-label]="'CKYC record ' + (match().ckycRefNo || '')">
+  <header class="ckyc-match__header">
+    <div class="ckyc-match__ref">
+      <span class="ckyc-match__label">CKYC reference no.</span>
+      <span class="ckyc-match__ref-value">{{ match().ckycRefNo || "Not available" }}</span>
+    </div>
+    @if (match().status; as status) {
+      <span class="ckyc-match__status" [class.ckyc-match__status--active]="status.toUpperCase() === 'ACTIVE'">
+        {{ status }}
+      </span>
+    }
+  </header>
+
+  <div class="ckyc-match__content" [class.ckyc-match__content--with-photo]="isStaff">
     <dl class="ckyc-match__details">
       <div>
-        <dt>CKYC Reference No</dt>
-        <dd>{{ match().ckycRefNo || "Not available" }}</dd>
-      </div>
-      <div>
-        <dt>Full Name</dt>
-        <dd>{{ match().fullName || "Not available" }}</dd>
+        <dt>Full name</dt>
+        <dd [class.ckyc-match__value--empty]="!match().fullName">{{ match().fullName || "Not available" }}</dd>
       </div>
       <div>
         <dt>Gender</dt>
-        <dd>{{ match().gender || "Not available" }}</dd>
+        <dd [class.ckyc-match__value--empty]="!match().gender">{{ match().gender || "Not available" }}</dd>
       </div>
       <div>
         <dt>Mobile</dt>
-        <dd>{{ match().mobile || "Not available" }}</dd>
+        <dd [class.ckyc-match__value--empty]="!match().mobile">{{ match().mobile || "Not available" }}</dd>
       </div>
       <div>
         <dt>Email</dt>
-        <dd>{{ match().email || "Not available" }}</dd>
+        <dd [class.ckyc-match__value--empty]="!match().email">{{ match().email || "Not available" }}</dd>
       </div>
       <div>
         <dt>Last updated</dt>
-        <dd>{{ (match().lastUpdatedDate | date: 'dd/MM/yyyy, h:mm a') || "—" }}</dd>
+        <dd [class.ckyc-match__value--empty]="!match().lastUpdatedDate">
+          {{ (match().lastUpdatedDate | date: "dd/MM/yyyy, h:mm a") || "Not available" }}
+        </dd>
       </div>
       <div>
-        <dt>Documents Submitted</dt>
+        <dt>Documents submitted</dt>
         <dd>
-          @if (!match().docSubmitted?.length) {
-            Not available
-          } @else {
-            @for (document of match().docSubmitted ?? []; track document.documentName + $index) {
-              <span>
-                {{ document.documentName }}
-              </span>
-              @if (!$last) {
-                ,
+          @if (match().docSubmitted?.length) {
+            <ul class="ckyc-match__chips">
+              @for (document of match().docSubmitted ?? []; track document.documentName + $index) {
+                <li class="ckyc-match__document-chip" [class.ckyc-match__document-chip--matched]="document.isMatchedOvd">
+                  @if (document.isMatchedOvd) {
+                    <span aria-hidden="true">✓</span>
+                  }
+                  {{ document.documentName }}
+                  @if (document.isMatchedOvd) {
+                    <span class="ckyc-match__chip-note">· Matched</span>
+                  }
+                </li>
               }
-            }
+            </ul>
+          } @else {
+            <span class="ckyc-match__value--empty">Not available</span>
           }
         </dd>
       </div>
     </dl>
     @if (isStaff) {
-      <aside class="ckyc-match__photo">
+      <figure class="ckyc-match__photo" [class.ckyc-match__photo--empty]="!photoSource()">
         @if (photoSource(); as source) {
-          <span class="ckyc-match__photo-type">{{ match().photoExt?.toUpperCase() }}</span>
           <img
             class="ckyc-match__photo-image"
             [src]="source"
             [alt]="(match().fullName || 'CKYC applicant') + ' CKYC photo'"
           />
         } @else {
-          <span>Photo not available</span>
+          <figcaption>Photo not available</figcaption>
         }
-      </aside>
+      </figure>
     }
   </div>
-  <div class="ckyc-match__actions">
-    @if (flow.step() === 'search' || flow.step() === 'enquiryReceived') {
-      <button mat-stroked-button color="primary" type="button" (click)="startAuthentication()">Authenticate</button>
-    }
-  </div>
-  <!-- @if (isActive()) {
-    <app-ckyc-authentication-types />
-  } -->
+
+  @if (flow.step() === "search" || flow.step() === "enquiryReceived") {
+    <footer class="ckyc-match__actions">
+      <button
+        mat-flat-button
+        class="ckyc-match__authenticate"
+        type="button"
+        [disabled]="isProcessing()"
+        (click)="startAuthentication()"
+      >
+        Authenticate
+      </button>
+    </footer>
+  }
 </article>
-<!-- Some punctuation in the first @for block and the closing of the
-     Documents Submitted section was obscured; this is best-effort. -->

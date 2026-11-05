@@ -140,6 +140,7 @@ export interface OtpDomainState {
   expiresAt: number | null;
   hasMobileNumber?: boolean; // INFERRED from screenshot usage
   hasEmailAddress?: boolean; // INFERRED from screenshot usage
+  mobileLast4?: string | null; // last 4 digits of the registered mobile (applicable-modes response), for the OTP screen
   successMessage: string | null; // trigger-consent messages of the last OTP send, shown as a banner on the OTP screen
 }
 

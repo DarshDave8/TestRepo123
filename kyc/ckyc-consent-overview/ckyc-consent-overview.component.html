@@ -1,6 +1,7 @@
 <!-- Consent overview (redesign 2026-11-05): from design/ckyc-consent-overview.component.html on design-test-repo.
      Bindings are unchanged (isTriggerEnquiriesSuccess, loading, response(), enquiryResults(),
-     isTriggerButtonClicked, startEnquiryTrigger()), so the component class needs no change. -->
+     isTriggerButtonClicked, startEnquiryTrigger()). Icons: the class needs FontAwesomeModule in its imports and
+     approveIcon, closeIcon, infoIcon, refreshIcon, sendIcon (src/app/constants/icons.constants) as fields. -->
 <section class="ckyc-overview" aria-labelledby="ckyc-overview-title">
   <app-ckyc-error-alert />
 
@@ -12,6 +13,7 @@
         <span class="ckyc-overview__overall">
           <span class="ckyc-overview__overall-label">Overall</span>
           <span class="ckyc-status" [class.ckyc-status--success]="res.success" [class.ckyc-status--failed]="!res.success">
+            <fa-icon [icon]="res.success ? approveIcon : closeIcon" />
             {{ res.success ? "Success" : "Failed" }}
           </span>
         </span>
@@ -44,6 +46,7 @@
                   <td class="ckyc-overview__count">{{ item.recordsFound }}</td>
                   <td>
                     <span class="ckyc-status" [class.ckyc-status--success]="item.success" [class.ckyc-status--failed]="!item.success">
+                      <fa-icon [icon]="item.success ? approveIcon : closeIcon" />
                       {{ item.success ? "Success" : "Failed" }}
                     </span>
                   </td>
@@ -65,7 +68,7 @@
           </table>
         </div>
       } @else {
-        <p class="ckyc-overview__empty">No CKYC enquiry results found.</p>
+        <p class="ckyc-overview__empty"><fa-icon [icon]="infoIcon" />No CKYC enquiry results found.</p>
       }
     }
   } @else {
@@ -76,7 +79,9 @@
         <p class="ckyc-overview__hint">Search CKYC records for this customer to continue.</p>
       </div>
       <button mat-flat-button class="ckyc-overview__trigger" type="button" (click)="startEnquiryTrigger()">
-        {{ isTriggerButtonClicked ? "Retrigger Enquiries" : "Trigger Enquiries" }}
+        <fa-icon [icon]="isTriggerButtonClicked ? refreshIcon : sendIcon" />{{
+          isTriggerButtonClicked ? "Retrigger Enquiries" : "Trigger Enquiries"
+        }}
       </button>
     </div>
   }

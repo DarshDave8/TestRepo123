@@ -1,6 +1,9 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, input } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
+import { approveIcon, closeIcon, dotIcon, downloadIcon, errorIcon, refreshIcon, sendIcon } from 'src/app/constants/icons.constants';
 import { AuthenticationMode } from '../constants/ckyc-onboarding.constants';
 import { AuthNodeStatus, ICkycAuthNodeConfig } from '../models/ckyc-onboarding.model';
 import { CkycAuthStateService } from '../services/ckyc-auth-state.service';
@@ -19,6 +22,14 @@ const STATUS_TEXT: Record<AuthNodeStatus, string> = {
   FAILED: 'Failed',
 };
 
+// Icon beside the status text, so Success / Failed do not rely on colour alone. IN_PROGRESS keeps its pulsing dot.
+const STATUS_ICON: Record<AuthNodeStatus, IconDefinition | null> = {
+  PENDING: dotIcon,
+  IN_PROGRESS: null,
+  SUCCESS: approveIcon,
+  FAILED: closeIcon,
+};
+
 /**
  * Consent call history for one auth mode: a row per node of that mode that has been sent, plus the node that
  * waits for the user to send it (its row carries Trigger / Re-trigger).
@@ -27,7 +38,7 @@ const STATUS_TEXT: Record<AuthNodeStatus, string> = {
 @Component({
   selector: 'app-ckyc-consent-status',
   standalone: true,
-  imports: [MatButtonModule],
+  imports: [MatButtonModule, FontAwesomeModule],
   templateUrl: './ckyc-consent-status.component.html',
   styleUrl: './ckyc-consent-status.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -56,6 +67,12 @@ export class CkycConsentStatusComponent {
   );
   readonly isBusy = this.authStore.isBusy;
   readonly statusText = STATUS_TEXT;
+  readonly statusIcon = STATUS_ICON;
+  // Font Awesome icons from the app's icons.constants
+  readonly errorIcon = errorIcon;
+  readonly downloadIcon = downloadIcon;
+  readonly refreshIcon = refreshIcon;
+  readonly sendIcon = sendIcon;
 
   canDownload(node: ICkycAuthNodeConfig): boolean {
     return this.downloadable() && this.authStore.canValidate(node);

@@ -11,16 +11,22 @@ import { AuthService } from 'src/app/auth/auth.service';
 import { CkycAuthStateService } from '../../services/ckyc-auth-state.service';
 import { finalize } from 'rxjs';
 import { CkycSharedStateService } from '../../services/ckyc-shared-state.service';
+import { toCkycPhotoSrc } from '../../utils/ckyc-photo.util';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { approveIcon, faLockIcon, userIcon } from 'src/app/constants/icons.constants';
 
 @Component({
   selector: 'app-ckyc-enquiry-details',
   standalone: true,
-  imports: [DatePipe, MatButtonModule],
+  imports: [DatePipe, MatButtonModule, FontAwesomeModule],
   templateUrl: './ckyc-enquiry-details.component.html',
   styleUrl: './ckyc-enquiry-details.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CkycEnquiryDetailsComponent implements OnInit {
+  readonly approveIcon = approveIcon;
+  readonly faLockIcon = faLockIcon;
+  readonly userIcon = userIcon;
   // Phase and lead id are set by the onboarding component; the consent calls use the same values.
   private readonly ckycSharedStateService = inject(CkycSharedStateService);
   readonly enquiry = input.required<ICkycEnquiryListResponseBody>();
@@ -32,15 +38,7 @@ export class CkycEnquiryDetailsComponent implements OnInit {
   isStaff = false;
   authService = inject(AuthService);
 
-  readonly photoSource = computed(() => {
-    const photo = this.match().photo?.trim() ?? '';
-    const photoExt = this.match().photoExt?.trim().toLowerCase() ?? '';
-    if (!photo) {
-      return null;
-    }
-    const mimeSubtype = photoExt === 'jpg' ? 'jpeg' : photoExt;
-    return `data:image/${mimeSubtype};base64,${photo}`;
-  });
+  readonly photoSource = computed(() => toCkycPhotoSrc(this.match().photo, this.match().photoExt));
   readonly isProcessing = signal<boolean>(false);
 
   ngOnInit(): void {

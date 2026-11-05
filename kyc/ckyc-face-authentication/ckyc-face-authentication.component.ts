@@ -3,17 +3,20 @@ import { MatButtonModule } from '@angular/material/button';
 import { AuthenticationMode } from '../constants/ckyc-onboarding.constants';
 import { CkycConsentStatusComponent } from '../ckyc-consent-status/ckyc-consent-status.component';
 import { CkycAuthStateService } from '../services/ckyc-auth-state.service';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { backArrowIcon } from 'src/app/constants/icons.constants';
 
 // Face auth screen: its consent call history. The calls themselves are sent by the auth queue.
 @Component({
   selector: 'app-ckyc-face-authentication',
   standalone: true,
-  imports: [MatButtonModule, CkycConsentStatusComponent],
+  imports: [MatButtonModule, CkycConsentStatusComponent, FontAwesomeModule],
   templateUrl: './ckyc-face-authentication.component.html',
   styleUrl: './ckyc-face-authentication.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CkycFaceAuthenticationComponent {
+  readonly backArrowIcon = backArrowIcon;
   private readonly authStore = inject(CkycAuthStateService);
   readonly mode = AuthenticationMode.FACEAUTH;
   readonly isActive = computed(() => this.authStore.activeScreenMode() === this.mode);

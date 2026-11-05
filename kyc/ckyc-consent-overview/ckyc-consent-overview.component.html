@@ -1,7 +1,6 @@
 <!-- Consent overview (redesign 2026-11-05): from design/ckyc-consent-overview.component.html on design-test-repo.
      Bindings are unchanged (isTriggerEnquiriesSuccess, loading, response(), enquiryResults(),
-     isTriggerButtonClicked, startEnquiryTrigger()). The class needs one change: add CkycIconComponent
-     (../ckyc-icon/ckyc-icon.component) to its imports. -->
+     isTriggerButtonClicked, startEnquiryTrigger()), so the component class needs no change. -->
 <section class="ckyc-overview" aria-labelledby="ckyc-overview-title">
   <app-ckyc-error-alert />
 
@@ -13,7 +12,6 @@
         <span class="ckyc-overview__overall">
           <span class="ckyc-overview__overall-label">Overall</span>
           <span class="ckyc-status" [class.ckyc-status--success]="res.success" [class.ckyc-status--failed]="!res.success">
-            <app-ckyc-icon [name]="res.success ? 'check' : 'x'" />
             {{ res.success ? "Success" : "Failed" }}
           </span>
         </span>
@@ -46,7 +44,6 @@
                   <td class="ckyc-overview__count">{{ item.recordsFound }}</td>
                   <td>
                     <span class="ckyc-status" [class.ckyc-status--success]="item.success" [class.ckyc-status--failed]="!item.success">
-                      <app-ckyc-icon [name]="item.success ? 'check' : 'x'" />
                       {{ item.success ? "Success" : "Failed" }}
                     </span>
                   </td>
@@ -68,20 +65,17 @@
           </table>
         </div>
       } @else {
-        <p class="ckyc-overview__empty"><app-ckyc-icon name="info" />No CKYC enquiry results found.</p>
+        <p class="ckyc-overview__empty">No CKYC enquiry results found.</p>
       }
     }
   } @else {
     <!-- Before the enquiries run: one compact row, text on the left, button on the right -->
     <div class="ckyc-overview__cta">
       <div class="ckyc-overview__cta-text">
-        <h2 id="ckyc-overview-title" class="ckyc-overview__title">
-          <app-ckyc-icon name="search" class="ckyc-overview__title-icon" />CKYC enquiries
-        </h2>
+        <h2 id="ckyc-overview-title" class="ckyc-overview__title">CKYC enquiries</h2>
         <p class="ckyc-overview__hint">Search CKYC records for this customer to continue.</p>
       </div>
       <button mat-flat-button class="ckyc-overview__trigger" type="button" (click)="startEnquiryTrigger()">
-        <app-ckyc-icon [name]="isTriggerButtonClicked ? 'refresh' : 'send'" />
         {{ isTriggerButtonClicked ? "Retrigger Enquiries" : "Trigger Enquiries" }}
       </button>
     </div>

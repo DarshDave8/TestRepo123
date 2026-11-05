@@ -25,20 +25,12 @@ import { CkycFlowStateService } from './ckyc-flow-state.service';
 import { CkycSharedStateService } from './ckyc-shared-state.service';
 import { OtpIdentifier } from '../models/ckyc-consent-request.model';
 
-// Only the last 4 digits are kept: enough for "ending 3210" on the OTP screen, works whether or not the
-// backend already masks the number, and keeps the full number out of app state.
-function lastFourDigits(mobile?: string | null): string | null {
-  const digits = (mobile ?? '').replace(/\D/g, '');
-  return digits.length >= 4 ? digits.slice(-4) : null;
-}
-
 const INITIAL_AUTH_STATE: AuthDomainState = { loading: false, attemptId: null, error: null };
 const INITIAL_OTP_STATE: OtpDomainState = {
   generated: false,
   expiresAt: null,
   hasMobileNumber: false,
   hasEmailAddress: false,
-  mobileLast4: null,
   successMessage: null,
 };
 
@@ -113,7 +105,6 @@ export class CkycAuthStateService {
             ...s,
             hasMobileNumber: res.body?.hasMobileNumber,
             hasEmailAddress: res.body?.hasEmailAddress,
-            mobileLast4: lastFourDigits(res.body?.mobile),
           }));
           this.buildLinearQueue(phase, res.body?.applicableConsentTypes || []);
           this.authState.update((s) => ({ ...s, attemptId: res.body.attemptId }));

@@ -11,13 +11,11 @@ import { AuthService } from 'src/app/auth/auth.service';
 import { CkycAuthStateService } from '../../services/ckyc-auth-state.service';
 import { finalize } from 'rxjs';
 import { CkycSharedStateService } from '../../services/ckyc-shared-state.service';
-import { toCkycPhotoSrc } from '../../utils/ckyc-photo.util';
-import { CkycIconComponent } from '../../ckyc-icon/ckyc-icon.component';
 
 @Component({
   selector: 'app-ckyc-enquiry-details',
   standalone: true,
-  imports: [DatePipe, MatButtonModule, CkycIconComponent],
+  imports: [DatePipe, MatButtonModule],
   templateUrl: './ckyc-enquiry-details.component.html',
   styleUrl: './ckyc-enquiry-details.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -34,7 +32,15 @@ export class CkycEnquiryDetailsComponent implements OnInit {
   isStaff = false;
   authService = inject(AuthService);
 
-  readonly photoSource = computed(() => toCkycPhotoSrc(this.match().photo, this.match().photoExt));
+  readonly photoSource = computed(() => {
+    const photo = this.match().photo?.trim() ?? '';
+    const photoExt = this.match().photoExt?.trim().toLowerCase() ?? '';
+    if (!photo) {
+      return null;
+    }
+    const mimeSubtype = photoExt === 'jpg' ? 'jpeg' : photoExt;
+    return `data:image/${mimeSubtype};base64,${photo}`;
+  });
   readonly isProcessing = signal<boolean>(false);
 
   ngOnInit(): void {

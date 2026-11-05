@@ -130,10 +130,6 @@ td.ckyc-overview__count {
 }
 
 .ckyc-overview__empty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: t.$space-2;
   margin: 0;
   padding: t.$space-4;
   border-radius: t.$radius-sm;
@@ -146,7 +142,6 @@ td.ckyc-overview__count {
 .ckyc-status {
   display: inline-flex;
   align-items: center;
-  gap: t.$space-1;
   padding: 0.125rem t.$space-2;
   border: 1px solid t.$border;
   border-radius: 999px;
@@ -183,11 +178,6 @@ td.ckyc-overview__count {
   display: grid;
   gap: 0.125rem;
   min-width: 0;
-}
-
-.ckyc-overview__title-icon {
-  margin-inline-end: t.$space-2;
-  color: t.$text-muted;
 }
 
 .ckyc-overview__hint {

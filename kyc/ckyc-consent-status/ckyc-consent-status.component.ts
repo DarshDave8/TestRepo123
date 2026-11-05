@@ -1,8 +1,6 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, input } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
-import { CkycIconComponent } from '../ckyc-icon/ckyc-icon.component';
-import type { CkycIconName } from '../ckyc-icon/ckyc-icons';
 import { AuthenticationMode } from '../constants/ckyc-onboarding.constants';
 import { AuthNodeStatus, ICkycAuthNodeConfig } from '../models/ckyc-onboarding.model';
 import { CkycAuthStateService } from '../services/ckyc-auth-state.service';
@@ -21,14 +19,6 @@ const STATUS_TEXT: Record<AuthNodeStatus, string> = {
   FAILED: 'Failed',
 };
 
-// Icon beside the status text, so Success / Failed do not rely on colour alone. IN_PROGRESS keeps its pulsing dot.
-const STATUS_ICON: Record<AuthNodeStatus, CkycIconName | null> = {
-  PENDING: 'clock',
-  IN_PROGRESS: null,
-  SUCCESS: 'check',
-  FAILED: 'x',
-};
-
 /**
  * Consent call history for one auth mode: a row per node of that mode that has been sent, plus the node that
  * waits for the user to send it (its row carries Trigger / Re-trigger).
@@ -37,7 +27,7 @@ const STATUS_ICON: Record<AuthNodeStatus, CkycIconName | null> = {
 @Component({
   selector: 'app-ckyc-consent-status',
   standalone: true,
-  imports: [MatButtonModule, CkycIconComponent],
+  imports: [MatButtonModule],
   templateUrl: './ckyc-consent-status.component.html',
   styleUrl: './ckyc-consent-status.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -66,7 +56,6 @@ export class CkycConsentStatusComponent {
   );
   readonly isBusy = this.authStore.isBusy;
   readonly statusText = STATUS_TEXT;
-  readonly statusIcon = STATUS_ICON;
 
   canDownload(node: ICkycAuthNodeConfig): boolean {
     return this.downloadable() && this.authStore.canValidate(node);

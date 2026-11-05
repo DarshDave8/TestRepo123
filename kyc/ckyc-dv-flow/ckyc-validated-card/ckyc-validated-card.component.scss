@@ -47,50 +47,9 @@
   white-space: nowrap;
 }
 
-// Details, with the photo beside them when there is one (same size as on the match card)
-.ckyc-validated__body {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: t.$space-4;
-}
-
-.ckyc-validated__body--with-photo {
-  grid-template-columns: minmax(0, 1fr) 7rem;
-  align-items: start;
-
-  @include t.phone {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-.ckyc-validated__photo {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: 7rem;
-  aspect-ratio: 3 / 4;
-  margin: 0;
-  overflow: hidden;
-  border: 1px solid t.$border;
-  border-radius: t.$radius-sm;
-  background: t.$surface-muted;
-
-  @include t.phone {
-    order: -1; // photo first on a phone, as a thumbnail
-    max-width: 5rem;
-  }
-}
-
-.ckyc-validated__photo-image {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain; // never crop the face on an ID photo
-}
-
 .ckyc-validated__details {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-content: start;
   gap: t.$space-2 t.$space-6;
   margin: 0;
 

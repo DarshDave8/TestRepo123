@@ -164,19 +164,6 @@
   text-align: center;
 }
 
-// No photo: a person outline above the text, so the box reads as an empty photo slot
-.ckyc-match__photo-empty {
-  display: grid;
-  justify-items: center;
-  gap: t.$space-1;
-  padding: t.$space-2;
-}
-
-.ckyc-match__photo-empty-icon {
-  font-size: 1.75rem;
-  opacity: 0.6;
-}
-
 .ckyc-match__photo-image {
   display: block;
   width: 100%;
@@ -236,17 +223,6 @@
     aspect-ratio: auto;
     justify-items: start;
     padding: t.$space-2 t.$space-3;
-  }
-
-  // one short line on a phone: small icon before the text
-  .ckyc-match__photo-empty {
-    display: flex;
-    align-items: center;
-    padding: 0;
-  }
-
-  .ckyc-match__photo-empty-icon {
-    font-size: 1rem;
   }
 
   .ckyc-match__authenticate {

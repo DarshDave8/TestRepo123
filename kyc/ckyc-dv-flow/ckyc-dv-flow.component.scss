@@ -60,9 +60,6 @@
 }
 
 .dv-flow__hint {
-  display: flex;
-  align-items: flex-start;
-  gap: t.$space-1;
   flex: 1 1 16rem;
   margin: 0;
   color: t.$text-muted;
@@ -72,10 +69,6 @@
 .dv-flow__submit {
   @include t.button-primary;
   min-width: 10rem;
-}
-
-.dv-flow__hint-icon {
-  margin-top: 0.125rem;
 }
 
 // ---- CKYC / Aadhaar provider: the CKYC number already on the lead ----

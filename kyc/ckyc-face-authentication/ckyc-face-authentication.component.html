@@ -1,6 +1,8 @@
 <app-ckyc-consent-status [mode]="mode" />
 @if (isActive()) {
   <div class="consent-actions">
-    <button mat-stroked-button class="consent-actions__back" type="button" (click)="goBack()">Back</button>
+    <button mat-stroked-button class="consent-actions__back" type="button" (click)="goBack()">
+      <app-ckyc-icon name="arrow-left" />Back
+    </button>
   </div>
 }

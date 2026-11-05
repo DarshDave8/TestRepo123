@@ -1,70 +1,49 @@
 @use "../styles/ckyc-onboarding.tokens" as t;
 
 // The OTP step: the status table (from ckyc-consent-status), then this card once an OTP has been sent.
+// Same card language as the match card and the validated card: muted header, body, footer with the actions.
 .ckyc-otp {
   display: block;
   min-width: 0;
 
+  // ---- Card ----
   &__card {
     margin-top: t.$space-3;
-    padding: t.$space-6 t.$space-4;
+    overflow: hidden;
     border: 1px solid t.$border;
     border-radius: t.$radius-md;
     background: t.$surface;
   }
 
-  // "OTP sent" banner from the trigger response, between the status table and the card
-  &__success {
+  // ---- Header: icon, title + where it was sent, expiry / attempts chips ----
+  &__header {
     display: flex;
-    align-items: flex-start;
-    gap: t.$space-2;
-    margin-top: t.$space-3;
-    padding: t.$space-2 t.$space-3;
-    border: 1px solid t.$success-bg;
-    border-left: 4px solid t.$success;
-    border-radius: t.$radius-sm;
-    background: t.$success-bg;
-    color: t.$success-text;
-    font-size: t.$font-sm;
-    font-weight: 500;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: t.$space-2 t.$space-3;
+    padding: t.$space-3 t.$space-4;
+    border-bottom: 1px solid t.$border;
+    background: t.$surface-muted;
   }
 
-  &__success-icon {
+  &__header-icon {
     display: inline-flex;
     flex: none;
     align-items: center;
     justify-content: center;
-    width: 1rem;
-    height: 1rem;
-    border-radius: 50%;
-    background: t.$success-text;
-    color: t.$surface;
-  }
-
-  // One centred column inside the card
-  &__panel {
-    display: grid;
-    justify-items: center;
-    gap: t.$space-3;
-    width: min(100%, 22rem);
-    margin: 0 auto;
-    text-align: center;
-  }
-
-  &__icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.25rem;
-    height: 2.25rem;
+    width: 2rem;
+    height: 2rem;
     border-radius: 50%;
     background: t.$brand-blue-pale;
     color: t.$brand-purple;
+    font-size: 1rem;
   }
 
-  &__intro {
+  &__heading {
     display: grid;
-    gap: t.$space-1;
+    flex: 1 1 12rem;
+    gap: 0.125rem;
+    min-width: 0;
   }
 
   &__title {
@@ -72,27 +51,132 @@
     color: t.$brand-purple;
     font-size: t.$font-md;
     font-weight: 600;
+    line-height: 1.3;
   }
 
   &__help {
     margin: 0;
     color: t.$text-muted;
     font-size: t.$font-sm;
-    line-height: 1.5;
+    line-height: 1.4;
+  }
+
+  &__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: t.$space-2;
+  }
+
+  &__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: t.$space-1;
+    padding: 0.125rem t.$space-2;
+    border: 1px solid t.$border;
+    border-radius: 999px;
+    background: t.$surface;
+    color: t.$text-muted;
+    font-size: t.$font-xs;
+    font-weight: 500;
+    white-space: nowrap;
+
+    strong {
+      color: t.$text;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
+  &__chip--expired {
+    border-color: t.$error-bg;
+    background: t.$error-bg;
+    color: t.$error-text;
+
+    strong {
+      color: inherit;
+    }
+  }
+
+  // ---- Body: left-aligned column, narrow enough that the code field is not a long empty bar ----
+  &__body {
+    display: grid;
+    gap: t.$space-3;
+    max-width: 26rem;
+    padding: t.$space-4;
+  }
+
+  // "OTP sent to mobile": one quiet line, not a second banner
+  &__sent {
+    display: flex;
+    align-items: flex-start;
+    gap: t.$space-2;
+    margin: 0;
+    color: t.$success-text;
+    font-size: t.$font-sm;
+    font-weight: 500;
+  }
+
+  &__sent-icon {
+    margin-top: 0.0625rem;
+  }
+
+  // "Which OTP are you entering?" with two side-by-side options
+  &__channel {
+    display: grid;
+    gap: t.$space-2;
+  }
+
+  &__channel-label {
+    color: t.$text;
+    font-size: t.$font-sm;
+    font-weight: 600;
   }
 
   &__channels {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: t.$space-2;
+  }
+
+  // Each option is a bordered box (bigger click target). No checked tint: the radio shows the choice.
+  &__channel-option {
+    box-sizing: border-box;
+    min-width: 0;
+    padding-right: t.$space-2;
+    border: 1px solid t.$border;
+    border-radius: t.$radius-sm;
+    font-size: t.$font-sm;
+  }
+
+  &__channel-text {
+    display: inline-flex;
     flex-wrap: wrap;
-    justify-content: center;
-    gap: t.$space-2 t.$space-6;
+    align-items: center;
+    gap: 0 t.$space-1;
+  }
+
+  &__channel-icon {
+    color: t.$text-muted;
+  }
+
+  &__channel-detail {
+    color: t.$text-muted;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__channel-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: t.$space-1;
+    color: t.$error-text;
+    font-size: t.$font-xs;
   }
 
   &__field {
     width: 100%;
   }
 
-  // 6 large, evenly spaced digits; the left padding balances the trailing letter-spacing so they sit centred
+  // 6 evenly spaced digits; the left padding balances the trailing letter-spacing so they sit centred
   &__input {
     padding-left: 0.5em;
     font-size: t.$font-lg;
@@ -101,23 +185,10 @@
     text-align: center;
   }
 
-  &__meta {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: t.$space-1 t.$space-6;
-    color: t.$text-muted;
-    font-size: t.$font-sm;
-
-    strong {
-      color: t.$text;
-      font-weight: 600;
-    }
-  }
-
   &__notice {
-    box-sizing: border-box;
-    width: 100%;
+    display: flex;
+    align-items: flex-start;
+    gap: t.$space-2;
     padding: t.$space-2 t.$space-3;
     border: 1px solid t.$border;
     border-radius: t.$radius-sm;
@@ -126,25 +197,36 @@
     font-size: t.$font-sm;
   }
 
+  &__notice-icon {
+    margin-top: 0.125rem;
+  }
+
   &__notice--warning {
     border-color: t.$error-bg;
     background: t.$error-bg;
     color: t.$error-text;
   }
 
-  // Verify and Resend side by side, same width
-  &__actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: t.$space-3;
-    width: 100%;
+  // ---- Footer: Back on the left, Resend + Verify on the right ----
+  &__footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: t.$space-2 t.$space-3;
+    padding: t.$space-3 t.$space-4;
+    border-top: 1px solid t.$border;
+  }
 
-    button {
-      width: 100%;
-    }
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: t.$space-2;
+    margin-left: auto; // stays on the right when there is no Back button
   }
 
   &__verify {
+    min-width: 8rem;
     @include t.button-primary;
     @include t.button-compact;
   }
@@ -170,13 +252,38 @@
     @include t.button-compact;
   }
 
+  // ---- Phone: chips under the title, one option per line, full-width actions with Verify first ----
   @include t.phone {
-    &__card {
-      padding: t.$space-4;
+    &__chips {
+      width: 100%;
+      padding-left: 2.75rem; // in line with the title, past the header icon
+    }
+
+    &__channels {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    &__body {
+      max-width: none;
+    }
+
+    &__footer {
+      flex-direction: column-reverse;
+      align-items: stretch;
     }
 
     &__actions {
-      grid-template-columns: minmax(0, 1fr);
+      display: grid;
+      margin-left: 0;
+    }
+
+    &__verify {
+      order: -1;
+    }
+
+    &__actions button,
+    &__back {
+      width: 100%;
     }
   }
 }

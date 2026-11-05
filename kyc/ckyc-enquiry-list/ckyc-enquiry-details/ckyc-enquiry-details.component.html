@@ -44,7 +44,7 @@
               @for (document of match().docSubmitted ?? []; track document.documentName + $index) {
                 <li class="ckyc-match__document-chip" [class.ckyc-match__document-chip--matched]="document.isMatchedOvd">
                   @if (document.isMatchedOvd) {
-                    <span aria-hidden="true">✓</span>
+                    <app-ckyc-icon name="check" />
                   }
                   {{ document.documentName }}
                   @if (document.isMatchedOvd) {
@@ -68,7 +68,10 @@
             [alt]="(match().fullName || 'CKYC applicant') + ' CKYC photo'"
           />
         } @else {
-          <figcaption>Photo not available</figcaption>
+          <figcaption class="ckyc-match__photo-empty">
+            <app-ckyc-icon name="user" class="ckyc-match__photo-empty-icon" />
+            Photo not available
+          </figcaption>
         }
       </figure>
     }
@@ -83,7 +86,7 @@
         [disabled]="isProcessing()"
         (click)="startAuthentication()"
       >
-        Authenticate
+        <app-ckyc-icon name="shield-check" />Authenticate
       </button>
     </footer>
   }

@@ -5,7 +5,11 @@
       <app-ckyc-consent-overview></app-ckyc-consent-overview>
       @if (isShowEnquiries) {
         @if (validatedDetails(); as details) {
-          <app-ckyc-validated-card [details]="details" class="dv-flow__child" />
+          <app-ckyc-validated-card
+            [details]="details"
+            [recordPhoto]="flowState.activeMatchSelection()?.selectedResult"
+            class="dv-flow__child"
+          />
         } @else {
           @if (leadDetails()) {
             <app-ckyc-onboarding
@@ -36,6 +40,7 @@
     <div class="dv-flow__actions">
       @if (!sharedService.isDvCkycSubmitEnabled()) {
         <p class="dv-flow__hint" id="dv-flow-submit-hint">
+          <app-ckyc-icon name="info" class="dv-flow__hint-icon" />
           @if (flowState.displayedEnquiries().length > 0 && !flowState.isAtleastOneOVDRecordPresent()) {
             Authenticate a matching record, or confirm above that none of them belongs to the customer.
           } @else {
@@ -52,7 +57,7 @@
         [attr.aria-busy]="isSubmitting()"
         (click)="onSubmit()"
       >
-        {{ isSubmitting() ? "Submitting…" : "Submit CKYC" }}
+        <app-ckyc-icon name="send" />{{ isSubmitting() ? "Submitting…" : "Submit CKYC" }}
       </button>
     </div>
   </div>

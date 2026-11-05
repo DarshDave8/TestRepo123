@@ -13,6 +13,7 @@ import { SearchAttemptedPhase } from '../constants/ckyc-onboarding.constants';
 import { CkycConsentOverviewComponent } from '../ckyc-consent-overview/ckyc-consent-overview.component';
 import { CkycOnboardingComponent } from '../ckyc-onboarding.component';
 import { CkycValidatedCardComponent } from './ckyc-validated-card/ckyc-validated-card.component';
+import { CkycIconComponent } from '../ckyc-icon/ckyc-icon.component';
 import { CkycAuthStateService } from '../services/ckyc-auth-state.service';
 import { CkycFlowStateService } from '../services/ckyc-flow-state.service';
 import { CkycSharedStateService } from '../services/ckyc-shared-state.service';
@@ -20,7 +21,13 @@ import { CkycSharedStateService } from '../services/ckyc-shared-state.service';
 @Component({
   selector: 'app-ckyc-dv-flow',
   // INFERRED: MatButtonModule for the new "Submit CKYC" button; the real imports array was not photographed.
-  imports: [CkycConsentOverviewComponent, CkycOnboardingComponent, CkycValidatedCardComponent, MatButtonModule],
+  imports: [
+    CkycConsentOverviewComponent,
+    CkycOnboardingComponent,
+    CkycValidatedCardComponent,
+    CkycIconComponent,
+    MatButtonModule,
+  ],
   templateUrl: './ckyc-dv-flow.component.html',
   styleUrl: './ckyc-dv-flow.component.scss',
 })

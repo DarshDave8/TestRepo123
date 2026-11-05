@@ -12,6 +12,7 @@ import { CkycConsentStatusComponent } from '../ckyc-consent-status/ckyc-consent-
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatRadioModule } from '@angular/material/radio';
 import { OtpIdentifier, OtpIdentifierEnum } from '../models/ckyc-consent-request.model';
+import { CkycIconComponent } from '../ckyc-icon/ckyc-icon.component';
 @Component({
   selector: 'app-ckyc-step-otp',
   standalone: true,
@@ -22,6 +23,7 @@ import { OtpIdentifier, OtpIdentifierEnum } from '../models/ckyc-consent-request
     MatInputModule,
     MatRadioModule,
     CkycConsentStatusComponent,
+    CkycIconComponent,
   ],
   templateUrl: './ckyc-step-otp.component.html',
   styleUrl: './ckyc-step-otp.component.scss',
@@ -53,8 +55,9 @@ export class CkycStepOtpComponent {
     nonNullable: true,
     validators: [Validators.required, Validators.pattern(/^[0-9]{6}$/)],
   });
-  readonly radioControl = new FormControl<OtpIdentifier>(this.resolveDefaultOtpChannel(), {
-    nonNullable: true,
+  // Which OTP is being entered. With both channels it starts empty, so the user picks it: a preselected wrong
+  // channel would silently use up one of the limited validate attempts.
+  readonly radioControl = new FormControl<OtpIdentifier | null>(this.resolveDefaultOtpChannel(), {
     validators: [Validators.required],
   });
   private timerSubscription?: Subscription;
@@ -71,21 +74,46 @@ export class CkycStepOtpComponent {
       }
     });
   }
-  // Mobile only -> MOBILE; otherwise EMAIL. With both channels the user picks in the radio group.
-  resolveDefaultOtpChannel(): OtpIdentifier {
+  // Mobile only -> MOBILE; both -> none (the user picks in the radio group); otherwise EMAIL.
+  resolveDefaultOtpChannel(): OtpIdentifier | null {
     const { hasMobileNumber, hasEmailAddress } = this.ckycAuthState.otpState();
-    return hasMobileNumber && !hasEmailAddress ? OtpIdentifierEnum.MOBILE : OtpIdentifierEnum.EMAIL;
+    if (hasMobileNumber && hasEmailAddress) return null;
+    return hasMobileNumber ? OtpIdentifierEnum.MOBILE : OtpIdentifierEnum.EMAIL;
+  }
+
+  // Label of the OTP field, naming the channel once it is known: "6-digit OTP from mobile".
+  otpFieldLabel(): string {
+    switch (this.radioControl.value) {
+      case OtpIdentifierEnum.MOBILE:
+        return '6-digit OTP from mobile';
+      case OtpIdentifierEnum.EMAIL:
+        return '6-digit OTP from email';
+      default:
+        return '6-digit OTP';
+    }
+  }
+
+  // "Choose mobile or email" shows once the code is typed (or the group was left) without a channel.
+  showChannelHint(): boolean {
+    return this.radioControl.invalid && (this.otpControl.valid || this.radioControl.touched);
   }
 
   submit(): void {
-    if (this.otpControl.invalid || this.countdown() === 0 || this.isSubmitting() || this.isMaxAttemptsReached()) {
+    if (
+      this.otpControl.invalid ||
+      this.radioControl.invalid ||
+      this.countdown() === 0 ||
+      this.isSubmitting() ||
+      this.isMaxAttemptsReached()
+    ) {
       this.otpControl.markAsTouched();
+      this.radioControl.markAsTouched();
       return;
     }
     this.isSubmitting.set(true);
     this.verifyFailed.set(false);
     this.ckycAuthState
-      .validate(this.otpControl.value, this.radioControl.value)
+      .validate(this.otpControl.value, this.radioControl.value ?? undefined)
       .pipe(
         tap((success) => {
           if (success) {

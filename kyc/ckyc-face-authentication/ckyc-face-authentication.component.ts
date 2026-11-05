@@ -3,12 +3,13 @@ import { MatButtonModule } from '@angular/material/button';
 import { AuthenticationMode } from '../constants/ckyc-onboarding.constants';
 import { CkycConsentStatusComponent } from '../ckyc-consent-status/ckyc-consent-status.component';
 import { CkycAuthStateService } from '../services/ckyc-auth-state.service';
+import { CkycIconComponent } from '../ckyc-icon/ckyc-icon.component';
 
 // Face auth screen: its consent call history. The calls themselves are sent by the auth queue.
 @Component({
   selector: 'app-ckyc-face-authentication',
   standalone: true,
-  imports: [MatButtonModule, CkycConsentStatusComponent],
+  imports: [MatButtonModule, CkycConsentStatusComponent, CkycIconComponent],
   templateUrl: './ckyc-face-authentication.component.html',
   styleUrl: './ckyc-face-authentication.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

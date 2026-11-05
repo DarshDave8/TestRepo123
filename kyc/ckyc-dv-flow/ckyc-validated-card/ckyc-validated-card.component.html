@@ -1,39 +1,47 @@
 <article class="ckyc-validated" aria-labelledby="ckyc-validated-title">
   <header class="ckyc-validated__header">
     <h3 id="ckyc-validated-title" class="ckyc-validated__title">CKYC details</h3>
-    <span class="ckyc-validated__badge"><span aria-hidden="true">✓</span> Consent validated</span>
+    <span class="ckyc-validated__badge"><app-ckyc-icon name="check-circle" />Consent validated</span>
   </header>
-  <dl class="ckyc-validated__details">
-    <div class="ckyc-validated__item">
-      <dt class="ckyc-validated__label">Name</dt>
-      <dd class="ckyc-validated__value" [class.ckyc-validated__value--empty]="!fullName()">
-        {{ fullName() || "Not available" }}
-      </dd>
-    </div>
-    <div class="ckyc-validated__item">
-      <dt class="ckyc-validated__label">Date of birth</dt>
-      <!-- Angular reads a date-only "yyyy-MM-dd" as a local date, so the day never shifts with the timezone. -->
-      <dd class="ckyc-validated__value" [class.ckyc-validated__value--empty]="!view().dateOfBirth">
-        {{ (view().dateOfBirth | date: "dd/MM/yyyy") || "Not available" }}
-      </dd>
-    </div>
-    <div class="ckyc-validated__item">
-      <dt class="ckyc-validated__label">Gender</dt>
-      <dd class="ckyc-validated__value" [class.ckyc-validated__value--empty]="!gender()">
-        {{ gender() || "Not available" }}
-      </dd>
-    </div>
-    <div class="ckyc-validated__item">
-      <dt class="ckyc-validated__label">Mobile number</dt>
-      <dd class="ckyc-validated__value" [class.ckyc-validated__value--empty]="!view().mobileNumber">
-        {{ view().mobileNumber || "Not available" }}
-      </dd>
-    </div>
-    <div class="ckyc-validated__item">
-      <dt class="ckyc-validated__label">Email</dt>
-      <dd class="ckyc-validated__value" [class.ckyc-validated__value--empty]="!view().email">
-        {{ view().email || "Not available" }}
-      </dd>
-    </div>
-  </dl>
+  <div class="ckyc-validated__body" [class.ckyc-validated__body--with-photo]="!!photoSource()">
+    <dl class="ckyc-validated__details">
+      <div class="ckyc-validated__item">
+        <dt class="ckyc-validated__label">Name</dt>
+        <dd class="ckyc-validated__value" [class.ckyc-validated__value--empty]="!fullName()">
+          {{ fullName() || "Not available" }}
+        </dd>
+      </div>
+      <div class="ckyc-validated__item">
+        <dt class="ckyc-validated__label">Date of birth</dt>
+        <!-- Angular reads a date-only "yyyy-MM-dd" as a local date, so the day never shifts with the timezone. -->
+        <dd class="ckyc-validated__value" [class.ckyc-validated__value--empty]="!view().dateOfBirth">
+          {{ (view().dateOfBirth | date: "dd/MM/yyyy") || "Not available" }}
+        </dd>
+      </div>
+      <div class="ckyc-validated__item">
+        <dt class="ckyc-validated__label">Gender</dt>
+        <dd class="ckyc-validated__value" [class.ckyc-validated__value--empty]="!gender()">
+          {{ gender() || "Not available" }}
+        </dd>
+      </div>
+      <div class="ckyc-validated__item">
+        <dt class="ckyc-validated__label">Mobile number</dt>
+        <dd class="ckyc-validated__value" [class.ckyc-validated__value--empty]="!view().mobileNumber">
+          {{ view().mobileNumber || "Not available" }}
+        </dd>
+      </div>
+      <div class="ckyc-validated__item">
+        <dt class="ckyc-validated__label">Email</dt>
+        <dd class="ckyc-validated__value" [class.ckyc-validated__value--empty]="!view().email">
+          {{ view().email || "Not available" }}
+        </dd>
+      </div>
+    </dl>
+    <!-- Only when there is a photo: no empty placeholder on a validated record. -->
+    @if (photoSource(); as source) {
+      <figure class="ckyc-validated__photo">
+        <img class="ckyc-validated__photo-image" [src]="source" [alt]="(fullName() || 'Customer') + ' CKYC photo'" />
+      </figure>
+    }
+  </div>
 </article>

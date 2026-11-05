@@ -85,3 +85,14 @@ $font-xl: 1.2rem;
     color: $brand-purple;
   }
 }
+
+// Smaller Material button for tables, card headers and inline actions (Trigger / Re-trigger, Verify, Back).
+// Include after button-primary / button-secondary / button-text so its height wins. 2rem stays above the
+// 24px WCAG 2.2 target-size minimum.
+@mixin button-compact {
+  min-height: 2rem;
+  height: 2rem;
+  padding: 0 $space-3;
+  font-size: $font-sm;
+  line-height: 1;
+}

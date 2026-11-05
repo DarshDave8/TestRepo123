@@ -21,13 +21,26 @@
   background: t.$surface-muted;
 }
 
+// "CKYC reference no.: 1234…" on one line (wraps only when the phone is too narrow for it)
 .ckyc-match__ref {
-  display: grid;
-  gap: t.$space-1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 t.$space-2;
   min-width: 0;
 }
 
-.ckyc-match__label,
+.ckyc-match__label {
+  color: t.$text-muted;
+  font-size: t.$font-sm;
+  font-weight: 600;
+  white-space: nowrap;
+
+  &::after {
+    content: ":";
+  }
+}
+
 .ckyc-match__details dt {
   color: t.$text-muted;
   font-size: t.$font-sm;
@@ -38,7 +51,8 @@
 
 .ckyc-match__ref-value {
   color: t.$brand-purple;
-  font-size: t.$font-lg;
+  font-size: t.$font-md;
+  font-variant-numeric: tabular-nums;
   font-weight: 600;
   letter-spacing: 0.02em;
   overflow-wrap: anywhere;

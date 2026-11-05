@@ -8,4 +8,5 @@
 
 .consent-actions__back {
   @include t.button-secondary;
+  @include t.button-compact;
 }

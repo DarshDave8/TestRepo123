@@ -11,13 +11,13 @@
   align-items: flex-start;
   gap: t.$space-2;
   margin-bottom: t.$space-3;
-  padding: t.$space-3 t.$space-4;
+  padding: t.$space-2 t.$space-3;
   border: 1px solid t.$error-bg;
   border-left: 4px solid t.$error;
   border-radius: t.$radius-sm;
   background: t.$error-bg;
   color: t.$error-text;
-  font-size: t.$font-md;
+  font-size: t.$font-sm;
   font-weight: 500;
 }
 
@@ -26,12 +26,12 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1rem;
+  height: 1rem;
   border-radius: 50%;
   background: t.$error-text;
   color: t.$surface;
-  font-size: t.$font-sm;
+  font-size: t.$font-xs;
   font-weight: 700;
 }
 
@@ -48,23 +48,23 @@
     table-layout: fixed; // same column widths in every stacked table (Face, OTP, Physical)
     border-collapse: collapse;
     text-align: left;
-    font-size: t.$font-md;
+    font-size: t.$font-sm;
     color: t.$text;
   }
 
   caption {
     caption-side: top; // keep the title above the table even if a global style moves captions
-    padding: t.$space-3 t.$space-4;
+    padding: t.$space-2 t.$space-4;
     border-bottom: 1px solid t.$border;
     text-align: left;
-    font-size: t.$font-lg;
+    font-size: t.$font-md;
     font-weight: 600;
     color: t.$brand-purple;
   }
 
   th,
   td {
-    padding: t.$space-3 t.$space-4;
+    padding: t.$space-2 t.$space-4;
     vertical-align: middle;
   }
 
@@ -72,7 +72,7 @@
     background: t.$surface-muted;
     border-bottom: 1px solid t.$border;
     color: t.$text-muted;
-    font-size: t.$font-sm;
+    font-size: t.$font-xs;
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -95,7 +95,7 @@
 }
 
 .consent-status__status {
-  width: 10rem;
+  width: 8rem;
 }
 
 .consent-status__action {
@@ -106,10 +106,12 @@
 
 .consent-status__button-primary {
   @include t.button-primary;
+  @include t.button-compact;
 }
 
 .consent-status__button-secondary {
   @include t.button-secondary;
+  @include t.button-compact;
 }
 
 .consent-status__none {
@@ -127,12 +129,12 @@
   display: inline-flex;
   align-items: center;
   gap: t.$space-1;
-  padding: t.$space-1 t.$space-3;
+  padding: 0.125rem t.$space-2;
   border: 1px solid t.$border;
   border-radius: 999px;
   background: t.$surface-muted;
   color: t.$text-muted;
-  font-size: t.$font-sm;
+  font-size: t.$font-xs;
   font-weight: 600;
   white-space: nowrap;
 
@@ -156,8 +158,8 @@
     // pulsing dot while the call is running
     &::before {
       content: "";
-      width: 0.5rem;
-      height: 0.5rem;
+      width: 0.375rem;
+      height: 0.375rem;
       border-radius: 50%;
       background: currentColor;
       animation: consent-pulse 1s ease-in-out infinite alternate;
@@ -204,9 +206,9 @@
       grid-template-areas:
         "request request"
         "status action";
-      gap: t.$space-2 t.$space-3;
+      gap: t.$space-1 t.$space-3;
       align-items: center;
-      padding: t.$space-3 t.$space-4;
+      padding: t.$space-2 t.$space-4;
     }
 
     th,

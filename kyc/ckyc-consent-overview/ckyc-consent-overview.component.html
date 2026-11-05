@@ -1,0 +1,83 @@
+<!-- Consent overview (redesign 2026-11-05): from design/ckyc-consent-overview.component.html on design-test-repo.
+     Bindings are unchanged (isTriggerEnquiriesSuccess, loading, response(), enquiryResults(),
+     isTriggerButtonClicked, startEnquiryTrigger()), so the component class needs no change. -->
+<section class="ckyc-overview" aria-labelledby="ckyc-overview-title">
+  <app-ckyc-error-alert />
+
+  @if (isTriggerEnquiriesSuccess) {
+    <!-- Title and overall status on one line -->
+    <header class="ckyc-overview__header">
+      <h2 id="ckyc-overview-title" class="ckyc-overview__title">CKYC consent overview</h2>
+      @if (!loading && response(); as res) {
+        <span class="ckyc-overview__overall">
+          <span class="ckyc-overview__overall-label">Overall</span>
+          <span class="ckyc-status" [class.ckyc-status--success]="res.success" [class.ckyc-status--failed]="!res.success">
+            {{ res.success ? "Success" : "Failed" }}
+          </span>
+        </span>
+      }
+    </header>
+
+    @if (loading) {
+      <div class="ckyc-overview__loading" role="status">
+        <mat-progress-bar mode="indeterminate" />
+        <p>Fetching CKYC enquiry details…</p>
+      </div>
+    }
+
+    @if (!loading && response()) {
+      @if (enquiryResults().length > 0) {
+        <div class="ckyc-overview__table-wrap" role="region" aria-label="CKYC enquiry results" tabindex="0">
+          <table class="ckyc-overview__table">
+            <thead>
+              <tr>
+                <th scope="col">Search option</th>
+                <th scope="col" class="ckyc-overview__count">Records</th>
+                <th scope="col">Status</th>
+                <th scope="col">Messages</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of enquiryResults(); track $index) {
+                <tr>
+                  <td class="ckyc-overview__option">{{ item.searchOption }}</td>
+                  <td class="ckyc-overview__count">{{ item.recordsFound }}</td>
+                  <td>
+                    <span class="ckyc-status" [class.ckyc-status--success]="item.success" [class.ckyc-status--failed]="!item.success">
+                      {{ item.success ? "Success" : "Failed" }}
+                    </span>
+                  </td>
+                  <td>
+                    @if (item.messages?.length) {
+                      <ul class="ckyc-overview__messages">
+                        @for (message of item.messages; track $index) {
+                          <li>{{ message }}</li>
+                        }
+                      </ul>
+                    } @else {
+                      <span class="ckyc-overview__none" aria-hidden="true">—</span>
+                      <span class="cdk-visually-hidden">No messages</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="ckyc-overview__empty">No CKYC enquiry results found.</p>
+      }
+    }
+  } @else {
+    <!-- Before the enquiries run: one compact row, text on the left, button on the right -->
+    <div class="ckyc-overview__cta">
+      <div class="ckyc-overview__cta-text">
+        <h2 id="ckyc-overview-title" class="ckyc-overview__title">CKYC enquiries</h2>
+        <p class="ckyc-overview__hint">Search CKYC records for this customer to continue.</p>
+      </div>
+      <button mat-flat-button class="ckyc-overview__trigger" type="button" (click)="startEnquiryTrigger()">
+        {{ isTriggerButtonClicked ? "Retrigger Enquiries" : "Trigger Enquiries" }}
+      </button>
+    </div>
+  }
+</section>

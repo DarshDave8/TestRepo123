@@ -7,7 +7,7 @@
 
   &__card {
     margin-top: t.$space-3;
-    padding: t.$space-8 t.$space-6;
+    padding: t.$space-6 t.$space-4;
     border: 1px solid t.$border;
     border-radius: t.$radius-md;
     background: t.$surface;
@@ -19,13 +19,13 @@
     align-items: flex-start;
     gap: t.$space-2;
     margin-top: t.$space-3;
-    padding: t.$space-3 t.$space-4;
+    padding: t.$space-2 t.$space-3;
     border: 1px solid t.$success-bg;
     border-left: 4px solid t.$success;
     border-radius: t.$radius-sm;
     background: t.$success-bg;
     color: t.$success-text;
-    font-size: t.$font-md;
+    font-size: t.$font-sm;
     font-weight: 500;
   }
 
@@ -34,8 +34,8 @@
     flex: none;
     align-items: center;
     justify-content: center;
-    width: 1.25rem;
-    height: 1.25rem;
+    width: 1rem;
+    height: 1rem;
     border-radius: 50%;
     background: t.$success-text;
     color: t.$surface;
@@ -45,8 +45,8 @@
   &__panel {
     display: grid;
     justify-items: center;
-    gap: t.$space-4;
-    width: min(100%, 24rem);
+    gap: t.$space-3;
+    width: min(100%, 22rem);
     margin: 0 auto;
     text-align: center;
   }
@@ -55,8 +55,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 3rem;
-    height: 3rem;
+    width: 2.25rem;
+    height: 2.25rem;
     border-radius: 50%;
     background: t.$brand-blue-pale;
     color: t.$brand-purple;
@@ -70,14 +70,14 @@
   &__title {
     margin: 0;
     color: t.$brand-purple;
-    font-size: t.$font-xl;
+    font-size: t.$font-md;
     font-weight: 600;
   }
 
   &__help {
     margin: 0;
     color: t.$text-muted;
-    font-size: t.$font-md;
+    font-size: t.$font-sm;
     line-height: 1.5;
   }
 
@@ -95,7 +95,7 @@
   // 6 large, evenly spaced digits; the left padding balances the trailing letter-spacing so they sit centred
   &__input {
     padding-left: 0.5em;
-    font-size: t.$font-xl;
+    font-size: t.$font-lg;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.5em;
     text-align: center;
@@ -118,12 +118,12 @@
   &__notice {
     box-sizing: border-box;
     width: 100%;
-    padding: t.$space-3 t.$space-4;
+    padding: t.$space-2 t.$space-3;
     border: 1px solid t.$border;
     border-radius: t.$radius-sm;
     background: t.$surface-muted;
     color: t.$text;
-    font-size: t.$font-md;
+    font-size: t.$font-sm;
   }
 
   &__notice--warning {
@@ -146,14 +146,17 @@
 
   &__verify {
     @include t.button-primary;
+    @include t.button-compact;
   }
 
   &__resend {
     @include t.button-secondary;
+    @include t.button-compact;
   }
 
   &__back {
     @include t.button-text;
+    @include t.button-compact;
   }
 
   // Before an OTP is sent there is no card: just Back under the table, as on the Face and Physical screens
@@ -164,11 +167,12 @@
 
   &__back-outline {
     @include t.button-secondary;
+    @include t.button-compact;
   }
 
   @include t.phone {
     &__card {
-      padding: t.$space-6 t.$space-4;
+      padding: t.$space-4;
     }
 
     &__actions {

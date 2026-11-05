@@ -30,12 +30,7 @@
   font-size: t.$font-md;
   line-height: 1.5;
   cursor: pointer;
-
-  // ticked: the box takes the brand tint so the confirmation is visible at a glance
-  &:has(.dv-flow__checkbox:checked) {
-    border-color: t.$brand-purple;
-    background: t.$brand-blue-pale;
-  }
+  // No checked-state tint on the box: the tick itself shows the confirmation.
 }
 
 .dv-flow__checkbox {

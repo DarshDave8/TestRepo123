@@ -23,7 +23,7 @@ import { ProviderFetchStatus } from 'src/app/models/account.model';
 import type { ICustomerBasicDetailsFetch } from 'src/app/nri/profile-creation/ckyc-flow/ckyc-flow.model';
 import type { ICustomerBasicDetails } from 'src/app/nri/profile-creation/model/customer-basic-details.model';
 import { ILeadDetails } from 'src/app/nri/workflow/models/lead.model';
-import { SearchAttemptedPhase } from '../constants/ckyc-onboarding.constants';
+import { CKYC_SUBMIT_HINTS, SearchAttemptedPhase } from '../constants/ckyc-onboarding.constants';
 import { CkycConsentOverviewComponent } from '../ckyc-consent-overview/ckyc-consent-overview.component';
 import { CkycOnboardingComponent } from '../ckyc-onboarding.component';
 import { CkycValidatedCardComponent } from './ckyc-validated-card/ckyc-validated-card.component';
@@ -69,6 +69,19 @@ export class CkycDvFlowComponent implements OnChanges {
   // Checkbox under the validated card. Kept apart from sharedService.isCkycConsentChecked on purpose: that flag
   // means "none of these records pertains to the customer" and makes Submit mark every enquiry as not belonging.
   readonly isValidatedDetailsConfirmed = signal(false);
+
+  // Why Submit CKYC is disabled. Checked in flow order: until the enquiries have run there is nothing to
+  // authenticate (this used to say "Authenticate a matching record to submit." even then, e.g. after a failed
+  // Trigger Enquiries).
+  readonly submitHint = computed(() => {
+    if (!this.flowState.isTriggerEnquiriesSuccess()) return CKYC_SUBMIT_HINTS.ENQUIRIES_NOT_RUN;
+    if (this.flowState.historyLoading()) return CKYC_SUBMIT_HINTS.ENQUIRIES_LOADING;
+    if (this.validatedDetails()) return CKYC_SUBMIT_HINTS.CONFIRM_VALIDATED;
+    if (this.flowState.displayedEnquiries().length > 0 && !this.flowState.isAtleastOneOVDRecordPresent()) {
+      return CKYC_SUBMIT_HINTS.AUTHENTICATE_OR_CONFIRM_NONE;
+    }
+    return CKYC_SUBMIT_HINTS.AUTHENTICATE;
+  });
   // Update-enquiry / submit running: Submit CKYC is disabled, so a second click cannot send it twice.
   readonly isSubmitting = signal(false);
 

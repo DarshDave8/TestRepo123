@@ -149,6 +149,7 @@ export const CKYC_ERROR_TITLES: Record<CkycErrorScope, string> = {
 
 // Our messages, used only when the backend sends no message of its own (see utils/ckyc-error.util.ts).
 export const CKYC_ERROR_MESSAGES = {
+  TRIGGER_ENQUIRIES_FAILED: 'We could not run the CKYC enquiries. Please retrigger them.',
   SEARCH_FAILED: 'We could not complete the CKYC search. Please try again.',
   NO_RECORD_FOUND: 'No CKYC record was found for this search.',
   HISTORY_LOAD_FAILED: 'We could not load the CKYC enquiry history. Please try again.',
@@ -162,4 +163,13 @@ export const CKYC_ERROR_MESSAGES = {
   OTP_EXPIRED: 'The OTP has expired. Resend it to continue.',
   UPDATE_ENQUIRY_FAILED: 'We could not update the CKYC enquiries. Please try again.',
   SUBMIT_FAILED: 'We could not submit the CKYC details. Please try again.',
+} as const;
+
+// Why Submit CKYC is disabled (hint under the button in DV), one text per state of the flow.
+export const CKYC_SUBMIT_HINTS = {
+  ENQUIRIES_NOT_RUN: 'Trigger the CKYC enquiries above to continue.',
+  ENQUIRIES_LOADING: 'Loading the CKYC enquiries…',
+  CONFIRM_VALIDATED: 'Confirm the validated CKYC details above to submit.',
+  AUTHENTICATE_OR_CONFIRM_NONE: 'Authenticate a matching record, or confirm above that none of them belongs to the customer.',
+  AUTHENTICATE: 'Authenticate a matching record to submit.',
 } as const;

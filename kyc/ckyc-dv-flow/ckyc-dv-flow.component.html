@@ -61,13 +61,7 @@
         @if (!sharedService.isDvCkycSubmitEnabled()) {
           <p class="dv-flow__hint" id="dv-flow-submit-hint">
             <fa-icon class="dv-flow__hint-icon" [icon]="infoIcon" />
-            @if (validatedDetails()) {
-              Confirm the validated CKYC details above to submit.
-            } @else if (flowState.displayedEnquiries().length > 0 && !flowState.isAtleastOneOVDRecordPresent()) {
-              Authenticate a matching record, or confirm above that none of them belongs to the customer.
-            } @else {
-              Authenticate a matching record to submit.
-            }
+            {{ submitHint() }}
           </p>
         }
         <button

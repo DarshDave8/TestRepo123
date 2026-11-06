@@ -73,7 +73,10 @@
       }
     }
   } @else {
-    <!-- Before the enquiries run: one compact row, text on the left, button on the right -->
+    <!-- Before the enquiries have run successfully (first time, or after a failed run): text on the left, the
+         Trigger / Retrigger button on the right. Keep the button's label as it is: the results table and the
+         "No CKYC enquiry results found." note belong to the success branch above, never inside this button.
+         A failed run shows its error in the alert at the top of this card. -->
     <div class="ckyc-overview__cta">
       <div class="ckyc-overview__cta-text">
         <h2 id="ckyc-overview-title" class="ckyc-overview__title">CKYC enquiries</h2>

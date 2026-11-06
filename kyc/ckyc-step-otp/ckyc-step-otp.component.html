@@ -19,14 +19,12 @@
         <span class="ckyc-otp__header-icon"><fa-icon [icon]="faLockIcon" /></span>
         <div class="ckyc-otp__heading">
           <h3 id="ckyc-otp-title" class="ckyc-otp__title">Verify OTP</h3>
-          <!-- Where the OTP went; "ending 3210" only when the applicable-modes response gave the mobile. -->
+          <!-- Where the OTP went -->
           <p class="ckyc-otp__help" id="ckyc-otp-help">
             @if (ckycAuthState.otpState().hasEmailAddress && ckycAuthState.otpState().hasMobileNumber) {
               Sent to the registered mobile number and email. Enter either one.
             } @else if (ckycAuthState.otpState().hasMobileNumber) {
-              Sent to the registered mobile number{{
-                ckycAuthState.otpState().mobileLast4 ? " ending " + ckycAuthState.otpState().mobileLast4 : ""
-              }}.
+              Sent to the registered mobile number.
             } @else {
               Sent to the registered email.
             }
@@ -74,9 +72,6 @@
                 <span class="ckyc-otp__channel-text">
                   <fa-icon class="ckyc-otp__channel-icon" [icon]="phoneIcon" />
                   Mobile
-                  @if (ckycAuthState.otpState().mobileLast4; as last4) {
-                    <span class="ckyc-otp__channel-detail">ending {{ last4 }}</span>
-                  }
                 </span>
               </mat-radio-button>
               <mat-radio-button class="ckyc-otp__channel-option" [value]="otpIdentifierEnum.EMAIL">

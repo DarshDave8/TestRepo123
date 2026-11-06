@@ -21,16 +21,10 @@ interface CkycValidatedView {
   gender?: string | null;
   mobileNumber?: string | null;
   email?: string | null;
-  // UNVERIFIED field names: the photo is read from the response if it carries one under either spelling
-  // (IConsentData uses "Photo"); otherwise the card falls back to the authenticated record's photo.
+  // Photo from the validate-consent response only. UNVERIFIED field names (ICustomerBasicDetails is not in this
+  // repo): "photo" or "Photo" (IConsentData's spelling) with "photoExt". No photo in the response = no photo shown.
   photo?: string | null;
   Photo?: string | null;
-  photoExt?: string | null;
-}
-
-// Photo of the CKYC record that was authenticated (the search result), used when the response has none.
-export interface CkycValidatedPhoto {
-  photo?: string | null;
   photoExt?: string | null;
 }
 
@@ -48,7 +42,6 @@ export class CkycValidatedCardComponent {
 
   // Validate-consent response body (ckyc-onboarding emits it with status SUCCESS).
   readonly details = input.required<ICustomerBasicDetails>();
-  readonly recordPhoto = input<CkycValidatedPhoto | null | undefined>(null);
 
   // Same rule as the match card: the CKYC photo is shown to staff only.
   protected readonly isStaff = this.authService.userIdentity?.userType === UserType.STAFF;
@@ -66,13 +59,10 @@ export class CkycValidatedCardComponent {
     const gender = this.view().gender?.trim();
     return gender ? (GenderDesc[gender as GENDER] ?? gender) : '';
   });
-  // Response photo first, then the authenticated record's photo; null = show nothing (no empty box).
+  // Only the photo the backend sent in the validate-consent response; null = show nothing (no empty box).
   protected readonly photoSource = computed(() => {
     if (!this.isStaff) return null;
     const view = this.view();
-    const record = this.recordPhoto();
-    return (
-      toCkycPhotoSrc(view.photo ?? view.Photo, view.photoExt) ?? toCkycPhotoSrc(record?.photo, record?.photoExt)
-    );
+    return toCkycPhotoSrc(view.photo ?? view.Photo, view.photoExt);
   });
 }

@@ -5,11 +5,7 @@
       <app-ckyc-consent-overview></app-ckyc-consent-overview>
       @if (isShowEnquiries) {
         @if (validatedDetails(); as details) {
-          <app-ckyc-validated-card
-            [details]="details"
-            [recordPhoto]="flowState.activeMatchSelection()?.selectedResult"
-            class="dv-flow__child"
-          />
+          <app-ckyc-validated-card [details]="details" class="dv-flow__child" />
         } @else {
           @if (leadDetails()) {
             <app-ckyc-onboarding

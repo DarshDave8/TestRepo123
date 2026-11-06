@@ -14,6 +14,7 @@ import { CkycSharedStateService } from '../../services/ckyc-shared-state.service
 import { toCkycPhotoSrc } from '../../utils/ckyc-photo.util';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { approveIcon, faLockIcon, userIcon } from 'src/app/constants/icons.constants';
+import { CkycSearchOption } from '../../constants/ckyc-onboarding.constants';
 
 @Component({
   selector: 'app-ckyc-enquiry-details',
@@ -35,6 +36,7 @@ export class CkycEnquiryDetailsComponent implements OnInit {
   readonly flow = inject(CkycFlowStateService);
   readonly authStore = inject(CkycAuthStateService);
   private readonly destroyRef = inject(DestroyRef);
+  CkycSearchOption = CkycSearchOption;
   isStaff = false;
   authService = inject(AuthService);
 

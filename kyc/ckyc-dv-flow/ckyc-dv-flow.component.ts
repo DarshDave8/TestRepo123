@@ -1,7 +1,21 @@
 // Rebuilt from commit 9689250e (diff photographs, 2026-11-03) over screenshot 147112.
 // SOURCE GAP: lines the diff did not show are marked below; take this file from that branch, not from here.
 // ngOnChanges and resolveCkycTrigger synced with the real file (photo 2026-11-04 17:27).
-import { Component, DestroyRef, OnChanges, SimpleChanges, effect, inject, input, output, signal } from '@angular/core';
+// isEditable, auto-submit emit and effect body from the other developer's diff (photos 2026-11-06).
+import {
+  Component,
+  DestroyRef,
+  OnChanges,
+  OnInit,
+  SimpleChanges,
+  computed,
+  effect,
+  inject,
+  input,
+  output,
+  signal,
+  untracked,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { finalize } from 'rxjs';
@@ -18,6 +32,8 @@ import { infoIcon, sendIcon } from 'src/app/constants/icons.constants';
 import { CkycAuthStateService } from '../services/ckyc-auth-state.service';
 import { CkycFlowStateService } from '../services/ckyc-flow-state.service';
 import { CkycSharedStateService } from '../services/ckyc-shared-state.service';
+import { faL } from '@fortawesome/free-solid-svg-icons';
+import { ICkycEnquiryListResponseBody } from '../models/ckyc-search-response.model';
 
 @Component({
   selector: 'app-ckyc-dv-flow',
@@ -37,6 +53,7 @@ export class CkycDvFlowComponent implements OnChanges {
   readonly sendIcon = sendIcon;
   leadDetails = input<ILeadDetails>();
   searchAttemptedPhase = input<SearchAttemptedPhase>();
+  isEditable = input<boolean>();
   finalSubmitted = output<boolean>();
   isShowCkycFlow = signal<boolean>(false);
   readonly flowState = inject(CkycFlowStateService);
@@ -53,7 +70,15 @@ export class CkycDvFlowComponent implements OnChanges {
   constructor() {
     effect(() => {
       if (this.flowState.isTriggerEnquiriesSuccess()) {
-        // SOURCE GAP: effect body not shown in the diff (real lines 29-46).
+        // INFERRED: real line 50 (untracked) is hidden in the diff photo; lines 51-53 are visible.
+        untracked(() => {
+          this.isShowEnquiries = this.flowState.isTriggerEnquiriesSuccess();
+        });
+      }
+      if (this.flowState.isDefaultSubmitTriggerSuccessful()) {
+        untracked(() => {
+          this.finalSubmitted.emit(true);
+        });
       }
     });
     // This screen owns the CKYC flow in DV. The services are app-wide, so their state does not die with the
@@ -62,12 +87,16 @@ export class CkycDvFlowComponent implements OnChanges {
       this.authService.resetAuth();
       this.flowState.reset();
       this.sharedService.reset();
+      this.flowState.isEditable.set(false);
     });
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['leadDetails'] && changes['leadDetails'].currentValue) {
       this.resolveCkycTrigger();
+    }
+    if (changes['isEditable'] && changes['isEditable'].currentValue) {
+      this.flowState.isEditable.set(this.isEditable()!);
     }
   }
 
@@ -121,4 +150,5 @@ export class CkycDvFlowComponent implements OnChanges {
         }
       });
   }
+  resolveEmptyEnquiryList() {}
 }

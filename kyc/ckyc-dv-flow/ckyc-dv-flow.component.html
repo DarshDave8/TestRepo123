@@ -1,8 +1,10 @@
-<!-- From commit 9689250e (diff photograph, 2026-11-03); UI step 6 (2026-11-04). -->
+<!-- From commit 9689250e (diff photograph, 2026-11-03); UI step 6 (2026-11-04); isEditable gates (diff photos 2026-11-06). -->
 @if (isShowCkycFlow()) {
   <div class="dv-flow">
     @if (leadDetails()?.customerProfile?.profileProvider === "MANUAL") {
-      <app-ckyc-consent-overview></app-ckyc-consent-overview>
+      @if (isEditable()) {
+        <app-ckyc-consent-overview></app-ckyc-consent-overview>
+      }
       @if (isShowEnquiries) {
         @if (validatedDetails(); as details) {
           <app-ckyc-validated-card [details]="details" class="dv-flow__child" />
@@ -14,47 +16,53 @@
               (customerBasicDetailsFetch)="onCustomerBasicDetailsFetch($event)"
               class="dv-flow__child"
             />
-            @if (flowState.displayedEnquiries().length > 0 && !flowState.isAtleastOneOVDRecordPresent()) {
-              <!-- The box follows the shared flag, so it cannot show unticked while Submit is enabled. -->
-              <label class="dv-flow__confirm" for="consentCheckbox">
-                <input
-                  id="consentCheckbox"
-                  class="dv-flow__checkbox"
-                  type="checkbox"
-                  [checked]="sharedService.isCkycConsentChecked()"
-                  (change)="setNoMatchConfirmed($any($event.target).checked)"
-                />
-                <span class="dv-flow__confirm-text">
-                  I have reviewed the provided information and confirm that none of these records pertains to the customer.
-                </span>
-              </label>
+            <!-- As in the other developer's diff: "!isEditable()" (every other gate is "isEditable()"). -->
+            @if (!isEditable()) {
+              @if (flowState.displayedEnquiries().length > 0 && !flowState.isAtleastOneOVDRecordPresent()) {
+                <!-- The box follows the shared flag, so it cannot show unticked while Submit is enabled. -->
+                <label class="dv-flow__confirm" for="consentCheckbox">
+                  <input
+                    id="consentCheckbox"
+                    class="dv-flow__checkbox"
+                    type="checkbox"
+                    [checked]="sharedService.isCkycConsentChecked()"
+                    (change)="setNoMatchConfirmed($any($event.target).checked)"
+                  />
+                  <span class="dv-flow__confirm-text">
+                    I have reviewed the provided information and confirm that none of these records pertains to the
+                    customer.
+                  </span>
+                </label>
+              }
             }
           }
         }
       }
     }
     <div class="dv-flow__actions">
-      @if (!sharedService.isDvCkycSubmitEnabled()) {
-        <p class="dv-flow__hint" id="dv-flow-submit-hint">
-          <fa-icon class="dv-flow__hint-icon" [icon]="infoIcon" />
-          @if (flowState.displayedEnquiries().length > 0 && !flowState.isAtleastOneOVDRecordPresent()) {
-            Authenticate a matching record, or confirm above that none of them belongs to the customer.
-          } @else {
-            Authenticate a matching record to submit.
-          }
-        </p>
+      @if (isEditable()) {
+        @if (!sharedService.isDvCkycSubmitEnabled()) {
+          <p class="dv-flow__hint" id="dv-flow-submit-hint">
+            <fa-icon class="dv-flow__hint-icon" [icon]="infoIcon" />
+            @if (flowState.displayedEnquiries().length > 0 && !flowState.isAtleastOneOVDRecordPresent()) {
+              Authenticate a matching record, or confirm above that none of them belongs to the customer.
+            } @else {
+              Authenticate a matching record to submit.
+            }
+          </p>
+        }
+        <button
+          mat-flat-button
+          class="dv-flow__submit"
+          type="button"
+          [disabled]="!sharedService.isDvCkycSubmitEnabled() || isSubmitting()"
+          [attr.aria-describedby]="sharedService.isDvCkycSubmitEnabled() ? null : 'dv-flow-submit-hint'"
+          [attr.aria-busy]="isSubmitting()"
+          (click)="onSubmit()"
+        >
+          <fa-icon [icon]="sendIcon" />{{ isSubmitting() ? "Submitting…" : "Submit CKYC" }}
+        </button>
       }
-      <button
-        mat-flat-button
-        class="dv-flow__submit"
-        type="button"
-        [disabled]="!sharedService.isDvCkycSubmitEnabled() || isSubmitting()"
-        [attr.aria-describedby]="sharedService.isDvCkycSubmitEnabled() ? null : 'dv-flow-submit-hint'"
-        [attr.aria-busy]="isSubmitting()"
-        (click)="onSubmit()"
-      >
-        <fa-icon [icon]="sendIcon" />{{ isSubmitting() ? "Submitting…" : "Submit CKYC" }}
-      </button>
     </div>
   </div>
 } @else if (

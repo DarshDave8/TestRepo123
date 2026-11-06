@@ -77,17 +77,19 @@
     }
   </div>
 
-  @if (flow.step() === "search" || flow.step() === "enquiryReceived") {
-    <footer class="ckyc-match__actions">
-      <button
-        mat-flat-button
-        class="ckyc-match__authenticate"
-        type="button"
-        [disabled]="isProcessing()"
-        (click)="startAuthentication()"
-      >
-        <fa-icon [icon]="faLockIcon" />Authenticate
-      </button>
-    </footer>
+  @if (flow.isEditable()) {
+    @if (flow.step() === "search" || flow.step() === "enquiryReceived") {
+      <footer class="ckyc-match__actions">
+        <button
+          mat-flat-button
+          class="ckyc-match__authenticate"
+          type="button"
+          [disabled]="isProcessing()"
+          (click)="startAuthentication()"
+        >
+          <fa-icon [icon]="faLockIcon" />Authenticate
+        </button>
+      </footer>
+    }
   }
 </article>

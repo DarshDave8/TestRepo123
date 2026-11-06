@@ -5,7 +5,13 @@
       <h1 id="enquiry-history-title">Enquiry history</h1>
     </div>
     <div class="ckyc-history__tools">
-      <span class="ckyc-history__total">{{ flow.displayedEnquiries().length }} enquiries</span>
+      <span class="ckyc-history__total">
+        {{
+          flow.displayedEnquiries().length > 1
+            ? flow.displayedEnquiries().length + " enquiries"
+            : flow.displayedEnquiries().length + " enquiry"
+        }}
+      </span>
     </div>
   </div>
   @if (flow.historyError()) {

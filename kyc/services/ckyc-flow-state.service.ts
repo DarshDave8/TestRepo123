@@ -8,7 +8,7 @@ import { CkycOnboardingService } from './ckyc-onboarding.service';
 import {
   CkycSearchAction,
   CkycSearchOption,
-  // SearchAttemptedPhase,
+  SearchAttemptedPhase, // used by the DV auto-submit in loadEnquiries()
 } from '../constants/ckyc-onboarding.constants';
 import { CkycStepManager } from '../ckyc-step-manager';
 import {
@@ -45,6 +45,7 @@ export class CkycFlowStateService {
   readonly isTriggerEnquiriesSuccess = signal<boolean>(false); // set by triggerEnquiries() (not transcribed)
 
   // status signal
+  readonly isEditable = signal<boolean>(false);
   readonly historyLoading = signal<boolean>(false);
   readonly historyError = signal<string | null>(null);
   readonly enquiryLoading = signal<boolean>(false);
@@ -64,7 +65,7 @@ export class CkycFlowStateService {
   // Fired by reset(): drops responses still on the way, so they cannot fill the next lead's screen.
   // (takeUntilDestroyed would never fire here: an app-wide service is never destroyed.)
   private readonly reset$ = new Subject<void>();
-
+  readonly isDefaultSubmitTriggerSuccessful = signal<boolean>(false);
   // Only enquiries that found at least one record, newest first.
   readonly displayedEnquiries = computed(() =>
     [...(this.enquiries() ?? [])]
@@ -196,6 +197,13 @@ export class CkycFlowStateService {
               );
               if (!anyRecord) {
                 this.ckycSharedStateService.setIsDvCkycSubmitEnabled(true);
+                if (this.ckycSharedStateService.searchAttemptedPhase() === SearchAttemptedPhase.DIGITAL_VERIFICATION) {
+                  this.submitCkyc().subscribe((res) => {
+                    if (res) {
+                      this.isDefaultSubmitTriggerSuccessful.set(true);
+                    }
+                  });
+                }
               }
             }
           } else {
@@ -302,6 +310,8 @@ export class CkycFlowStateService {
     this.enquiries.set([]);
     this.activeMatchSelection.set(null);
     this.isTriggerEnquiriesSuccess.set(false);
+    // App-wide service: left true, the next lead's DV screen would emit finalSubmitted as soon as it opens.
+    this.isDefaultSubmitTriggerSuccessful.set(false);
     this.historyLoading.set(false);
     this.historyError.set(null);
     this.enquiryLoading.set(false);

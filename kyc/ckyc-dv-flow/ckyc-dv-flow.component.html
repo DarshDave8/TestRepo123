@@ -8,6 +8,21 @@
       @if (isShowEnquiries) {
         @if (validatedDetails(); as details) {
           <app-ckyc-validated-card [details]="details" class="dv-flow__child" />
+          <!-- Submit CKYC stays disabled until the validated details are confirmed (only where Submit is shown). -->
+          @if (isEditable()) {
+            <label class="dv-flow__confirm" for="validatedDetailsCheckbox">
+              <input
+                id="validatedDetailsCheckbox"
+                class="dv-flow__checkbox"
+                type="checkbox"
+                [checked]="isValidatedDetailsConfirmed()"
+                (change)="setValidatedDetailsConfirmed($any($event.target).checked)"
+              />
+              <span class="dv-flow__confirm-text">
+                I have reviewed the validated CKYC details above and confirm that they belong to the customer.
+              </span>
+            </label>
+          }
         } @else {
           @if (leadDetails()) {
             <app-ckyc-onboarding
@@ -44,7 +59,9 @@
         @if (!sharedService.isDvCkycSubmitEnabled()) {
           <p class="dv-flow__hint" id="dv-flow-submit-hint">
             <fa-icon class="dv-flow__hint-icon" [icon]="infoIcon" />
-            @if (flowState.displayedEnquiries().length > 0 && !flowState.isAtleastOneOVDRecordPresent()) {
+            @if (validatedDetails()) {
+              Confirm the validated CKYC details above to submit.
+            } @else if (flowState.displayedEnquiries().length > 0 && !flowState.isAtleastOneOVDRecordPresent()) {
               Authenticate a matching record, or confirm above that none of them belongs to the customer.
             } @else {
               Authenticate a matching record to submit.

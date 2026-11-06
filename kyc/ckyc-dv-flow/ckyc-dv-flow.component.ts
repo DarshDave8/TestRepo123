@@ -64,6 +64,9 @@ export class CkycDvFlowComponent implements OnChanges {
 
   // Set when validate consent succeeds; the template then swaps the onboarding widget for the card.
   readonly validatedDetails = signal<ICustomerBasicDetails | null>(null);
+  // Checkbox under the validated card. Kept apart from sharedService.isCkycConsentChecked on purpose: that flag
+  // means "none of these records pertains to the customer" and makes Submit mark every enquiry as not belonging.
+  readonly isValidatedDetailsConfirmed = signal(false);
   // Update-enquiry / submit running: Submit CKYC is disabled, so a second click cannot send it twice.
   readonly isSubmitting = signal(false);
 
@@ -124,8 +127,16 @@ export class CkycDvFlowComponent implements OnChanges {
       this.validatedDetails.set(event.profileData);
       // A record was authenticated, so "none of these records pertains to the customer" no longer holds.
       this.sharedService.setIsCkycConsentChecked(false);
-      this.sharedService.setIsDvCkycSubmitEnabled(true);
+      // Submit CKYC waits for the confirmation checkbox under the validated card.
+      this.isValidatedDetailsConfirmed.set(false);
+      this.sharedService.setIsDvCkycSubmitEnabled(false);
     }
+  }
+
+  // "I confirm the validated CKYC details belong to the customer" checkbox: Submit follows the box.
+  setValidatedDetailsConfirmed(checked: boolean) {
+    this.isValidatedDetailsConfirmed.set(checked);
+    this.sharedService.setIsDvCkycSubmitEnabled(checked);
   }
 
   // "None of these records pertains to the customer" checkbox: Submit and the confirmation follow the box.

@@ -1,0 +1,72 @@
+@use "../styles/ckyc-onboarding.tokens" as t;
+
+// Takes no space while there is no error (the host only holds the @if anchor comment), so it can sit in a grid
+// or flex layout without leaving an empty gap.
+:host {
+  display: block;
+}
+
+:host(:empty) {
+  display: none;
+}
+
+.ckyc-error-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: t.$space-2;
+  // 0.75rem (space-3) around the alert; a grid parent that already has a gap sets --ckyc-error-alert-margin: 0
+  margin-block: var(--ckyc-error-alert-margin, 0.75rem);
+  padding: t.$space-2 t.$space-3;
+  border: 1px solid t.$error-bg;
+  border-left: 4px solid t.$error;
+  border-radius: t.$radius-sm;
+  background: t.$error-bg;
+  color: t.$error-text;
+  font-size: t.$font-sm;
+  line-height: 1.4;
+}
+
+.ckyc-error-alert__icon {
+  flex: none;
+  margin-top: 0.125rem;
+  font-size: 1rem;
+}
+
+.ckyc-error-alert__content {
+  display: grid;
+  flex: 1;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.ckyc-error-alert__title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.ckyc-error-alert__message {
+  margin: 0;
+  overflow-wrap: anywhere; // a long backend message without spaces still wraps
+}
+
+.ckyc-error-alert__close {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin: -0.25rem -0.375rem -0.25rem 0;
+  padding: 0;
+  border: 0;
+  border-radius: t.$radius-sm;
+  background: transparent;
+  color: inherit;
+  font-size: t.$font-md;
+  cursor: pointer;
+  @include t.focus-ring;
+
+  &:hover {
+    background: rgba(180, 35, 24, 0.08); // $error-text, faint
+  }
+}

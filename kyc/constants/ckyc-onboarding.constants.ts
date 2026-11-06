@@ -132,3 +132,34 @@ export const RELATED_PERSON_RELATION_OPTIONS = [
 
 // SOURCE GAP: CKYC_SEARCH_METHODS and further original definitions are not
 // completely visible, and have not been invented here.
+
+// ---- Errors ----
+// Where an error is shown: each part of the flow has its own alert, placed next to that part.
+//   enquiry: under the search form · history: in the enquiry list · auth: in the active consent table
+//   (or under the match card before a table is on screen) · submit: above Submit CKYC.
+export type CkycErrorScope = 'enquiry' | 'history' | 'auth' | 'submit';
+
+// Heading of the alert: names the part of the flow; the message under it says what happened.
+export const CKYC_ERROR_TITLES: Record<CkycErrorScope, string> = {
+  enquiry: 'CKYC search',
+  history: 'Enquiry history',
+  auth: 'Authentication',
+  submit: 'CKYC submission',
+};
+
+// Our messages, used only when the backend sends no message of its own (see utils/ckyc-error.util.ts).
+export const CKYC_ERROR_MESSAGES = {
+  SEARCH_FAILED: 'We could not complete the CKYC search. Please try again.',
+  NO_RECORD_FOUND: 'No CKYC record was found for this search.',
+  HISTORY_LOAD_FAILED: 'We could not load the CKYC enquiry history. Please try again.',
+  AUTH_MODES_LOAD_FAILED: 'We could not load the authentication methods for this record. Please try again.',
+  NO_AUTH_METHODS: 'No authentication method is available for this record.',
+  CONSENT_TRIGGER_FAILED: (label: string) => `${label} could not be sent. Please try again.`,
+  CONSENT_VALIDATE_FAILED: 'We could not verify the consent. Please try again.',
+  AUTH_METHODS_EXHAUSTED: (label: string) => `${label} failed. No other authentication method is available.`,
+  OTP_VERIFY_FAILED: 'The OTP could not be verified. Check the code and try again.',
+  OTP_MAX_ATTEMPTS: 'Maximum OTP attempts reached. This OTP can no longer be verified.',
+  OTP_EXPIRED: 'The OTP has expired. Resend it to continue.',
+  UPDATE_ENQUIRY_FAILED: 'We could not update the CKYC enquiries. Please try again.',
+  SUBMIT_FAILED: 'We could not submit the CKYC details. Please try again.',
+} as const;

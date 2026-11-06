@@ -7,6 +7,7 @@
 .dv-flow {
   display: grid;
   gap: t.$space-4;
+  --ckyc-error-alert-margin: 0; // the grid gap spaces the alert
   min-width: 0;
 }
 

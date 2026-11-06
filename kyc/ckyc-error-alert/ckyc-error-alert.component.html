@@ -1,0 +1,12 @@
+@if (activeError(); as error) {
+  <div class="ckyc-error-alert" role="alert">
+    <fa-icon class="ckyc-error-alert__icon" [icon]="errorIcon" />
+    <div class="ckyc-error-alert__content">
+      <p class="ckyc-error-alert__title">{{ error.title }}</p>
+      <p class="ckyc-error-alert__message">{{ error.message }}</p>
+    </div>
+    <button type="button" class="ckyc-error-alert__close" aria-label="Dismiss error" (click)="clearError()">
+      <fa-icon [icon]="closeIcon" />
+    </button>
+  </div>
+}

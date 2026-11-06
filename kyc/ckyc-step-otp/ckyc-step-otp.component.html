@@ -112,16 +112,15 @@
         @if (isMaxAttemptsReached()) {
           <div class="ckyc-otp__notice ckyc-otp__notice--warning" role="alert">
             <fa-icon class="ckyc-otp__notice-icon" [icon]="warningIcon" />
-            <span>Maximum OTP attempts reached. This OTP can no longer be verified.</span>
+            <span>{{ errorMessages.OTP_MAX_ATTEMPTS }}</span>
           </div>
         } @else if (verifyFailed()) {
           <div class="ckyc-otp__notice ckyc-otp__notice--warning" role="alert">
             <fa-icon class="ckyc-otp__notice-icon" [icon]="warningIcon" />
+            <!-- Backend message first (e.g. "Invalid OTP."), ours when it sent none -->
             <span>
-              OTP not verified.
-              @if (remainingAttempts() === null) {
-                Check the code and try again.
-              } @else {
+              {{ otpNode()?.lastError || errorMessages.OTP_VERIFY_FAILED }}
+              @if (remainingAttempts() !== null) {
                 {{ remainingAttempts() }} {{ remainingAttempts() === 1 ? "attempt" : "attempts" }} left.
               }
             </span>
@@ -129,7 +128,7 @@
         } @else if (countdown() === 0) {
           <div class="ckyc-otp__notice" role="status">
             <fa-icon class="ckyc-otp__notice-icon" [icon]="infoIcon" />
-            <span>The OTP has expired. Resend it to continue.</span>
+            <span>{{ errorMessages.OTP_EXPIRED }}</span>
           </div>
         }
       </div>

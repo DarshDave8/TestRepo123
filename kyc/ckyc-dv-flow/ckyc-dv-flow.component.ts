@@ -27,6 +27,7 @@ import { SearchAttemptedPhase } from '../constants/ckyc-onboarding.constants';
 import { CkycConsentOverviewComponent } from '../ckyc-consent-overview/ckyc-consent-overview.component';
 import { CkycOnboardingComponent } from '../ckyc-onboarding.component';
 import { CkycValidatedCardComponent } from './ckyc-validated-card/ckyc-validated-card.component';
+import { CkycErrorAlertComponent } from '../ckyc-error-alert/ckyc-error-alert.component';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { infoIcon, sendIcon } from 'src/app/constants/icons.constants';
 import { CkycAuthStateService } from '../services/ckyc-auth-state.service';
@@ -42,6 +43,7 @@ import { ICkycEnquiryListResponseBody } from '../models/ckyc-search-response.mod
     CkycConsentOverviewComponent,
     CkycOnboardingComponent,
     CkycValidatedCardComponent,
+    CkycErrorAlertComponent,
     FontAwesomeModule,
     MatButtonModule,
   ],

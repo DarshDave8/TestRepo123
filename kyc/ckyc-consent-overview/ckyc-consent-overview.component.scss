@@ -9,6 +9,7 @@
 .ckyc-overview {
   display: grid;
   gap: t.$space-3;
+  --ckyc-error-alert-margin: 0; // the grid gap spaces the alert
   min-width: 0;
   padding: t.$space-3 t.$space-4;
   border: 1px solid t.$border;

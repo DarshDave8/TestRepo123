@@ -14,11 +14,8 @@
       </span>
     </div>
   </div>
-  @if (flow.historyError()) {
-    <div class="ckyc-history__state ckyc-history__state--error" role="alert">
-      {{ flow.historyError() }}
-    </div>
-  }
+  <!-- History errors, where the history would be -->
+  <app-ckyc-error-alert scope="history" />
   @for (group of flow.enquiryGroups() | keyvalue; track group.key; let isFirst = $first) {
     <section class="ckyc-history__group">
       <div class="ckyc-history__group-header">

@@ -3,17 +3,19 @@
     <!-- <app-ckyc-search /> -->
     @if (searchAttemptedPhase() === phase.PROFILE_CREATION) {
       <app-ckyc-search-v2 />
-      <app-ckyc-error-alert />
+      <!-- Search errors, under the search form -->
+      <app-ckyc-error-alert scope="enquiry" />
     }
     <app-ckyc-enquiry-list />
   } @else {
-    <app-ckyc-error-alert />
-
     <app-ckyc-enquiry-details
       [enquiry]="flow.activeMatchSelection()?.parentEnquiry!"
       [match]="flow.activeMatchSelection()?.selectedResult!"
       [matchIndex]="flow.activeMatchSelection()?.matchIndex!"
     />
+    <!-- Auth errors before any consent table is on screen (e.g. modes failed to load), under the match card.
+         Once a table is on screen, that table shows them (ckyc-consent-status). -->
+    <app-ckyc-error-alert scope="auth" />
 
     <!-- One screen per auth mode the queue has reached, in queue order; earlier screens stay visible. -->
     @for (mode of ckycAuthState.reachedModes(); track mode) {

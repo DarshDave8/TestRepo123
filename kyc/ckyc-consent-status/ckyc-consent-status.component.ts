@@ -3,7 +3,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import { approveIcon, closeIcon, dotIcon, downloadIcon, errorIcon, refreshIcon, sendIcon } from 'src/app/constants/icons.constants';
+import { approveIcon, closeIcon, dotIcon, downloadIcon, refreshIcon, sendIcon } from 'src/app/constants/icons.constants';
+import { CkycErrorAlertComponent } from '../ckyc-error-alert/ckyc-error-alert.component';
 import { AuthenticationMode } from '../constants/ckyc-onboarding.constants';
 import { AuthNodeStatus, ICkycAuthNodeConfig } from '../models/ckyc-onboarding.model';
 import { CkycAuthStateService } from '../services/ckyc-auth-state.service';
@@ -33,12 +34,13 @@ const STATUS_ICON: Record<AuthNodeStatus, IconDefinition | null> = {
 /**
  * Consent call history for one auth mode: a row per node of that mode that has been sent, plus the node that
  * waits for the user to send it (its row carries Trigger / Re-trigger).
- * Shown at the top of the Face, Physical and OTP screens. On the active screen it also shows the error message.
+ * Shown at the top of the Face, Physical and OTP screens. On the active screen it also shows the auth error
+ * (app-ckyc-error-alert scope="auth" with this table's mode).
  */
 @Component({
   selector: 'app-ckyc-consent-status',
   standalone: true,
-  imports: [MatButtonModule, FontAwesomeModule],
+  imports: [MatButtonModule, FontAwesomeModule, CkycErrorAlertComponent],
   templateUrl: './ckyc-consent-status.component.html',
   styleUrl: './ckyc-consent-status.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -62,14 +64,10 @@ export class CkycConsentStatusComponent {
       .authNodes()
       .filter((node) => node.mode === this.mode() && (node.status !== 'PENDING' || node.id === this.awaitingNodeId())),
   );
-  readonly error = computed(() =>
-    this.authStore.activeScreenMode() === this.mode() ? this.authStore.authState().error : null,
-  );
   readonly isBusy = this.authStore.isBusy;
   readonly statusText = STATUS_TEXT;
   readonly statusIcon = STATUS_ICON;
   // Font Awesome icons from the app's icons.constants
-  readonly errorIcon = errorIcon;
   readonly downloadIcon = downloadIcon;
   readonly refreshIcon = refreshIcon;
   readonly sendIcon = sendIcon;

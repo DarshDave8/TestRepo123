@@ -7,7 +7,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { finalize, interval, Subscription, tap } from 'rxjs';
 import { CkycAuthStateService } from '../services/ckyc-auth-state.service';
-import { AuthenticationMode } from '../constants/ckyc-onboarding.constants';
+import { AuthenticationMode, CKYC_ERROR_MESSAGES } from '../constants/ckyc-onboarding.constants';
 import { CkycConsentStatusComponent } from '../ckyc-consent-status/ckyc-consent-status.component';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatRadioModule } from '@angular/material/radio';
@@ -31,6 +31,8 @@ import { approveIcon, backArrowIcon, checkCircleIcon, envelopeIcon, faFieldError
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CkycStepOtpComponent {
+  // OTP messages from the constants file (the backend's own verify message comes first, see the template)
+  readonly errorMessages = CKYC_ERROR_MESSAGES;
   // Font Awesome icons from the app's icons.constants
   readonly approveIcon = approveIcon;
   readonly backArrowIcon = backArrowIcon;

@@ -54,6 +54,8 @@
         }
       }
     }
+    <!-- Update-enquiry / submit errors (including the DV auto-submit), right above Submit CKYC -->
+    <app-ckyc-error-alert scope="submit" />
     <div class="dv-flow__actions">
       @if (isEditable()) {
         @if (!sharedService.isDvCkycSubmitEnabled()) {

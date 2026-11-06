@@ -3,7 +3,8 @@
      isTriggerButtonClicked, startEnquiryTrigger()). Icons: the class needs FontAwesomeModule in its imports and
      approveIcon, closeIcon, infoIcon, refreshIcon, sendIcon (src/app/constants/icons.constants) as fields. -->
 <section class="ckyc-overview" aria-labelledby="ckyc-overview-title">
-  <app-ckyc-error-alert />
+  <!-- Enquiry errors in DV (there is no search form there) -->
+  <app-ckyc-error-alert scope="enquiry" />
 
   @if (isTriggerEnquiriesSuccess) {
     <!-- Title and overall status on one line -->

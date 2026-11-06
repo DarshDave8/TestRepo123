@@ -10,6 +10,7 @@ import { UserType } from 'src/app/models/account.model';
 import { CkycFlowStateService } from '../services/ckyc-flow-state.service';
 import { CkycSharedStateService } from '../services/ckyc-shared-state.service';
 import { CkycEnquiryDetailsComponent } from './ckyc-enquiry-details/ckyc-enquiry-details.component';
+import { CkycErrorAlertComponent } from '../ckyc-error-alert/ckyc-error-alert.component';
 import { ICkycEnquiryListResponseBody } from '../models/ckyc-search-response.model';
 import { CkycSearchRequest, IOvdDetail } from '../models/ckyc-search-request.model';
 import { CkycSearchOption, OvdType, SearchAttemptedPhase } from '../constants/ckyc-onboarding.constants';
@@ -24,7 +25,14 @@ interface CkycIdListSummaryItem {
 @Component({
   selector: 'app-ckyc-enquiry-list',
   standalone: true,
-  imports: [MatButtonModule, MatExpansionModule, MatProgressSpinnerModule, CkycEnquiryDetailsComponent, CommonModule],
+  imports: [
+    MatButtonModule,
+    MatExpansionModule,
+    MatProgressSpinnerModule,
+    CkycEnquiryDetailsComponent,
+    CkycErrorAlertComponent,
+    CommonModule,
+  ],
   templateUrl: './ckyc-enquiry-list.component.html',
   styleUrl: './ckyc-enquiry-list.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

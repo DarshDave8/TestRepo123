@@ -6,10 +6,12 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Subject, catchError, finalize, map, of, switchMap, takeUntil, type Observable } from 'rxjs';
 import { CkycOnboardingService } from './ckyc-onboarding.service';
 import {
+  CKYC_ERROR_MESSAGES,
   CkycSearchAction,
   CkycSearchOption,
   SearchAttemptedPhase, // used by the DV auto-submit in loadEnquiries()
 } from '../constants/ckyc-onboarding.constants';
+import { ckycErrorMessage } from '../utils/ckyc-error.util';
 import { CkycStepManager } from '../ckyc-step-manager';
 import {
   CkycEnquiryGroups,
@@ -50,6 +52,8 @@ export class CkycFlowStateService {
   readonly historyError = signal<string | null>(null);
   readonly enquiryLoading = signal<boolean>(false);
   readonly enquiryError = signal<string | null>(null);
+  // Update-enquiry / submit errors, shown above Submit CKYC (they used to go to enquiryError, the search alert).
+  readonly submitError = signal<string | null>(null);
 
   private readonly validatedDetailsSubject = new Subject<ICustomerBasicDetails>();
   readonly validatedDetails$: Observable<ICustomerBasicDetails> = this.validatedDetailsSubject.asObservable();
@@ -107,6 +111,7 @@ export class CkycFlowStateService {
   // If the user confirmed that none of the enquiries pertains to the customer, mark them so with update-enquiry
   // first, then submit; otherwise (or when there is nothing to mark) submit directly.
   ckycDvSubmit(): Observable<boolean> {
+    this.submitError.set(null);
     if (!this.ckycSharedStateService.isCkycConsentChecked() || this.enquiries().length === 0) {
       return this.submitCkyc();
     }
@@ -128,10 +133,14 @@ export class CkycFlowStateService {
       leadId: this.ckycSharedStateService.leadDetails()?.leadId!,
     };
     return this.ckycApi.updateEnquiries(updateEnquiryRequest).pipe(
-      // Submit only after the update succeeded.
-      switchMap((res) => (res && res.success ? this.submitCkyc() : of(false))),
-      catchError(() => {
-        this.enquiryError.set('Unable to complete the request');
+      // Submit only after the update succeeded; a refused update used to fail silently.
+      switchMap((res) => {
+        if (res?.success) return this.submitCkyc();
+        this.submitError.set(ckycErrorMessage(res, CKYC_ERROR_MESSAGES.UPDATE_ENQUIRY_FAILED));
+        return of(false);
+      }),
+      catchError((error) => {
+        this.submitError.set(ckycErrorMessage(error, CKYC_ERROR_MESSAGES.UPDATE_ENQUIRY_FAILED));
         return of(false);
       }),
       takeUntil(this.reset$),
@@ -139,6 +148,7 @@ export class CkycFlowStateService {
   }
 
   submitCkyc(): Observable<boolean> {
+    this.submitError.set(null);
     const submitRequest: ISubmitCkycRequest = {
       enquiryId: '',
       enquiryResponseId: null,
@@ -159,12 +169,12 @@ export class CkycFlowStateService {
     return this.ckycApi.submit(submitRequest).pipe(
       map((res) => {
         if (res?.success && res.body?.success) return true;
-        // Request accepted but the submit refused: show why.
-        if (res?.success) this.enquiryError.set(res.body?.messages?.join(', ') || 'Unable to submit CKYC.');
+        // Refused (top level or body): show why. A top-level refusal used to fail silently.
+        this.submitError.set(ckycErrorMessage(res, CKYC_ERROR_MESSAGES.SUBMIT_FAILED));
         return false;
       }),
-      catchError(() => {
-        this.enquiryError.set('Unable to complete the request');
+      catchError((error) => {
+        this.submitError.set(ckycErrorMessage(error, CKYC_ERROR_MESSAGES.SUBMIT_FAILED));
         return of(false);
       }),
       takeUntil(this.reset$),
@@ -207,11 +217,11 @@ export class CkycFlowStateService {
               }
             }
           } else {
-            this.historyError.set(response?.messages ? response?.messages.join(',') : 'Unable to load CKYC enquiries.');
+            this.historyError.set(ckycErrorMessage(response, CKYC_ERROR_MESSAGES.HISTORY_LOAD_FAILED));
           }
         },
-        error: () => {
-          this.historyError.set('Unable to load CKYC enquiries.');
+        error: (error) => {
+          this.historyError.set(ckycErrorMessage(error, CKYC_ERROR_MESSAGES.HISTORY_LOAD_FAILED));
         },
       });
   }
@@ -232,18 +242,16 @@ export class CkycFlowStateService {
             // (the list shows only enquiries with records).
             if (!response.body?.results?.length) {
               this.ckycSharedStateService.setManualVerificationEnabled(true);
-              this.enquiryError.set('No result for the current enquiry');
+              this.enquiryError.set(CKYC_ERROR_MESSAGES.NO_RECORD_FOUND);
             }
             this.stepManager.goTo('enquiryReceived');
             this.loadEnquiries();
           } else {
-            this.enquiryError.set(
-              response?.messages ? response?.messages.join(',') : 'Unable to execute CKYC search enquiry',
-            );
+            this.enquiryError.set(ckycErrorMessage(response, CKYC_ERROR_MESSAGES.SEARCH_FAILED));
           }
         },
-        error: () => {
-          this.enquiryError.set('Unable to execute CKYC search enquiry');
+        error: (error) => {
+          this.enquiryError.set(ckycErrorMessage(error, CKYC_ERROR_MESSAGES.SEARCH_FAILED));
         },
       });
   }
@@ -316,6 +324,7 @@ export class CkycFlowStateService {
     this.historyError.set(null);
     this.enquiryLoading.set(false);
     this.enquiryError.set(null);
+    this.submitError.set(null);
     this.savedOvds.set([]);
     this.searchValues.set({});
     this.relatedPersonValues.set({});

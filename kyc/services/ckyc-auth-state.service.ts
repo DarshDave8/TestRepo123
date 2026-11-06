@@ -5,6 +5,7 @@ import { defer, Observable, of, Subject } from 'rxjs';
 import { tap, catchError, finalize, map, takeUntil } from 'rxjs/operators';
 import { CkycOnboardingService } from './ckyc-onboarding.service';
 import {
+  CKYC_ERROR_MESSAGES,
   AUTH_CONFIG,
   AUTH_FACTOR_LABELS,
   AUTH_MODE_LABELS,
@@ -14,6 +15,7 @@ import {
   ModeConfiguration,
   SearchAttemptedPhase,
 } from '../constants/ckyc-onboarding.constants';
+import { ckycErrorMessage } from '../utils/ckyc-error.util';
 import {
   AuthDomainState,
   ICkycAuthNodeConfig,
@@ -97,7 +99,8 @@ export class CkycAuthStateService {
       .pipe(
         tap((res) => {
           if (!res?.success) {
-            this.authState.update((s) => ({ ...s, error: 'Unable to load authentication modes.' }));
+            const error = ckycErrorMessage(res, CKYC_ERROR_MESSAGES.AUTH_MODES_LOAD_FAILED);
+            this.authState.update((s) => ({ ...s, error }));
             this.ckycSharedStateService.setManualVerificationEnabled(true);
             return;
           }
@@ -110,8 +113,9 @@ export class CkycAuthStateService {
           this.authState.update((s) => ({ ...s, attemptId: res.body.attemptId }));
         }),
         map((res) => Boolean(res?.success)),
-        catchError(() => {
-          this.authState.update((s) => ({ ...s, error: 'Network error loading auth modes.' }));
+        catchError((err) => {
+          const error = ckycErrorMessage(err, CKYC_ERROR_MESSAGES.AUTH_MODES_LOAD_FAILED);
+          this.authState.update((s) => ({ ...s, error }));
           return of(false);
         }),
         finalize(() => this.authState.update((s) => ({ ...s, loading: false }))),
@@ -126,7 +130,7 @@ export class CkycAuthStateService {
   startQueue(): boolean {
     const first = this.currentNode();
     if (!first) {
-      this.authState.update((s) => ({ ...s, error: 'No authentication methods are available.' }));
+      this.authState.update((s) => ({ ...s, error: CKYC_ERROR_MESSAGES.NO_AUTH_METHODS }));
       this.ckycSharedStateService.setManualVerificationEnabled(true);
       return false;
     }
@@ -158,14 +162,14 @@ export class CkycAuthStateService {
     }).pipe(
       map((response) => {
         if (!response?.success) {
-          this.onTriggerFailure(node.id, response?.messages?.join(', ') || `${node.label} failed.`);
+          this.onTriggerFailure(node.id, ckycErrorMessage(response, CKYC_ERROR_MESSAGES.CONSENT_TRIGGER_FAILED(node.label)));
           return false;
         }
         this.onTriggerSuccess(node.id, response.messages);
         return true;
       }),
-      catchError(() => {
-        this.onTriggerFailure(node.id, `${node.label} failed.`);
+      catchError((error) => {
+        this.onTriggerFailure(node.id, ckycErrorMessage(error, CKYC_ERROR_MESSAGES.CONSENT_TRIGGER_FAILED(node.label)));
         return of(false);
       }),
       finalize(() => {
@@ -195,6 +199,11 @@ export class CkycAuthStateService {
   validate(otp?: string, otpIdentifier?: OtpIdentifier): Observable<boolean> {
     const node = this.currentNode();
     if (!node) return of(false);
+    // Our message when the backend sends none; the OTP card shows it under the code field.
+    const validateFallback =
+      node.mode === AuthenticationMode.OTP
+        ? CKYC_ERROR_MESSAGES.OTP_VERIFY_FAILED
+        : CKYC_ERROR_MESSAGES.CONSENT_VALIDATE_FAILED;
     const request: IValidateConsentRequest = {
       attemptId: this.authState().attemptId!,
       consentType: node.mode,
@@ -209,10 +218,7 @@ export class CkycAuthStateService {
     }).pipe(
       map((response) => {
         if (!response?.success) {
-          return this.onValidateFailure(
-            node.id,
-            response?.messages?.join(', ') || 'Unable to validate consent. Please try again.',
-          );
+          return this.onValidateFailure(node.id, ckycErrorMessage(response, validateFallback));
         }
         // Keep the queue and screens as they are: the flow is done. The host resets when it leaves the page.
         this.updateNode(node.id, { validateSuccess: true, lastError: null });
@@ -223,7 +229,7 @@ export class CkycAuthStateService {
         this.flow.emitValidatedDetails(response.body);
         return true;
       }),
-      catchError(() => of(this.onValidateFailure(node.id, 'Unable to validate consent. Please try again.'))),
+      catchError((error) => of(this.onValidateFailure(node.id, ckycErrorMessage(error, validateFallback)))),
       finalize(() => this.authState.update((s) => ({ ...s, loading: false }))),
       takeUntil(this.cancelConsent$),
     );
@@ -330,8 +336,9 @@ export class CkycAuthStateService {
     // The last send failed: drop the "OTP sent" banner of an earlier send.
     if (node.mode === AuthenticationMode.OTP) this.otpState.update((s) => ({ ...s, successMessage: null }));
     if (this.hasAttemptsLeft(node.triggerAttemptCount, node.maxTriggerAttempts)) {
-      // Stay on this node; the user sends it again (e.g. "Re-trigger OTP").
-      this.authState.update((s) => ({ ...s, error: `${node.label} failed. Please try again.` }));
+      // Stay on this node; the user sends it again (e.g. "Re-trigger OTP"). Backend message first (it used to be
+      // replaced by "<label> failed. Please try again.").
+      this.authState.update((s) => ({ ...s, error: message }));
       return;
     }
     this.moveToNextNode(node);
@@ -365,7 +372,7 @@ export class CkycAuthStateService {
     const next = this._authNodes()[usedUp.order + 1];
     if (!next) {
       this._currentNodeIndex.set(null);
-      this.authState.update((s) => ({ ...s, error: `${usedUp.label} failed. No authentication methods remain.` }));
+      this.authState.update((s) => ({ ...s, error: CKYC_ERROR_MESSAGES.AUTH_METHODS_EXHAUSTED(usedUp.label) }));
       this.ckycSharedStateService.setManualVerificationEnabled(true);
       return;
     }

@@ -9,27 +9,6 @@
   container: consent-status / inline-size;
 }
 
-// ---- Error / fallback message (active screen only) ----
-.consent-alert {
-  display: flex;
-  align-items: flex-start;
-  gap: t.$space-2;
-  margin-bottom: t.$space-3;
-  padding: t.$space-2 t.$space-3;
-  border: 1px solid t.$error-bg;
-  border-left: 4px solid t.$error;
-  border-radius: t.$radius-sm;
-  background: t.$error-bg;
-  color: t.$error-text;
-  font-size: t.$font-sm;
-  font-weight: 500;
-}
-
-.consent-alert__icon {
-  font-size: 1rem; // icon size; it lines up with the first line of the message
-  margin-top: 0.0625rem;
-}
-
 // ---- Table ----
 // Never scrolls sideways: the columns size to their content, and below 36rem each row becomes a small card.
 .consent-status {

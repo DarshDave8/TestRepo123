@@ -18,6 +18,7 @@ import {
 import { ckycErrorMessage } from '../utils/ckyc-error.util';
 import {
   AuthDomainState,
+  GivenConsentDownloadStatus,
   ICkycAuthNodeConfig,
   ITriggerConsentRequest,
   IValidateConsentRequest,
@@ -25,7 +26,7 @@ import {
 } from '../models/ckyc-onboarding.model';
 import { CkycFlowStateService } from './ckyc-flow-state.service';
 import { CkycSharedStateService } from './ckyc-shared-state.service';
-import { OtpIdentifier } from '../models/ckyc-consent-request.model';
+import { IConsentData, OtpIdentifier } from '../models/ckyc-consent-request.model';
 
 const INITIAL_AUTH_STATE: AuthDomainState = { loading: false, attemptId: null, error: null };
 const INITIAL_OTP_STATE: OtpDomainState = {
@@ -72,14 +73,27 @@ export class CkycAuthStateService {
   });
   // The last reached mode's screen is the active one: it shows the error message and the Back button.
   readonly activeScreenMode = computed<AuthenticationMode | null>(() => this.reachedModes().at(-1) ?? null);
+
+  // Consent for this match was already given (isConsentGiven): applicableConsentTypes is ignored, no queue is
+  // built, and validate consent is called directly. The match card shows its progress and "Download Data" retry.
+  private readonly _consentAlreadyGiven = signal(false);
+  readonly consentAlreadyGiven = this._consentAlreadyGiven.asReadonly();
+  // Own status, not authState.loading: loadApplicableModes clears that flag while this call is still running.
+  private readonly _givenConsentDownload = signal<GivenConsentDownloadStatus>('IDLE');
+  readonly givenConsentDownload = this._givenConsentDownload.asReadonly();
+
   // A consent or validate call is running.
   readonly isBusy = computed(
-    () => this.authState().loading || this._authNodes().some((node) => node.status === 'IN_PROGRESS'),
+    () =>
+      this.authState().loading ||
+      this._givenConsentDownload() === 'IN_PROGRESS' ||
+      this._authNodes().some((node) => node.status === 'IN_PROGRESS'),
   );
 
   /**
    * Loads the modes the backend allows for this match and builds the auth queue from them.
    * AUTH_CONFIG decides which of those modes are used per phase (Profile Creation: OTP only).
+   * Consent already given (isConsentGiven): the modes are ignored and no queue is built.
    */
   loadApplicableModes(
     enquiryId: string,
@@ -109,7 +123,11 @@ export class CkycAuthStateService {
             hasMobileNumber: res.body?.hasMobileNumber,
             hasEmailAddress: res.body?.hasEmailAddress,
           }));
-          this.buildLinearQueue(phase, res.body?.applicableConsentTypes || []);
+          if (res.body?.isConsentGiven) {
+            this._consentAlreadyGiven.set(true);
+          } else {
+            this.buildLinearQueue(phase, res.body?.applicableConsentTypes || []);
+          }
           this.authState.update((s) => ({ ...s, attemptId: res.body.attemptId }));
         }),
         map((res) => Boolean(res?.success)),
@@ -126,8 +144,13 @@ export class CkycAuthStateService {
   /**
    * Starts this match's queue (after loadApplicableModes): sends the first node when it is autoTrigger,
    * otherwise it waits for the user. Returns false when no node is usable; manual verification is flagged.
+   * Consent already given: no queue, no trigger; validate consent is called straight away.
    */
   startQueue(): boolean {
+    if (this._consentAlreadyGiven()) {
+      this.downloadGivenConsent().subscribe();
+      return true;
+    }
     const first = this.currentNode();
     if (!first) {
       this.authState.update((s) => ({ ...s, error: CKYC_ERROR_MESSAGES.NO_AUTH_METHODS }));
@@ -204,11 +227,49 @@ export class CkycAuthStateService {
       node.mode === AuthenticationMode.OTP
         ? CKYC_ERROR_MESSAGES.OTP_VERIFY_FAILED
         : CKYC_ERROR_MESSAGES.CONSENT_VALIDATE_FAILED;
+    return this.requestValidation(node.mode, otp ? { otp, otpIdentifier } : {}, validateFallback, {
+      // Keep the queue and screens as they are: the flow is done. The host resets when it leaves the page.
+      onSuccess: () => this.updateNode(node.id, { validateSuccess: true, lastError: null }),
+      onFailure: (message) => this.onValidateFailure(node.id, message),
+    });
+  }
+
+  /**
+   * Consent already given (isConsentGiven): validate consent with no auth mode, no trigger before it.
+   * Failure: the error shows under the match card, which offers "Download Data" again (only this call repeats).
+   */
+  downloadGivenConsent(): Observable<boolean> {
+    const status = this._givenConsentDownload();
+    if (!this._consentAlreadyGiven() || status === 'IN_PROGRESS' || status === 'SUCCESS') return of(false);
+    return defer(() => {
+      this._givenConsentDownload.set('IN_PROGRESS');
+      return this.requestValidation(null, {}, CKYC_ERROR_MESSAGES.CONSENT_VALIDATE_FAILED, {
+        onSuccess: () => this._givenConsentDownload.set('SUCCESS'),
+        onFailure: (error) => {
+          this._givenConsentDownload.set('FAILED');
+          this.authState.update((s) => ({ ...s, error }));
+        },
+      });
+    }).pipe(
+      finalize(() => {
+        // Unsubscribed before a response: the call never finished, so "Download Data" is offered again.
+        if (this._givenConsentDownload() === 'IN_PROGRESS') this._givenConsentDownload.set('FAILED');
+      }),
+    );
+  }
+
+  // The validate consent call; the caller says what success and failure do to its state.
+  private requestValidation(
+    consentType: AuthenticationMode | null,
+    consentData: IConsentData,
+    fallbackMessage: string,
+    handlers: { onSuccess: () => void; onFailure: (message: string) => void },
+  ): Observable<boolean> {
     const request: IValidateConsentRequest = {
       attemptId: this.authState().attemptId!,
-      consentType: node.mode,
+      consentType,
       leadId: this.ckycSharedStateService.leadId(),
-      consentData: otp ? { otp, otpIdentifier } : {},
+      consentData,
       searchAttemptedPhase: this.ckycSharedStateService.searchAttemptedPhase()!,
     };
     // Loading starts when the call does (on subscribe), like triggerConsent.
@@ -218,10 +279,10 @@ export class CkycAuthStateService {
     }).pipe(
       map((response) => {
         if (!response?.success) {
-          return this.onValidateFailure(node.id, ckycErrorMessage(response, validateFallback));
+          handlers.onFailure(ckycErrorMessage(response, fallbackMessage));
+          return false;
         }
-        // Keep the queue and screens as they are: the flow is done. The host resets when it leaves the page.
-        this.updateNode(node.id, { validateSuccess: true, lastError: null });
+        handlers.onSuccess();
         // Submit CKYC sends the validated attempt.
         this.flow.activeMatchSelection.update((selection) =>
           selection ? { ...selection, attemptId: response.body.attemptId } : selection,
@@ -229,7 +290,10 @@ export class CkycAuthStateService {
         this.flow.emitValidatedDetails(response.body);
         return true;
       }),
-      catchError((error) => of(this.onValidateFailure(node.id, ckycErrorMessage(error, validateFallback)))),
+      catchError((error) => {
+        handlers.onFailure(ckycErrorMessage(error, fallbackMessage));
+        return of(false);
+      }),
       finalize(() => this.authState.update((s) => ({ ...s, loading: false }))),
       takeUntil(this.cancelConsent$),
     );
@@ -305,9 +369,12 @@ export class CkycAuthStateService {
     };
   }
 
+  // Also clears the consent-already-given state, which stands in for the queue.
   private clearQueue(): void {
     this._authNodes.set([]);
     this._currentNodeIndex.set(null);
+    this._consentAlreadyGiven.set(false);
+    this._givenConsentDownload.set('IDLE');
   }
 
   // ---- Auth queue: progress ----

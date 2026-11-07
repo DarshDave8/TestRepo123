@@ -15,7 +15,8 @@ interface CkycActiveError {
  * - enquiry: under the search form (search failed, no record found)
  * - history: in the enquiry list (history could not be loaded)
  * - auth:    with `mode`, in that mode's consent table, only while it is the active screen (send / verify errors);
- *            without `mode`, under the match card, only while no consent table is on screen (modes failed to load)
+ *            without `mode`, under the match card, only while no consent table is on screen; on the enquiry list,
+ *            in the card whose Authenticate did not start (modes failed to load, or none is usable)
  * - submit:  above Submit CKYC (update enquiries / submit)
  * So each error shows once, in one place. The message is set by the services: the backend's own text when it sent
  * one, else ours from CKYC_ERROR_MESSAGES.

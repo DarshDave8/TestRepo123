@@ -77,6 +77,13 @@
     }
   </div>
 
+  <!-- Authenticate did not start for this record (modes did not load, or none is usable): why, above the button. -->
+  @if (showStartError()) {
+    <div class="ckyc-match__error">
+      <app-ckyc-error-alert scope="auth" />
+    </div>
+  }
+
   @if (flow.isEditable()) {
     @if (flow.step() === "search" || flow.step() === "enquiryReceived") {
       <footer class="ckyc-match__actions">

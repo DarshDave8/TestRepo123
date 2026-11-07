@@ -184,6 +184,11 @@
   object-fit: contain; // never crop the face on an ID photo
 }
 
+// ---- Start error (Authenticate did not start), above the footer ----
+.ckyc-match__error {
+  padding-inline: t.$space-6;
+}
+
 // ---- Footer ----
 .ckyc-match__actions {
   display: flex;
@@ -220,6 +225,7 @@
 @include t.phone {
   .ckyc-match__header,
   .ckyc-match__content,
+  .ckyc-match__error,
   .ckyc-match__actions {
     padding-right: t.$space-4;
     padding-left: t.$space-4;

@@ -15,11 +15,12 @@ import { toCkycPhotoSrc } from '../../utils/ckyc-photo.util';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { approveIcon, faLockIcon, userIcon } from 'src/app/constants/icons.constants';
 import { CkycSearchOption } from '../../constants/ckyc-onboarding.constants';
+import { CkycErrorAlertComponent } from '../../ckyc-error-alert/ckyc-error-alert.component';
 
 @Component({
   selector: 'app-ckyc-enquiry-details',
   standalone: true,
-  imports: [DatePipe, MatButtonModule, FontAwesomeModule],
+  imports: [DatePipe, MatButtonModule, FontAwesomeModule, CkycErrorAlertComponent],
   templateUrl: './ckyc-enquiry-details.component.html',
   styleUrl: './ckyc-enquiry-details.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -42,6 +43,10 @@ export class CkycEnquiryDetailsComponent implements OnInit {
 
   readonly photoSource = computed(() => toCkycPhotoSrc(this.match().photo, this.match().photoExt));
   readonly isProcessing = signal<boolean>(false);
+  // This card among all cards of the list: one record of one enquiry.
+  private readonly matchKey = computed(() => `${this.match().enquiryId}_${this.matchIndex()}`);
+  // This card's Authenticate did not start: the auth error shows in this card, not under the whole list.
+  readonly showStartError = computed(() => this.authStore.startFailedMatchKey() === this.matchKey());
 
   ngOnInit(): void {
     this.isStaff = this.authService.userIdentity?.userType === UserType.STAFF;
@@ -75,6 +80,8 @@ export class CkycEnquiryDetailsComponent implements OnInit {
         } else {
           // Authentication did not start: drop the match, so Submit CKYC cannot send an unauthenticated match.
           this.flow.activeMatchSelection.set(null);
+          // Show why in this card (modes failed to load, or none is usable).
+          this.authStore.markStartFailed(this.matchKey());
         }
       });
   }

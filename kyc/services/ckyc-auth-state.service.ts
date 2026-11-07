@@ -76,6 +76,10 @@ export class CkycAuthStateService {
   readonly isBusy = computed(
     () => this.authState().loading || this._authNodes().some((node) => node.status === 'IN_PROGRESS'),
   );
+  // The match card whose Authenticate did not start (modes did not load, or none is usable). The enquiry list
+  // has no auth screen, so that card shows authState.error. Cleared when modes load again and on reset.
+  private readonly _startFailedMatchKey = signal<string | null>(null);
+  readonly startFailedMatchKey = this._startFailedMatchKey.asReadonly();
 
   /**
    * Loads the modes the backend allows for this match and builds the auth queue from them.
@@ -88,6 +92,7 @@ export class CkycAuthStateService {
     phase: SearchAttemptedPhase,
   ): Observable<boolean> {
     this.clearQueue();
+    this._startFailedMatchKey.set(null);
     this.authState.update((s) => ({ ...s, loading: true, error: null }));
     return this.ckycApi
       .getApplicableAuthenticationModes({
@@ -276,8 +281,14 @@ export class CkycAuthStateService {
   resetAuth(): void {
     this.cancelConsent$.next();
     this.clearQueue();
+    this._startFailedMatchKey.set(null);
     this.authState.set(INITIAL_AUTH_STATE);
     this.otpState.set(INITIAL_OTP_STATE);
+  }
+
+  // Authenticate did not start for this match card: the card shows the auth error (see startFailedMatchKey).
+  markStartFailed(matchKey: string): void {
+    this._startFailedMatchKey.set(matchKey);
   }
 
   // ---- Auth queue: building ----

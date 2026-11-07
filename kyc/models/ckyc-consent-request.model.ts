@@ -45,7 +45,7 @@ export interface ITriggerConsentRequest {
 
 export interface IValidateConsentRequest {
   attemptId: string;
-  consentType: AuthenticationMode | null; // null: consent already given (isConsentGiven), no auth mode used
+  consentType: AuthenticationMode;
   leadId: string | null;
   consentData: IConsentData;
   searchAttemptedPhase: SearchAttemptedPhase;

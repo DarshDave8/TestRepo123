@@ -90,25 +90,6 @@
           <fa-icon [icon]="faLockIcon" />Authenticate
         </button>
       </footer>
-    } @else if (authStore.consentAlreadyGiven() && authStore.givenConsentDownload() !== "SUCCESS") {
-      <!-- Consent already given: no auth screens follow, only validate consent. Its errors show under this card. -->
-      <footer class="ckyc-match__actions ckyc-match__actions--split">
-        <button mat-stroked-button class="ckyc-match__back" type="button" (click)="backToEnquiries()">
-          <fa-icon [icon]="backArrowIcon" />Back
-        </button>
-        <button
-          mat-flat-button
-          class="ckyc-match__authenticate"
-          type="button"
-          [disabled]="authStore.givenConsentDownload() === 'IN_PROGRESS'"
-          [attr.aria-busy]="authStore.givenConsentDownload() === 'IN_PROGRESS'"
-          (click)="downloadGivenConsent()"
-        >
-          <fa-icon [icon]="downloadIcon" />{{
-            authStore.givenConsentDownload() === "IN_PROGRESS" ? "Downloading…" : "Download Data"
-          }}
-        </button>
-      </footer>
     }
   }
 </article>

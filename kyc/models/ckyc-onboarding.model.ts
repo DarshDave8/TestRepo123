@@ -149,9 +149,6 @@ export interface OtpDomainState {
 
 export type AuthNodeStatus = 'PENDING' | 'IN_PROGRESS' | 'SUCCESS' | 'FAILED';
 
-// Consent already given (isConsentGiven): no queue, validate consent is called directly. IDLE = not called yet.
-export type GivenConsentDownloadStatus = 'IDLE' | 'IN_PROGRESS' | 'SUCCESS' | 'FAILED';
-
 export interface ICkycAuthNodeConfig {
   id: string; // `${mode}` or `${mode}_${factor}`, e.g. 'FACEAUTH_DOB', 'OTP'
   mode: AuthenticationMode;

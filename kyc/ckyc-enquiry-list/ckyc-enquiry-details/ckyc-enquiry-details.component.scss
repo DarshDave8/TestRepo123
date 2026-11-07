@@ -192,18 +192,8 @@
   border-top: 1px solid t.$border;
 }
 
-// Consent already given: Back on the left, Download Data on the right.
-.ckyc-match__actions--split {
-  justify-content: space-between;
-  gap: t.$space-3;
-}
-
 .ckyc-match__authenticate {
   @include t.button-primary;
-}
-
-.ckyc-match__back {
-  @include t.button-secondary;
 }
 
 // ---- Layout by width ----
@@ -261,10 +251,5 @@
 
   .ckyc-match__authenticate {
     width: 100%;
-  }
-
-  // Download Data on top, full width; Back under it.
-  .ckyc-match__actions--split {
-    flex-direction: column-reverse;
   }
 }

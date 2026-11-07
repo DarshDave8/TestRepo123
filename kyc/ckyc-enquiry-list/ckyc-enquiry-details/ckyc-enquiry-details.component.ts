@@ -13,7 +13,7 @@ import { finalize } from 'rxjs';
 import { CkycSharedStateService } from '../../services/ckyc-shared-state.service';
 import { toCkycPhotoSrc } from '../../utils/ckyc-photo.util';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { approveIcon, backArrowIcon, downloadIcon, faLockIcon, userIcon } from 'src/app/constants/icons.constants';
+import { approveIcon, faLockIcon, userIcon } from 'src/app/constants/icons.constants';
 import { CkycSearchOption } from '../../constants/ckyc-onboarding.constants';
 
 @Component({
@@ -26,8 +26,6 @@ import { CkycSearchOption } from '../../constants/ckyc-onboarding.constants';
 })
 export class CkycEnquiryDetailsComponent implements OnInit {
   readonly approveIcon = approveIcon;
-  readonly backArrowIcon = backArrowIcon;
-  readonly downloadIcon = downloadIcon;
   readonly faLockIcon = faLockIcon;
   readonly userIcon = userIcon;
   // Phase and lead id are set by the onboarding component; the consent calls use the same values.
@@ -79,15 +77,5 @@ export class CkycEnquiryDetailsComponent implements OnInit {
           this.flow.activeMatchSelection.set(null);
         }
       });
-  }
-
-  // Consent already given: "Download Data" again after a failed validate consent (only that call is repeated).
-  downloadGivenConsent(): void {
-    this.authStore.downloadGivenConsent().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
-  }
-
-  // Back to the enquiry list; also stops the validate call if it is still running.
-  backToEnquiries(): void {
-    this.authStore.cancelConsentFlow();
   }
 }

@@ -156,8 +156,9 @@ export interface ICkycAuthNodeConfig {
   label: string; // shown in the consent status table
   order: number; // position in the queue, 0-based
   status: AuthNodeStatus;
+  requiresTrigger: boolean; // from AUTH_CONFIG: false = no consent call, validate directly (CONSENT_AVAILABLE)
   autoTrigger: boolean; // from AUTH_CONFIG: call goes out on reaching the node, or waits for the user
-  triggerSuccess: boolean | null; // null = not triggered yet
+  triggerSuccess: boolean | null; // null = not triggered yet (stays null when requiresTrigger is false)
   validateSuccess: boolean | null; // null = not validated yet
   triggerAttemptCount: number; // failed trigger calls
   maxTriggerAttempts: number | null; // from AUTH_CONFIG; null = unlimited

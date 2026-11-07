@@ -9,8 +9,7 @@ export interface IGetApplicableConsentTypesResponse extends IResponse {
 }
 export interface IGetApplicableConsentTypesResponseBody {
   attemptId: string;
-  isConsentGiven: boolean;
-  applicableConsentTypes: Array<AuthenticationMode>;
+  applicableConsentTypes: Array<AuthenticationMode>; // AUTO (CONSENT_AVAILABLE) = consent already given
   hasEmailAddress: boolean;
   hasMobileNumber: boolean;
   timeStamp: string;

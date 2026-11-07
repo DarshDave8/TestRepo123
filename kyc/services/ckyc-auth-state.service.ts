@@ -126,6 +126,7 @@ export class CkycAuthStateService {
   /**
    * Starts this match's queue (after loadApplicableModes): sends the first node when it is autoTrigger,
    * otherwise it waits for the user. Returns false when no node is usable; manual verification is flagged.
+   * CONSENT_AVAILABLE (consent already given) is first when the backend returns it: validate is called at once.
    */
   startQueue(): boolean {
     const first = this.currentNode();
@@ -135,9 +136,30 @@ export class CkycAuthStateService {
       return false;
     }
     if (first.autoTrigger) {
-      this.triggerConsent().subscribe();
+      this.sendCurrentNode().subscribe();
     }
     return true;
+  }
+
+  /**
+   * The current node's first call: the consent call, or, for a node without one (CONSENT_AVAILABLE), validate
+   * straight away. That validate shows the node as "Calling"; afterwards the node stays ready, so a failed
+   * download is retried with "Download Data".
+   */
+  private sendCurrentNode(): Observable<boolean> {
+    const node = this.currentNode();
+    if (!node) return of(false);
+    if (node.requiresTrigger) return this.triggerConsent();
+    return defer(() => {
+      // IN_PROGRESS keeps isBusy true for the whole call: loadApplicableModes clears authState.loading while
+      // this first validate is still running.
+      this.updateNode(node.id, { status: 'IN_PROGRESS', lastError: null });
+      return this.validate();
+    }).pipe(
+      finalize(() => {
+        if (this.findNode(node.id)?.status === 'IN_PROGRESS') this.updateNode(node.id, { status: 'SUCCESS' });
+      }),
+    );
   }
 
   /**
@@ -189,7 +211,7 @@ export class CkycAuthStateService {
   triggerAwaitingNode(): Observable<boolean> {
     if (!this.awaitingUserTrigger()) return of(false);
     this.authState.update((s) => ({ ...s, error: null }));
-    return this.triggerConsent();
+    return this.sendCurrentNode();
   }
 
   /**
@@ -294,6 +316,7 @@ export class CkycAuthStateService {
       label: subType ? `${AUTH_MODE_LABELS[config.mode]} ${AUTH_FACTOR_LABELS[subType]}` : AUTH_MODE_LABELS[config.mode],
       order,
       status: 'PENDING',
+      requiresTrigger: config.requiresTrigger ?? true,
       autoTrigger: config.autoTrigger,
       triggerSuccess: null,
       validateSuccess: null,
@@ -385,7 +408,7 @@ export class CkycAuthStateService {
       this.otpState.update((s) => ({ ...s, generated: false, expiresAt: null, successMessage: null }));
     }
     if (next.autoTrigger) {
-      this.triggerConsent().subscribe();
+      this.sendCurrentNode().subscribe();
     }
   }
 

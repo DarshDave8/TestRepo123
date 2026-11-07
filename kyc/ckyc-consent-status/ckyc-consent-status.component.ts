@@ -14,6 +14,7 @@ const MODE_TITLES: Record<AuthenticationMode, string> = {
   [AuthenticationMode.MANUAL]: 'Manual authentication',
   [AuthenticationMode.FACEAUTH]: 'Face authentication',
   [AuthenticationMode.OTP]: 'OTP verification',
+  [AuthenticationMode.CONSENT_AVAILABLE]: 'Existing consent',
 };
 
 const STATUS_TEXT: Record<AuthNodeStatus, string> = {

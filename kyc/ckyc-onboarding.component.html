@@ -20,6 +20,9 @@
     <!-- One screen per auth mode the queue has reached, in queue order; earlier screens stay visible. -->
     @for (mode of ckycAuthState.reachedModes(); track mode) {
       @switch (mode) {
+        @case (authMode.CONSENT_AVAILABLE) {
+          <app-non-otp-authentication [mode]="authMode.CONSENT_AVAILABLE" />
+        }
         @case (authMode.MANUAL) {
           <app-non-otp-authentication />
         }

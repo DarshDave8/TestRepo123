@@ -34,6 +34,8 @@ export enum AuthenticationMode {
   OTP = 'OTP',
   MANUAL = 'PHYSICAL',
   FACEAUTH = 'FACEAUTH',
+  // Consent already given for this record: no consent call, validate consent downloads the data directly.
+  CONSENT_AVAILABLE = 'AUTO',
 }
 export enum AuthFactor {
   DOB = 'DOB',
@@ -52,7 +54,10 @@ export type ModeConfiguration = {
   // If present: one node per factor set to true, in AuthFactor order (DOB -> RELATION -> BIRTHYEARPINCODE).
   // If every factor is false, the mode is skipped.
   factors?: Partial<Record<AuthFactor, boolean>>;
-  // true  = the consent call goes out as soon as the queue reaches this node.
+  // false = no consent call: the node goes straight to validate ("Download Data"). Leave out for true.
+  requiresTrigger?: boolean;
+  // true  = the node's first call (consent, or validate when requiresTrigger is false) goes out as soon as the
+  //         queue reaches this node.
   // false = the node waits for the user (the "Trigger OTP" button).
   autoTrigger: boolean;
   // Failed trigger calls allowed on one node before moving to the next node. null = unlimited (user re-triggers).
@@ -67,10 +72,22 @@ const ALL_FACTORS: Partial<Record<AuthFactor, boolean>> = {
   [AuthFactor.BIRTHYEARPINCODE]: true,
 };
 
+// First in every phase. No consent call; validate is called at once. Unlimited validate attempts, so a failed
+// download is retried with "Download Data" and never falls back to another mode.
+const CONSENT_AVAILABLE_CONFIG: ModeConfiguration = {
+  mode: AuthenticationMode.CONSENT_AVAILABLE,
+  enabled: true,
+  requiresTrigger: false,
+  autoTrigger: true,
+  maxTriggerAttempts: null,
+  maxValidateAttempts: null,
+};
+
 // Per phase, the modes in fallback order. Only modes the backend returns AND enabled here are used.
 // A new mode = one more entry, placed where it belongs in the order.
 export const AUTH_CONFIG: Record<SearchAttemptedPhase, readonly ModeConfiguration[]> = {
   [SearchAttemptedPhase.DIGITAL_VERIFICATION]: [
+    CONSENT_AVAILABLE_CONFIG,
     {
       mode: AuthenticationMode.MANUAL,
       enabled: true,
@@ -96,6 +113,7 @@ export const AUTH_CONFIG: Record<SearchAttemptedPhase, readonly ModeConfiguratio
     },
   ],
   [SearchAttemptedPhase.PROFILE_CREATION]: [
+    CONSENT_AVAILABLE_CONFIG,
     {
       mode: AuthenticationMode.OTP,
       enabled: true,
@@ -111,6 +129,7 @@ export const AUTH_MODE_LABELS: Record<AuthenticationMode, string> = {
   [AuthenticationMode.FACEAUTH]: 'Face auth',
   [AuthenticationMode.OTP]: 'OTP consent',
   [AuthenticationMode.MANUAL]: 'Manual auth',
+  [AuthenticationMode.CONSENT_AVAILABLE]: 'Consent already available',
 };
 export const AUTH_FACTOR_LABELS: Record<AuthFactor, string> = {
   [AuthFactor.DOB]: 'with DOB',

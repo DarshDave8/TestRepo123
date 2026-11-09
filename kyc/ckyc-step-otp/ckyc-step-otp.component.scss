@@ -1,12 +1,11 @@
 @use "../styles/ckyc-onboarding.tokens" as t;
 
 // The OTP step: the status table (from ckyc-consent-status), then this card once an OTP has been sent.
-// Same card language as the match card and the validated card: muted header, body, footer with the actions.
+// Same card language as the match and validated cards. Rules shared by several classes are grouped to keep the
+// compiled CSS small; keep the order: a modifier must stay after its base rule.
 .ckyc-otp {
-  display: block;
   min-width: 0;
 
-  // ---- Card ----
   &__card {
     margin-top: t.$space-3;
     overflow: hidden;
@@ -15,13 +14,17 @@
     background: t.$surface;
   }
 
-  // ---- Header: icon, title + where it was sent, expiry / attempts chips ----
-  &__header {
+  // ---- Header and footer bars ----
+  &__header,
+  &__footer {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: t.$space-2 t.$space-3;
     padding: t.$space-3 t.$space-4;
+  }
+
+  &__header {
     border-bottom: 1px solid t.$border;
     background: t.$surface-muted;
   }
@@ -87,17 +90,7 @@
     }
   }
 
-  &__chip--expired {
-    border-color: t.$error-bg;
-    background: t.$error-bg;
-    color: t.$error-text;
-
-    strong {
-      color: inherit;
-    }
-  }
-
-  // ---- Body: left-aligned column, narrow enough that the code field is not a long empty bar ----
+  // ---- Body: narrow enough that the code field is not a long empty bar ----
   &__body {
     display: grid;
     gap: t.$space-3;
@@ -105,7 +98,6 @@
     padding: t.$space-4;
   }
 
-  // "OTP sent to mobile": one quiet line, not a second banner
   &__sent {
     display: flex;
     align-items: flex-start;
@@ -120,7 +112,6 @@
     margin-top: 0.0625rem;
   }
 
-  // "Which OTP are you entering?" with two side-by-side options
   &__channel {
     display: grid;
     gap: t.$space-2;
@@ -138,7 +129,7 @@
     gap: t.$space-2;
   }
 
-  // Each option is a bordered box (bigger click target). No checked tint: the radio shows the choice.
+  // A bordered box per option (bigger click target); the radio shows the choice.
   &__channel-option {
     box-sizing: border-box;
     min-width: 0;
@@ -196,20 +187,21 @@
     margin-top: 0.125rem;
   }
 
+  // Error look of a chip (expired, attempts used up) and of a notice. After both base rules.
+  &__chip--expired,
   &__notice--warning {
     border-color: t.$error-bg;
     background: t.$error-bg;
     color: t.$error-text;
   }
 
+  &__chip--expired strong {
+    color: inherit;
+  }
+
   // ---- Footer: Back on the left, Resend + Verify on the right ----
   &__footer {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
     justify-content: space-between;
-    gap: t.$space-2 t.$space-3;
-    padding: t.$space-3 t.$space-4;
     border-top: 1px solid t.$border;
   }
 
@@ -220,31 +212,49 @@
     margin-left: auto; // stays on the right when there is no Back button
   }
 
+  // ---- Buttons: tokens button-primary (Verify), -secondary (Resend, Back outline), -text (Back), all compact.
+  // Written as grouped rules; the mixins' min-height 2.75rem is left out, button-compact's 2rem replaced it.
+  &__verify,
+  &__resend,
+  &__back,
+  &__back-outline {
+    font-weight: 600;
+    @include t.button-compact;
+    @include t.focus-ring;
+    @include t.button-icon;
+  }
+
+  &__verify,
+  &__resend,
+  &__back-outline {
+    border-radius: t.$radius-sm;
+  }
+
   &__verify {
     min-width: 8rem;
-    @include t.button-primary;
-    @include t.button-compact;
+
+    &.mat-mdc-unelevated-button:not(:disabled) {
+      background: t.$brand-purple;
+      color: t.$surface;
+    }
   }
 
-  &__resend {
-    @include t.button-secondary;
-    @include t.button-compact;
+  &__resend,
+  &__back-outline {
+    &.mat-mdc-outlined-button:not(:disabled) {
+      border: 1px solid t.$brand-purple;
+      color: t.$brand-purple;
+    }
   }
 
-  &__back {
-    @include t.button-text;
-    @include t.button-compact;
+  &__back.mat-mdc-button:not(:disabled) {
+    color: t.$brand-purple;
   }
 
   // Before an OTP is sent there is no card: just Back under the table, as on the Face and Physical screens
   &__back-row {
     display: flex;
     margin-top: t.$space-3;
-  }
-
-  &__back-outline {
-    @include t.button-secondary;
-    @include t.button-compact;
   }
 
   // ---- Phone: chips under the title, one option per line, full-width actions with Verify first ----

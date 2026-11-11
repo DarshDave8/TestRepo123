@@ -50,18 +50,15 @@ export class CkycStepOtpComponent {
   readonly countdown = signal(0);
   readonly isSubmitting = signal<boolean>(false);
   readonly otpIdentifierEnum = OtpIdentifierEnum;
-  // The OTP node of the auth queue: send status and failed-validation count (limit from AUTH_CONFIG).
+  // The OTP node of the auth queue: send status and resend count (limit from AUTH_CONFIG).
   readonly otpNode = computed(
     () => this.ckycAuthState.authNodes().find((node) => node.mode === AuthenticationMode.OTP) ?? null,
   );
   readonly isActive = computed(() => this.ckycAuthState.activeScreenMode() === AuthenticationMode.OTP);
-  readonly isMaxAttemptsReached = computed(() => {
+  // Every resend is used: Resend OTP is disabled. The current OTP can still be verified until it expires.
+  readonly noResendsLeft = computed(() => {
     const node = this.otpNode();
-    return node !== null && node.maxValidateAttempts !== null && node.validateAttemptCount >= node.maxValidateAttempts;
-  });
-  readonly remainingAttempts = computed(() => {
-    const node = this.otpNode();
-    return node?.maxValidateAttempts == null ? null : Math.max(0, node.maxValidateAttempts - node.validateAttemptCount);
+    return node !== null && node.maxResends !== null && node.resendCount >= node.maxResends;
   });
   // The last Verify did not succeed; cleared by the next Verify or a new OTP.
   readonly verifyFailed = signal(false);
@@ -70,7 +67,7 @@ export class CkycStepOtpComponent {
     validators: [Validators.required, Validators.pattern(/^[0-9]{6}$/)],
   });
   // Which OTP is being entered. With both channels it starts empty, so the user picks it: a preselected wrong
-  // channel would silently use up one of the limited validate attempts.
+  // channel would silently fail the verification.
   readonly radioControl = new FormControl<OtpIdentifier | null>(this.resolveDefaultOtpChannel(), {
     validators: [Validators.required],
   });
@@ -117,8 +114,7 @@ export class CkycStepOtpComponent {
       this.otpControl.invalid ||
       this.radioControl.invalid ||
       this.countdown() === 0 ||
-      this.isSubmitting() ||
-      this.isMaxAttemptsReached()
+      this.isSubmitting()
     ) {
       this.otpControl.markAsTouched();
       this.radioControl.markAsTouched();
@@ -147,7 +143,7 @@ export class CkycStepOtpComponent {
     this.ckycAuthState.cancelConsentFlow();
   }
   resend(): void {
-    if (this.isSubmitting() || this.isMaxAttemptsReached()) return;
+    if (this.isSubmitting() || this.noResendsLeft()) return;
     this.ckycAuthState
       .resendOtp()
       .pipe(takeUntilDestroyed(this.destroyRef))

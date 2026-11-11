@@ -39,9 +39,10 @@
           } @else {
             <span class="ckyc-otp__chip ckyc-otp__chip--expired">Expired</span>
           }
-          @if (otpNode()?.maxValidateAttempts; as maxAttempts) {
-            <span class="ckyc-otp__chip" [class.ckyc-otp__chip--expired]="isMaxAttemptsReached()">
-              <span>Attempts <strong>{{ otpNode()?.validateAttemptCount }}/{{ maxAttempts }}</strong></span>
+          <!-- Attempts = resends after the first OTP (wrong OTPs do not count) -->
+          @if (otpNode()?.maxResends; as maxResends) {
+            <span class="ckyc-otp__chip" [class.ckyc-otp__chip--expired]="noResendsLeft()">
+              <span>Resends <strong>{{ otpNode()?.resendCount }}/{{ maxResends }}</strong></span>
             </span>
           }
         </div>
@@ -50,12 +51,10 @@
       <!-- ---- Body ---- -->
       <div class="ckyc-otp__body">
         @if (ckycAuthState.otpState().successMessage; as successMessage) {
-          @if (!isMaxAttemptsReached()) {
-            <p class="ckyc-otp__sent" role="status">
-              <fa-icon class="ckyc-otp__sent-icon" [icon]="checkCircleIcon" />
-              <span>{{ successMessage }}</span>
-            </p>
-          }
+          <p class="ckyc-otp__sent" role="status">
+            <fa-icon class="ckyc-otp__sent-icon" [icon]="checkCircleIcon" />
+            <span>{{ successMessage }}</span>
+          </p>
         }
 
         <!-- Both channels: the user says which OTP they are entering (the backend validates against that one). -->
@@ -101,7 +100,7 @@
             autocomplete="one-time-code"
             aria-describedby="ckyc-otp-help"
             [formControl]="otpControl"
-            [readonly]="isMaxAttemptsReached() || isSubmitting()"
+            [readonly]="isSubmitting()"
             (keydown.enter)="submit()"
           />
           @if (otpControl.invalid && otpControl.touched) {
@@ -109,21 +108,16 @@
           }
         </mat-form-field>
 
-        @if (isMaxAttemptsReached()) {
-          <div class="ckyc-otp__notice ckyc-otp__notice--warning" role="alert">
-            <fa-icon class="ckyc-otp__notice-icon" [icon]="warningIcon" />
-            <span>{{ errorMessages.OTP_MAX_ATTEMPTS }}</span>
-          </div>
-        } @else if (verifyFailed()) {
+        @if (verifyFailed()) {
           <div class="ckyc-otp__notice ckyc-otp__notice--warning" role="alert">
             <fa-icon class="ckyc-otp__notice-icon" [icon]="warningIcon" />
             <!-- Backend message first (e.g. "Invalid OTP."), ours when it sent none -->
-            <span>
-              {{ otpNode()?.lastError || errorMessages.OTP_VERIFY_FAILED }}
-              @if (remainingAttempts() !== null) {
-                {{ remainingAttempts() }} {{ remainingAttempts() === 1 ? "attempt" : "attempts" }} left.
-              }
-            </span>
+            <span>{{ otpNode()?.lastError || errorMessages.OTP_VERIFY_FAILED }}</span>
+          </div>
+        } @else if (countdown() === 0 && noResendsLeft()) {
+          <div class="ckyc-otp__notice ckyc-otp__notice--warning" role="alert">
+            <fa-icon class="ckyc-otp__notice-icon" [icon]="warningIcon" />
+            <span>{{ errorMessages.OTP_NO_RESENDS_LEFT }}</span>
           </div>
         } @else if (countdown() === 0) {
           <div class="ckyc-otp__notice" role="status">
@@ -145,7 +139,7 @@
             mat-stroked-button
             class="ckyc-otp__resend"
             type="button"
-            [disabled]="countdown() > 0 || isMaxAttemptsReached()"
+            [disabled]="countdown() > 0 || noResendsLeft()"
             (click)="resend()"
           >
             <fa-icon [icon]="refreshIcon" />Resend OTP
@@ -155,7 +149,7 @@
             class="ckyc-otp__verify"
             type="button"
             [disabled]="
-              radioControl.invalid || otpControl.invalid || countdown() === 0 || isMaxAttemptsReached() || isSubmitting()
+              radioControl.invalid || otpControl.invalid || countdown() === 0 || isSubmitting()
             "
             [attr.aria-busy]="isSubmitting()"
             (click)="submit()"

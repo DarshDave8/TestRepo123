@@ -30,6 +30,7 @@
               [leadId]="leadDetails()?.leadId"
               (customerBasicDetailsFetch)="onCustomerBasicDetailsFetch($event)"
               class="dv-flow__child"
+              [class.dv-flow__auth-group]="flowState.step() === 'auth'"
             />
             <!-- As in the other developer's diff: "!isEditable()" (every other gate is "isEditable()"). -->
             @if (!isEditable()) {

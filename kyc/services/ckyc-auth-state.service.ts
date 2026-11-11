@@ -207,9 +207,19 @@ export class CkycAuthStateService {
     );
   }
 
-  // Sends the OTP again. Sends never count as OTP attempts; only failed validations do.
+  /**
+   * Sends the OTP again. Resends are the OTP's counted attempts (maxResends): only a resend the backend accepted
+   * counts, and none is sent once they are used up. Wrong OTPs are not counted.
+   */
   resendOtp(): Observable<boolean> {
-    return this.triggerConsent();
+    const node = this.currentNode();
+    if (!node || !this.hasAttemptsLeft(node.resendCount, node.maxResends)) return of(false);
+    return this.triggerConsent().pipe(
+      tap((sent) => {
+        const current = this.findNode(node.id);
+        if (sent && current) this.updateNode(node.id, { resendCount: current.resendCount + 1 });
+      }),
+    );
   }
 
   // User-started send of a node that waits for the user ("Trigger OTP" / "Re-trigger OTP").
@@ -220,8 +230,9 @@ export class CkycAuthStateService {
   }
 
   /**
-   * Validates the current node. A failure counts against the node's maxValidateAttempts (null = unlimited);
-   * once used up, the queue moves on. FACEAUTH / PHYSICAL show the error and stay, so "Download Data" can be retried.
+   * Validates the current node. A failure counts against the node's maxValidateAttempts (null = unlimited, as for
+   * OTP, whose attempts are its resends); once used up, the queue moves on. FACEAUTH / PHYSICAL show the error
+   * and stay, so "Download Data" can be retried.
    */
   validate(otp?: string, otpIdentifier?: OtpIdentifier): Observable<boolean> {
     const node = this.currentNode();
@@ -335,6 +346,8 @@ export class CkycAuthStateService {
       maxTriggerAttempts: config.maxTriggerAttempts,
       validateAttemptCount: 0,
       maxValidateAttempts: config.maxValidateAttempts,
+      resendCount: 0,
+      maxResends: config.maxResends ?? null,
       lastError: null,
     };
   }

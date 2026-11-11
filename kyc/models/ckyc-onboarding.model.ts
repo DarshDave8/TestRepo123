@@ -164,6 +164,8 @@ export interface ICkycAuthNodeConfig {
   maxTriggerAttempts: number | null; // from AUTH_CONFIG; null = unlimited
   validateAttemptCount: number; // failed validate calls
   maxValidateAttempts: number | null; // from AUTH_CONFIG; null = unlimited
+  resendCount: number; // successful resends after the first send (OTP)
+  maxResends: number | null; // from AUTH_CONFIG; null = no limit
   lastError: string | null;
 }
 

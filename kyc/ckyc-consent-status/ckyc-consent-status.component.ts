@@ -4,7 +4,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { approveIcon, closeIcon, dotIcon, downloadIcon, refreshIcon, sendIcon } from 'src/app/constants/icons.constants';
-import { CkycErrorAlertComponent } from '../ckyc-error-alert/ckyc-error-alert.component';
 import { AuthenticationMode } from '../constants/ckyc-onboarding.constants';
 import { AuthNodeStatus, ICkycAuthNodeConfig } from '../models/ckyc-onboarding.model';
 import { CkycAuthStateService } from '../services/ckyc-auth-state.service';
@@ -41,7 +40,7 @@ const STATUS_ICON: Record<AuthNodeStatus, IconDefinition | null> = {
 @Component({
   selector: 'app-ckyc-consent-status',
   standalone: true,
-  imports: [MatButtonModule, FontAwesomeModule, CkycErrorAlertComponent],
+  imports: [MatButtonModule, FontAwesomeModule],
   templateUrl: './ckyc-consent-status.component.html',
   styleUrl: './ckyc-consent-status.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

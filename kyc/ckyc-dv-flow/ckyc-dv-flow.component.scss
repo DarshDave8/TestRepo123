@@ -18,6 +18,17 @@
   margin: 0;
 }
 
+// Authenticating a record: one border around the match card and its consent tables, so they read as one group.
+.dv-flow__auth-group {
+  padding: t.$space-4;
+  border: 1px solid t.$border;
+  border-radius: t.$radius-md;
+
+  @include t.phone {
+    padding: t.$space-3;
+  }
+}
+
 // ---- Confirmation checkboxes: "None of these records" and, after validation, "details belong to the customer" ----
 .dv-flow__confirm {
   display: flex;

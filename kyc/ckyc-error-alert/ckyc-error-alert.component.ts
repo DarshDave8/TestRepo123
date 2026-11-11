@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { closeIcon, errorIcon } from 'src/app/constants/icons.constants';
-import { AuthenticationMode, CKYC_ERROR_TITLES, CkycErrorScope } from '../constants/ckyc-onboarding.constants';
+import { CKYC_ERROR_TITLES, CkycErrorScope } from '../constants/ckyc-onboarding.constants';
 import { CkycAuthStateService } from '../services/ckyc-auth-state.service';
 import { CkycFlowStateService } from '../services/ckyc-flow-state.service';
 
@@ -14,9 +14,9 @@ interface CkycActiveError {
  * Error alert for one part of the CKYC flow, placed next to that part (`scope`):
  * - enquiry: under the search form (search failed, no record found)
  * - history: in the enquiry list (history could not be loaded)
- * - auth:    with `mode`, in that mode's consent table, only while it is the active screen (send / verify errors);
- *            without `mode`, under the match card, only while no consent table is on screen; on the enquiry list,
- *            in the card whose Authenticate did not start (modes failed to load, or none is usable)
+ * - auth:    above all the consent tables, under the match card (load modes, send, verify, fallback errors);
+ *            on the enquiry list, in the card whose Authenticate did not start (modes failed to load, or none
+ *            is usable)
  * - submit:  above Submit CKYC (update enquiries / submit)
  * So each error shows once, in one place. The message is set by the services: the backend's own text when it sent
  * one, else ours from CKYC_ERROR_MESSAGES.
@@ -31,7 +31,6 @@ interface CkycActiveError {
 })
 export class CkycErrorAlertComponent {
   readonly scope = input.required<CkycErrorScope>();
-  readonly mode = input<AuthenticationMode | null>(null);
 
   private readonly flow = inject(CkycFlowStateService);
   private readonly auth = inject(CkycAuthStateService);
@@ -69,12 +68,9 @@ export class CkycErrorAlertComponent {
         return this.flow.historyError();
       case 'submit':
         return this.flow.submitError();
-      case 'auth': {
-        // One auth error, one place: the active screen's table, or (no table yet) the alert under the match card.
-        const activeScreen = this.auth.activeScreenMode();
-        const mode = this.mode();
-        return (mode ? activeScreen === mode : activeScreen === null) ? this.auth.authState().error : null;
-      }
+      case 'auth':
+        // One auth error, one place: above all the consent tables (or, on the enquiry list, in the match card).
+        return this.auth.authState().error;
     }
   }
 }

@@ -42,7 +42,8 @@ export enum AuthFactor {
   RELATION = 'RELATION',
   BIRTHYEARPINCODE = 'BIRTHYEARPINCODE',
 }
-export const CKYC_OTP_MAX_ATTEMPTS = 3;
+// OTP resends allowed after the first send (the attempt count shown on the OTP card). Wrong OTPs do not count.
+export const CKYC_OTP_MAX_RESENDS = 3;
 export const CKYC_OTP_TTL_SECONDS = 60;
 
 // ---- CKYC auth queue configuration ----
@@ -64,6 +65,8 @@ export type ModeConfiguration = {
   maxTriggerAttempts: number | null;
   // Failed validate calls allowed on one node. null = unlimited.
   maxValidateAttempts: number | null;
+  // Resends ("Resend OTP") allowed on one node after its first send. Leave out for none / not applicable.
+  maxResends?: number | null;
 };
 
 const ALL_FACTORS: Partial<Record<AuthFactor, boolean>> = {
@@ -109,7 +112,8 @@ export const AUTH_CONFIG: Record<SearchAttemptedPhase, readonly ModeConfiguratio
       enabled: true,
       autoTrigger: false,
       maxTriggerAttempts: null,
-      maxValidateAttempts: CKYC_OTP_MAX_ATTEMPTS,
+      maxValidateAttempts: null,
+      maxResends: CKYC_OTP_MAX_RESENDS,
     },
   ],
   [SearchAttemptedPhase.PROFILE_CREATION]: [
@@ -119,7 +123,8 @@ export const AUTH_CONFIG: Record<SearchAttemptedPhase, readonly ModeConfiguratio
       enabled: true,
       autoTrigger: true,
       maxTriggerAttempts: 1,
-      maxValidateAttempts: CKYC_OTP_MAX_ATTEMPTS,
+      maxValidateAttempts: null,
+      maxResends: CKYC_OTP_MAX_RESENDS,
     },
   ],
 };
@@ -178,7 +183,7 @@ export const CKYC_ERROR_MESSAGES = {
   CONSENT_VALIDATE_FAILED: 'We could not verify the consent. Please try again.',
   AUTH_METHODS_EXHAUSTED: (label: string) => `${label} failed. No other authentication method is available.`,
   OTP_VERIFY_FAILED: 'The OTP could not be verified. Check the code and try again.',
-  OTP_MAX_ATTEMPTS: 'Maximum OTP attempts reached. This OTP can no longer be verified.',
+  OTP_NO_RESENDS_LEFT: 'The OTP has expired and no resends are left. Go back to the enquiry to start again.',
   OTP_EXPIRED: 'The OTP has expired. Resend it to continue.',
   UPDATE_ENQUIRY_FAILED: 'We could not update the CKYC enquiries. Please try again.',
   SUBMIT_FAILED: 'We could not submit the CKYC details. Please try again.',

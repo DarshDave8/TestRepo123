@@ -4,6 +4,17 @@
      attempts), body (send confirmation, channel, code, messages), footer (Back on the left, Resend / Verify on the right). -->
 <section class="ckyc-otp">
   <app-ckyc-consent-status [mode]="authMode.OTP" [downloadable]="false" />
+  <!-- Outside the generated card: a failed OTP trigger can also have an attempt timestamp. -->
+  @if (otpNode()?.status === 'SUCCESS' || otpNode()?.status === 'FAILED') {
+    <p class="ckyc-otp__attempted-at" role="status">
+      @if (ckycAuthState.otpState().lastAttemptedAt !== null) {
+        OTP last attempted at:
+        <span>{{ ckycAuthState.otpState().lastAttemptedAt | date: 'dd MM yyyy HH:mm' : '+0530' }} IST</span>
+      } @else {
+        Attempt time unavailable
+      }
+    </p>
+  }
   @if (!ckycAuthState.otpState().generated) {
     @if (isActive()) {
       <div class="ckyc-otp__back-row">

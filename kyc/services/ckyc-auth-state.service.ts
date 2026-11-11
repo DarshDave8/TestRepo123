@@ -20,6 +20,7 @@ import {
   AuthDomainState,
   ICkycAuthNodeConfig,
   ITriggerConsentRequest,
+  ITriggerConsentResponseBody,
   IValidateConsentRequest,
   OtpDomainState,
 } from '../models/ckyc-onboarding.model';
@@ -31,6 +32,7 @@ const INITIAL_AUTH_STATE: AuthDomainState = { loading: false, attemptId: null, e
 const INITIAL_OTP_STATE: OtpDomainState = {
   generated: false,
   expiresAt: null,
+  lastAttemptedAt: null,
   hasMobileNumber: false,
   hasEmailAddress: false,
   successMessage: null,
@@ -91,8 +93,8 @@ export class CkycAuthStateService {
     leadId: string | null,
     phase: SearchAttemptedPhase,
   ): Observable<boolean> {
-    this.clearQueue();
-    this._startFailedMatchKey.set(null);
+    // A new match must not retain an earlier OTP or accept its still-running consent response.
+    this.resetAuth();
     this.authState.update((s) => ({ ...s, loading: true, error: null }));
     return this.ckycApi
       .getApplicableAuthenticationModes({
@@ -185,9 +187,14 @@ export class CkycAuthStateService {
     } as ITriggerConsentRequest;
     return defer(() => {
       this.updateNode(node.id, { status: 'IN_PROGRESS', lastError: null });
+      if (payload.consentType === AuthenticationMode.OTP) {
+        this.otpState.update((s) => ({ ...s, lastAttemptedAt: null }));
+      }
       return this.ckycApi.triggerConsent(payload);
     }).pipe(
       map((response) => {
+        // A refused trigger is still an attempt when the backend supplies its timestamp.
+        this.recordOtpAttemptTimestamp(payload, response?.body);
         if (!response?.success) {
           this.onTriggerFailure(node.id, ckycErrorMessage(response, CKYC_ERROR_MESSAGES.CONSENT_TRIGGER_FAILED(node.label)));
           return false;
@@ -196,6 +203,8 @@ export class CkycAuthStateService {
         return true;
       }),
       catchError((error) => {
+        // HttpErrorResponse may also carry the trigger response in its error body.
+        this.recordOtpAttemptTimestamp(payload, error?.error?.body);
         this.onTriggerFailure(node.id, ckycErrorMessage(error, CKYC_ERROR_MESSAGES.CONSENT_TRIGGER_FAILED(node.label)));
         return of(false);
       }),
@@ -359,6 +368,23 @@ export class CkycAuthStateService {
 
   // ---- Auth queue: progress ----
 
+  private recordOtpAttemptTimestamp(request: ITriggerConsentRequest, body?: ITriggerConsentResponseBody): void {
+    if (
+      request.consentType !== AuthenticationMode.OTP ||
+      this.authState().attemptId !== request.attemptId ||
+      this.currentNode()?.mode !== AuthenticationMode.OTP ||
+      body?.attemptId !== request.attemptId ||
+      body?.consentType !== AuthenticationMode.OTP
+    ) return;
+    const sourceTimestamp = typeof body.timeStamp === 'string' ? body.timeStamp.trim() : '';
+    // An explicit UTC/offset keeps the IST display independent of the browser's timezone.
+    const timestamp = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(sourceTimestamp) ? Date.parse(sourceTimestamp) : NaN;
+    this.otpState.update((s) => ({
+      ...s,
+      lastAttemptedAt: Number.isFinite(timestamp) ? timestamp : null,
+    }));
+  }
+
   private onTriggerSuccess(nodeId: string, messages?: string[]): void {
     const node = this.updateNode(nodeId, { status: 'SUCCESS', triggerSuccess: true, lastError: null });
     // Success after an error (failed send, re-trigger, resend, fallback): the earlier error no longer applies.
@@ -431,7 +457,7 @@ export class CkycAuthStateService {
         ...s,
         error: `${AUTH_MODE_LABELS[usedUp.mode]} failed. Falling back to ${AUTH_MODE_LABELS[next.mode]}.`,
       }));
-      this.otpState.update((s) => ({ ...s, generated: false, expiresAt: null, successMessage: null }));
+      this.otpState.update((s) => ({ ...s, generated: false, expiresAt: null, lastAttemptedAt: null, successMessage: null }));
     }
     if (next.autoTrigger) {
       this.sendCurrentNode().subscribe();

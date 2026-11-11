@@ -1,5 +1,6 @@
 // Screenshot transcription of ckyc-step-otp.component.ts (photograph supplied 2026-11-03, branch ckyc2-approach-changed).
 // Not a verified build. The .scss file was not photographed.
+import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -18,6 +19,7 @@ import { approveIcon, backArrowIcon, checkCircleIcon, envelopeIcon, faFieldError
   selector: 'app-ckyc-step-otp',
   standalone: true,
   imports: [
+    DatePipe,
     ReactiveFormsModule,
     MatButtonModule,
     MatFormFieldModule,

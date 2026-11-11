@@ -6,6 +6,17 @@
 .ckyc-otp {
   min-width: 0;
 
+  &__attempted-at {
+    margin: t.$space-2 0 0;
+    color: t.$text-muted;
+    font-size: t.$font-sm;
+    line-height: 1.4;
+
+    span {
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
   &__card {
     margin-top: t.$space-3;
     overflow: hidden;

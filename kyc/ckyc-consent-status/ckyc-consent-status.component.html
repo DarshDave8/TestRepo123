@@ -31,7 +31,12 @@
           <td class="consent-status__action">
             @if (canDownload(node)) {
               <button mat-stroked-button class="consent-status__button-secondary" type="button" [disabled]="isBusy()" (click)="downloadData(node)">
-                <fa-icon [icon]="downloadIcon" />Download Data
+                @if (node.validateSuccess === false) {
+                  <!-- The last download failed -->
+                  <fa-icon [icon]="refreshIcon" />Retry Download
+                } @else {
+                  <fa-icon [icon]="downloadIcon" />Download Data
+                }
               </button>
             } @else if (canTrigger(node)) {
               @if (node.status === "FAILED") {

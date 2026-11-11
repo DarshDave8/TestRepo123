@@ -361,6 +361,8 @@ export class CkycAuthStateService {
 
   private onTriggerSuccess(nodeId: string, messages?: string[]): void {
     const node = this.updateNode(nodeId, { status: 'SUCCESS', triggerSuccess: true, lastError: null });
+    // Success after an error (failed send, re-trigger, resend, fallback): the earlier error no longer applies.
+    this.authState.update((s) => ({ ...s, error: null }));
     if (node?.mode === AuthenticationMode.OTP) {
       this.otpState.update((s) => ({
         ...s,

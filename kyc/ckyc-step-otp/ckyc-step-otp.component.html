@@ -4,6 +4,11 @@
      attempts), body (send confirmation, channel, code, messages), footer (Back on the left, Resend / Verify on the right). -->
 <section class="ckyc-otp">
   <app-ckyc-consent-status [mode]="authMode.OTP" [downloadable]="false" />
+  @if (ckycAuthState.otpState().lastAttemptedAt !== null) {
+    <p class="ckyc-otp__help" role="status">
+      OTP last attempted at: {{ ckycAuthState.otpState().lastAttemptedAt | date: 'dd MM yyyy HH:mm' : '+0530' }} IST
+    </p>
+  }
   @if (!ckycAuthState.otpState().generated) {
     @if (isActive()) {
       <div class="ckyc-otp__back-row">

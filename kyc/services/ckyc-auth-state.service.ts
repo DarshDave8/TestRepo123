@@ -31,6 +31,7 @@ const INITIAL_AUTH_STATE: AuthDomainState = { loading: false, attemptId: null, e
 const INITIAL_OTP_STATE: OtpDomainState = {
   generated: false,
   expiresAt: null,
+  lastAttemptedAt: null,
   hasMobileNumber: false,
   hasEmailAddress: false,
   successMessage: null,
@@ -91,8 +92,7 @@ export class CkycAuthStateService {
     leadId: string | null,
     phase: SearchAttemptedPhase,
   ): Observable<boolean> {
-    this.clearQueue();
-    this._startFailedMatchKey.set(null);
+    this.resetAuth();
     this.authState.update((s) => ({ ...s, loading: true, error: null }));
     return this.ckycApi
       .getApplicableAuthenticationModes({
@@ -185,9 +185,14 @@ export class CkycAuthStateService {
     } as ITriggerConsentRequest;
     return defer(() => {
       this.updateNode(node.id, { status: 'IN_PROGRESS', lastError: null });
+      if (payload.consentType === AuthenticationMode.OTP) this.otpState.update((s) => ({ ...s, lastAttemptedAt: null }));
       return this.ckycApi.triggerConsent(payload);
     }).pipe(
       map((response) => {
+        if (payload.consentType === AuthenticationMode.OTP) {
+          const timestamp = Date.parse(response?.body?.timeStamp ?? '');
+          this.otpState.update((s) => ({ ...s, lastAttemptedAt: Number.isFinite(timestamp) ? timestamp : null }));
+        }
         if (!response?.success) {
           this.onTriggerFailure(node.id, ckycErrorMessage(response, CKYC_ERROR_MESSAGES.CONSENT_TRIGGER_FAILED(node.label)));
           return false;
@@ -196,6 +201,10 @@ export class CkycAuthStateService {
         return true;
       }),
       catchError((error) => {
+        if (payload.consentType === AuthenticationMode.OTP) {
+          const timestamp = Date.parse(error?.error?.body?.timeStamp ?? '');
+          this.otpState.update((s) => ({ ...s, lastAttemptedAt: Number.isFinite(timestamp) ? timestamp : null }));
+        }
         this.onTriggerFailure(node.id, ckycErrorMessage(error, CKYC_ERROR_MESSAGES.CONSENT_TRIGGER_FAILED(node.label)));
         return of(false);
       }),
@@ -431,7 +440,7 @@ export class CkycAuthStateService {
         ...s,
         error: `${AUTH_MODE_LABELS[usedUp.mode]} failed. Falling back to ${AUTH_MODE_LABELS[next.mode]}.`,
       }));
-      this.otpState.update((s) => ({ ...s, generated: false, expiresAt: null, successMessage: null }));
+      this.otpState.update((s) => ({ ...s, generated: false, expiresAt: null, lastAttemptedAt: null, successMessage: null }));
     }
     if (next.autoTrigger) {
       this.sendCurrentNode().subscribe();

@@ -138,7 +138,6 @@ export interface AuthDomainState {
 export interface OtpDomainState {
   generated: boolean;
   expiresAt: number | null;
-  lastAttemptedAt: number | null; // backend trigger-consent timeStamp, parsed as epoch milliseconds
   hasMobileNumber?: boolean; // INFERRED from screenshot usage
   hasEmailAddress?: boolean; // INFERRED from screenshot usage
   successMessage: string | null; // trigger-consent messages of the last OTP send, shown as a banner on the OTP screen

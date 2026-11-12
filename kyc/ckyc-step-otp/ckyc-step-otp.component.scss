@@ -1,8 +1,8 @@
 @use "../styles/ckyc-onboarding.tokens" as t;
 
 // The OTP step: the status table (from ckyc-consent-status), then this card once an OTP has been sent.
-// Same card language as the match and validated cards. Rules shared by several classes are grouped to keep the
-// compiled CSS small; keep the order: a modifier must stay after its base rule.
+// Same card language as the match and validated cards. Budget: under 3 kB compiled (anyComponentStyle), so plain
+// text lines instead of chips and grouped rules where classes share styles; a modifier stays after its base rule.
 .ckyc-otp {
   min-width: 0;
 
@@ -14,39 +14,13 @@
     background: t.$surface;
   }
 
-  // ---- Header and footer bars ----
-  &__header,
-  &__footer {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: t.$space-2 t.$space-3;
-    padding: t.$space-3 t.$space-4;
-  }
-
+  // ---- Header: title, where and when it was sent, then expiry and resends ----
   &__header {
+    display: grid;
+    gap: 0.125rem;
+    padding: t.$space-3 t.$space-4;
     border-bottom: 1px solid t.$border;
     background: t.$surface-muted;
-  }
-
-  &__header-icon {
-    display: inline-flex;
-    flex: none;
-    align-items: center;
-    justify-content: center;
-    width: 2rem;
-    height: 2rem;
-    border-radius: 50%;
-    background: t.$brand-blue-pale;
-    color: t.$brand-purple;
-    font-size: 1rem;
-  }
-
-  &__heading {
-    display: grid;
-    flex: 1 1 12rem;
-    gap: 0.125rem;
-    min-width: 0;
   }
 
   &__title {
@@ -64,30 +38,14 @@
     line-height: 1.4;
   }
 
-  &__chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: t.$space-2;
+  // "Expires in 01:59 · Resends 1/3": the numbers stand out and do not jitter as the timer runs
+  &__meta strong {
+    color: t.$text;
+    font-variant-numeric: tabular-nums;
   }
 
-  &__chip {
-    display: inline-flex;
-    align-items: center;
-    gap: t.$space-1;
-    padding: 0.125rem t.$space-2;
-    border: 1px solid t.$border;
-    border-radius: 999px;
-    background: t.$surface;
-    color: t.$text-muted;
-    font-size: t.$font-xs;
-    font-weight: 500;
-    white-space: nowrap;
-
-    strong {
-      color: t.$text;
-      font-weight: 600;
-      font-variant-numeric: tabular-nums;
-    }
+  &__meta &__expired {
+    color: t.$error-text;
   }
 
   // ---- Body: narrow enough that the code field is not a long empty bar ----
@@ -98,23 +56,24 @@
     padding: t.$space-4;
   }
 
-  &__sent {
+  &__sent,
+  &__notice {
     display: flex;
     align-items: flex-start;
     gap: t.$space-2;
     margin: 0;
-    color: t.$success-text;
     font-size: t.$font-sm;
+  }
+
+  &__sent {
+    color: t.$success-text;
     font-weight: 500;
   }
 
-  &__sent-icon {
-    margin-top: 0.0625rem;
-  }
-
+  // Mobile / Email on one line, under their question
   &__channel {
     display: grid;
-    gap: t.$space-2;
+    gap: t.$space-1;
   }
 
   &__channel-label {
@@ -123,37 +82,20 @@
     font-weight: 600;
   }
 
-  &__channels {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: t.$space-2;
-  }
-
-  // A bordered box per option (bigger click target); the radio shows the choice.
-  &__channel-option {
-    box-sizing: border-box;
-    min-width: 0;
-    padding-right: t.$space-2;
-    border: 1px solid t.$border;
-    border-radius: t.$radius-sm;
-    font-size: t.$font-sm;
-  }
-
-  &__channel-text {
+  &__channels,
+  &__channel-text,
+  &__channel-hint {
     display: inline-flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 0 t.$space-1;
   }
 
-  &__channel-icon {
-    color: t.$text-muted;
+  &__channels {
+    gap: 0 t.$space-4;
   }
 
   &__channel-hint {
-    display: inline-flex;
-    align-items: center;
-    gap: t.$space-1;
     color: t.$error-text;
     font-size: t.$font-xs;
   }
@@ -172,36 +114,30 @@
   }
 
   &__notice {
-    display: flex;
-    align-items: flex-start;
-    gap: t.$space-2;
     padding: t.$space-2 t.$space-3;
-    border: 1px solid t.$border;
     border-radius: t.$radius-sm;
     background: t.$surface-muted;
     color: t.$text;
-    font-size: t.$font-sm;
   }
 
-  &__notice-icon {
-    margin-top: 0.125rem;
-  }
-
-  // Error look of a chip (expired, attempts used up) and of a notice. After both base rules.
-  &__chip--expired,
   &__notice--warning {
-    border-color: t.$error-bg;
     background: t.$error-bg;
     color: t.$error-text;
   }
 
-  &__chip--expired strong {
-    color: inherit;
+  &__sent fa-icon,
+  &__notice fa-icon {
+    margin-top: 0.125rem;
   }
 
   // ---- Footer: Back on the left, Resend + Verify on the right ----
   &__footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     justify-content: space-between;
+    gap: t.$space-2;
+    padding: t.$space-3 t.$space-4;
     border-top: 1px solid t.$border;
   }
 
@@ -247,6 +183,11 @@
     }
   }
 
+  // "Resend in 01:59": the countdown does not shift the button's width
+  &__resend {
+    font-variant-numeric: tabular-nums;
+  }
+
   &__back.mat-mdc-button:not(:disabled) {
     color: t.$brand-purple;
   }
@@ -254,25 +195,16 @@
   // Before an OTP is sent there is no card: just Back under the table, as on the Face and Physical screens
   &__back-row {
     display: flex;
-    margin-top: t.$space-3;
   }
 
-  // Last OTP attempt time, under the table (after &__help: replaces its margin: 0)
+  // Back row, and the last attempt time when the send failed (after &__help: replaces its margin: 0)
+  &__back-row,
   &__time {
     margin-top: t.$space-3;
   }
 
-  // ---- Phone: chips under the title, one option per line, full-width actions with Verify first ----
+  // ---- Phone: full-width actions with Verify first ----
   @include t.phone {
-    &__chips {
-      width: 100%;
-      padding-left: 2.75rem; // in line with the title, past the header icon
-    }
-
-    &__channels {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
     &__body {
       max-width: none;
     }

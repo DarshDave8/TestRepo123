@@ -1,11 +1,13 @@
 <!-- Screenshot transcription of ckyc-step-otp.component.html (photograph supplied 2026-11-03), refactored for the auth queue. -->
 <!-- The OTP row in the table carries Trigger / Re-trigger; the OTP card appears once an OTP has been sent. -->
-<!-- Redesign 2026-11-05: a card like the match and validated cards. Header (what to do, where it was sent, expiry and
-     attempts), body (send confirmation, channel, code, messages), footer (Back on the left, Resend / Verify on the right). -->
+<!-- Redesign 2026-11-05, simplified 2026-11-11 (styles under 3 kB): a card like the match and validated cards. Header
+     (title; where and when it was sent; expiry and resends as one line), body (send confirmation, channel, code,
+     messages), footer (Back on the left; Resend, which shows its countdown, and Verify on the right). -->
 <section class="ckyc-otp">
   <app-ckyc-consent-status [mode]="authMode.OTP" [downloadable]="false" />
-  <!-- Backend time of the last OTP send, in IST whatever the browser's time zone (e.g. 11 Nov 2026, 01:43 PM IST) -->
-  @if (ckycAuthState.otpState().lastAttemptedAt; as attemptedAt) {
+  <!-- Backend time of the last OTP send, in IST whatever the browser's time zone (e.g. 11 Nov 2026, 01:43 PM IST).
+       Here only when there is no card (the send failed); the card's header shows it otherwise. -->
+  @if (!ckycAuthState.otpState().generated && ckycAuthState.otpState().lastAttemptedAt; as attemptedAt) {
     <p class="ckyc-otp__help ckyc-otp__time" role="status">
       Last OTP attempt:
       <time [attr.datetime]="attemptedAt | date: 'yyyy-MM-ddTHH:mm:ssZZZZZ' : '+0530'">
@@ -25,43 +27,39 @@
     <article class="ckyc-otp__card" aria-labelledby="ckyc-otp-title">
       <!-- ---- Header ---- -->
       <header class="ckyc-otp__header">
-        <span class="ckyc-otp__header-icon"><fa-icon [icon]="faLockIcon" /></span>
-        <div class="ckyc-otp__heading">
-          <h3 id="ckyc-otp-title" class="ckyc-otp__title">Verify OTP</h3>
-          <!-- Where the OTP went -->
-          <p class="ckyc-otp__help" id="ckyc-otp-help">
-            @if (ckycAuthState.otpState().hasEmailAddress && ckycAuthState.otpState().hasMobileNumber) {
-              Sent to the registered mobile number and email. Enter either one.
-            } @else if (ckycAuthState.otpState().hasMobileNumber) {
-              Sent to the registered mobile number.
-            } @else {
-              Sent to the registered email.
-            }
-          </p>
-        </div>
-        <!-- Not aria-live: the timer changes every second. Expiry is announced once by the notice below. -->
-        <div class="ckyc-otp__chips">
+        <h3 id="ckyc-otp-title" class="ckyc-otp__title">Verify OTP</h3>
+        <!-- Where and when the OTP went (backend time, IST) -->
+        <!-- No whitespace before the @if or the full stop: "… number at 11 Nov 2026, 01:43 PM IST." / "… number." -->
+        <p class="ckyc-otp__help" id="ckyc-otp-help">
+          {{ sentTo() }}@if (ckycAuthState.otpState().lastAttemptedAt; as sentAt) {
+            at
+            <time [attr.datetime]="sentAt | date: 'yyyy-MM-ddTHH:mm:ssZZZZZ' : '+0530'"
+              >{{ sentAt | date: "dd MMM yyyy, hh:mm a" : "+0530" }} IST</time
+            >}.
+          @if (ckycAuthState.otpState().hasEmailAddress && ckycAuthState.otpState().hasMobileNumber) {
+            Enter either one.
+          }
+        </p>
+        <!-- One line instead of chips. Not aria-live: the timer changes every second; expiry is announced once by the
+             notice below. Resends = resends after the first OTP (wrong OTPs do not count). -->
+        <p class="ckyc-otp__help ckyc-otp__meta">
           @if (countdown() > 0) {
-            <span class="ckyc-otp__chip">
-              <span>Expires in <strong>{{ formatDisplayTime(countdown()) }}</strong></span>
-            </span>
+            Expires in <strong>{{ formatDisplayTime(countdown()) }}</strong>
           } @else {
-            <span class="ckyc-otp__chip ckyc-otp__chip--expired">Expired</span>
+            <strong class="ckyc-otp__expired">Expired</strong>
           }
-          <!-- Attempts = resends after the first OTP (wrong OTPs do not count) -->
           @if (otpNode()?.maxResends; as maxResends) {
-            <span class="ckyc-otp__chip" [class.ckyc-otp__chip--expired]="noResendsLeft()">
-              <span>Resends <strong>{{ otpNode()?.resendCount }}/{{ maxResends }}</strong></span>
-            </span>
+            · Resends
+            <strong [class.ckyc-otp__expired]="noResendsLeft()">{{ otpNode()?.resendCount }}/{{ maxResends }}</strong>
           }
-        </div>
+        </p>
       </header>
 
       <!-- ---- Body ---- -->
       <div class="ckyc-otp__body">
         @if (ckycAuthState.otpState().successMessage; as successMessage) {
           <p class="ckyc-otp__sent" role="status">
-            <fa-icon class="ckyc-otp__sent-icon" [icon]="checkCircleIcon" />
+            <fa-icon [icon]="checkCircleIcon" />
             <span>{{ successMessage }}</span>
           </p>
         }
@@ -76,15 +74,15 @@
               aria-labelledby="ckyc-otp-channel-label"
               [attr.aria-describedby]="showChannelHint() ? 'ckyc-otp-channel-hint' : null"
             >
-              <mat-radio-button class="ckyc-otp__channel-option" [value]="otpIdentifierEnum.MOBILE">
+              <mat-radio-button [value]="otpIdentifierEnum.MOBILE">
                 <span class="ckyc-otp__channel-text">
-                  <fa-icon class="ckyc-otp__channel-icon" [icon]="phoneIcon" />
+                  <fa-icon [icon]="phoneIcon" />
                   Mobile
                 </span>
               </mat-radio-button>
-              <mat-radio-button class="ckyc-otp__channel-option" [value]="otpIdentifierEnum.EMAIL">
+              <mat-radio-button [value]="otpIdentifierEnum.EMAIL">
                 <span class="ckyc-otp__channel-text">
-                  <fa-icon class="ckyc-otp__channel-icon" [icon]="envelopeIcon" />
+                  <fa-icon [icon]="envelopeIcon" />
                   Email
                 </span>
               </mat-radio-button>
@@ -119,18 +117,18 @@
 
         @if (verifyFailed()) {
           <div class="ckyc-otp__notice ckyc-otp__notice--warning" role="alert">
-            <fa-icon class="ckyc-otp__notice-icon" [icon]="warningIcon" />
+            <fa-icon [icon]="warningIcon" />
             <!-- Backend message first (e.g. "Invalid OTP."), ours when it sent none -->
             <span>{{ otpNode()?.lastError || errorMessages.OTP_VERIFY_FAILED }}</span>
           </div>
         } @else if (countdown() === 0 && noResendsLeft()) {
           <div class="ckyc-otp__notice ckyc-otp__notice--warning" role="alert">
-            <fa-icon class="ckyc-otp__notice-icon" [icon]="warningIcon" />
+            <fa-icon [icon]="warningIcon" />
             <span>{{ errorMessages.OTP_NO_RESENDS_LEFT }}</span>
           </div>
         } @else if (countdown() === 0) {
           <div class="ckyc-otp__notice" role="status">
-            <fa-icon class="ckyc-otp__notice-icon" [icon]="infoIcon" />
+            <fa-icon [icon]="infoIcon" />
             <span>{{ errorMessages.OTP_EXPIRED }}</span>
           </div>
         }
@@ -151,7 +149,15 @@
             [disabled]="countdown() > 0 || noResendsLeft()"
             (click)="resend()"
           >
-            <fa-icon [icon]="refreshIcon" />Resend OTP
+            <!-- Locked while the OTP is valid: says when it opens, so a disabled button is not a mystery -->
+            <fa-icon [icon]="refreshIcon" />
+            @if (countdown() > 0) {
+              Resend in {{ formatDisplayTime(countdown()) }}
+            } @else if (noResendsLeft()) {
+              No resends left
+            } @else {
+              Resend OTP
+            }
           </button>
           <button
             mat-flat-button

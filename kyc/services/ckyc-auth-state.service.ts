@@ -185,7 +185,6 @@ export class CkycAuthStateService {
     } as ITriggerConsentRequest;
     return defer(() => {
       this.updateNode(node.id, { status: 'IN_PROGRESS', lastError: null });
-      if (payload.consentType === AuthenticationMode.OTP) this.otpState.update((s) => ({ ...s, lastAttemptedAt: null }));
       return this.ckycApi.triggerConsent(payload);
     }).pipe(
       map((response) => {

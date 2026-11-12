@@ -5,7 +5,7 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { approveIcon, closeIcon, dotIcon, downloadIcon, refreshIcon, sendIcon } from 'src/app/constants/icons.constants';
 import { AuthenticationMode } from '../constants/ckyc-onboarding.constants';
-import { AuthNodeStatus, ICkycAuthNodeConfig } from '../models/ckyc-onboarding.model';
+import { ICkycAuthNodeConfig } from '../models/ckyc-onboarding.model';
 import { CkycAuthStateService } from '../services/ckyc-auth-state.service';
 
 // Heading of each mode's table; the stacked screens read as steps.
@@ -16,26 +16,42 @@ const MODE_TITLES: Record<AuthenticationMode, string> = {
   [AuthenticationMode.CONSENT_AVAILABLE]: 'Existing consent',
 };
 
-const STATUS_TEXT: Record<AuthNodeStatus, string> = {
-  PENDING: 'Awaiting action',
-  IN_PROGRESS: 'Calling',
-  SUCCESS: 'Success',
-  FAILED: 'Failed',
-};
+// State of one call of a row: Trigger status = the consent call, Download / Verify status = the validate call.
+type CallStatus = 'AWAITING' | 'CALLING' | 'SUCCESS' | 'FAILED';
 
-// Icon beside the status text, so Success / Failed do not rely on colour alone. IN_PROGRESS keeps its pulsing dot.
-const STATUS_ICON: Record<AuthNodeStatus, IconDefinition | null> = {
-  PENDING: dotIcon,
-  IN_PROGRESS: null,
+// Icon beside the text, so the state does not rely on colour alone. CALLING keeps its pulsing dot.
+const CALL_STATUS_ICON: Record<CallStatus, IconDefinition | null> = {
+  AWAITING: dotIcon,
+  CALLING: null,
   SUCCESS: approveIcon,
   FAILED: closeIcon,
 };
 
+// Each text names its call: on narrow screens the column headers are hidden.
+const TRIGGER_STATUS_TEXT: Record<CallStatus, string> = {
+  AWAITING: 'Awaiting action',
+  CALLING: 'Calling',
+  SUCCESS: 'Sent',
+  FAILED: 'Send failed',
+};
+const DOWNLOAD_STATUS_TEXT: Record<CallStatus, string> = {
+  AWAITING: 'Awaiting action',
+  CALLING: 'Downloading',
+  SUCCESS: 'Downloaded',
+  FAILED: 'Download failed',
+};
+const VERIFY_STATUS_TEXT: Record<CallStatus, string> = {
+  AWAITING: 'Awaiting action',
+  CALLING: 'Verifying',
+  SUCCESS: 'Verified',
+  FAILED: 'Verification failed',
+};
+
 /**
  * Consent call history for one auth mode: a row per node of that mode that has been sent, plus the node that
- * waits for the user to send it (its row carries Trigger / Re-trigger).
- * Shown at the top of the Face, Physical and OTP screens. On the active screen it also shows the auth error
- * (app-ckyc-error-alert scope="auth" with this table's mode).
+ * waits for the user to send it (its row carries Trigger / Re-trigger). Each row shows its two calls apart:
+ * Trigger status (consent) and Download status (validate; Verify status for OTP).
+ * Shown at the top of the Face, Physical and OTP screens.
  */
 @Component({
   selector: 'app-ckyc-consent-status',
@@ -65,12 +81,31 @@ export class CkycConsentStatusComponent {
       .filter((node) => node.mode === this.mode() && (node.status !== 'PENDING' || node.id === this.awaitingNodeId())),
   );
   readonly isBusy = this.authStore.isBusy;
-  readonly statusText = STATUS_TEXT;
-  readonly statusIcon = STATUS_ICON;
+  readonly callStatusIcon = CALL_STATUS_ICON;
+  readonly triggerStatusText = TRIGGER_STATUS_TEXT;
+  // OTP is validated through the OTP form: Verify status
+  readonly validateStatusText = computed(() => (this.downloadable() ? DOWNLOAD_STATUS_TEXT : VERIFY_STATUS_TEXT));
+  readonly validateStatusTitle = computed(() => (this.downloadable() ? 'Download status' : 'Verify status'));
   // Font Awesome icons from the app's icons.constants
   readonly downloadIcon = downloadIcon;
   readonly refreshIcon = refreshIcon;
   readonly sendIcon = sendIcon;
+
+  // The consent call. From triggerSuccess, not node.status, which also turns FAILED when the downloads are used up.
+  // null: the mode has no consent call (Existing consent).
+  triggerStatus(node: ICkycAuthNodeConfig): CallStatus | null {
+    if (!node.requiresTrigger) return null;
+    if (node.status === 'IN_PROGRESS') return 'CALLING';
+    if (node.triggerSuccess === null) return 'AWAITING';
+    return node.triggerSuccess ? 'SUCCESS' : 'FAILED';
+  }
+
+  // The validate call. null: not tried yet. Existing consent has no consent call, so its running call is this one.
+  validateStatus(node: ICkycAuthNodeConfig): CallStatus | null {
+    if (!node.requiresTrigger && node.status === 'IN_PROGRESS') return 'CALLING';
+    if (node.validateSuccess === null) return null;
+    return node.validateSuccess ? 'SUCCESS' : 'FAILED';
+  }
 
   canDownload(node: ICkycAuthNodeConfig): boolean {
     return this.downloadable() && this.authStore.canValidate(node);

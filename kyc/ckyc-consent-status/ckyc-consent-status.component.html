@@ -5,7 +5,8 @@
       <tr>
         <th scope="col" class="consent-status__index">#</th>
         <th scope="col">Consent request</th>
-        <th scope="col" class="consent-status__status">Status</th>
+        <th scope="col" class="consent-status__status">Trigger status</th>
+        <th scope="col" class="consent-status__status">{{ validateStatusTitle() }}</th>
         <th scope="col" class="consent-status__action">Action</th>
       </tr>
     </thead>
@@ -14,19 +15,40 @@
         <tr>
           <td class="consent-status__index">{{ index + 1 }}</td>
           <td class="consent-status__request">{{ node.label }}</td>
+          <!-- Calling has its pulsing dot instead of an icon -->
           <td class="consent-status__status">
-            <span
-              class="consent-result"
-              [class.consent-result--success]="node.status === 'SUCCESS'"
-              [class.consent-result--failed]="node.status === 'FAILED'"
-              [class.consent-result--calling]="node.status === 'IN_PROGRESS'"
-            >
-              <!-- Calling has its pulsing dot instead of an icon -->
-              @if (statusIcon[node.status]; as icon) {
-                <fa-icon [icon]="icon" />
-              }
-              {{ statusText[node.status] }}
-            </span>
+            @if (triggerStatus(node); as status) {
+              <span
+                class="consent-result"
+                [class.consent-result--success]="status === 'SUCCESS'"
+                [class.consent-result--failed]="status === 'FAILED'"
+                [class.consent-result--calling]="status === 'CALLING'"
+              >
+                @if (callStatusIcon[status]; as icon) {
+                  <fa-icon [icon]="icon" />
+                }
+                {{ triggerStatusText[status] }}
+              </span>
+            } @else {
+              <span class="consent-status__none">Not required</span>
+            }
+          </td>
+          <td class="consent-status__status">
+            @if (validateStatus(node); as status) {
+              <span
+                class="consent-result"
+                [class.consent-result--success]="status === 'SUCCESS'"
+                [class.consent-result--failed]="status === 'FAILED'"
+                [class.consent-result--calling]="status === 'CALLING'"
+              >
+                @if (callStatusIcon[status]; as icon) {
+                  <fa-icon [icon]="icon" />
+                }
+                {{ validateStatusText()[status] }}
+              </span>
+            } @else {
+              <span class="consent-status__none" aria-label="Not tried yet">—</span>
+            }
           </td>
           <td class="consent-status__action">
             @if (canDownload(node)) {
@@ -55,7 +77,7 @@
         </tr>
       } @empty {
         <tr>
-          <td colspan="4" class="consent-status__empty">No consent calls yet.</td>
+          <td colspan="5" class="consent-status__empty">No consent calls yet.</td>
         </tr>
       }
     </tbody>

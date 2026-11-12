@@ -257,11 +257,6 @@
     margin-top: t.$space-3;
   }
 
-  // Last OTP attempt time, under the table (after &__help: replaces its margin: 0)
-  &__time {
-    margin-top: t.$space-3;
-  }
-
   // ---- Phone: chips under the title, one option per line, full-width actions with Verify first ----
   @include t.phone {
     &__chips {

@@ -14,7 +14,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatRadioModule } from '@angular/material/radio';
 import { OtpIdentifier, OtpIdentifierEnum } from '../models/ckyc-consent-request.model';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
-import { approveIcon, backArrowIcon, checkCircleIcon, envelopeIcon, faFieldErrorIcon, infoIcon, phoneIcon, refreshIcon, warningIcon } from 'src/app/constants/icons.constants';
+import { approveIcon, backArrowIcon, checkCircleIcon, envelopeIcon, faFieldErrorIcon, faLockIcon, infoIcon, phoneIcon, refreshIcon, warningIcon } from 'src/app/constants/icons.constants';
 @Component({
   selector: 'app-ckyc-step-otp',
   standalone: true,
@@ -41,6 +41,7 @@ export class CkycStepOtpComponent {
   readonly checkCircleIcon = checkCircleIcon;
   readonly envelopeIcon = envelopeIcon;
   readonly faFieldErrorIcon = faFieldErrorIcon;
+  readonly faLockIcon = faLockIcon;
   readonly infoIcon = infoIcon;
   readonly phoneIcon = phoneIcon;
   readonly refreshIcon = refreshIcon;
@@ -56,13 +57,6 @@ export class CkycStepOtpComponent {
     () => this.ckycAuthState.authNodes().find((node) => node.mode === AuthenticationMode.OTP) ?? null,
   );
   readonly isActive = computed(() => this.ckycAuthState.activeScreenMode() === AuthenticationMode.OTP);
-  // Where the OTP went, for the card's header (the time and full stop follow in the template)
-  readonly sentTo = computed(() => {
-    const { hasEmailAddress, hasMobileNumber } = this.ckycAuthState.otpState();
-    if (hasEmailAddress && hasMobileNumber) return 'Sent to the registered mobile number and email';
-    return hasMobileNumber ? 'Sent to the registered mobile number' : 'Sent to the registered email';
-  });
-
   // Every resend is used: Resend OTP is disabled. The current OTP can still be verified until it expires.
   readonly noResendsLeft = computed(() => {
     const node = this.otpNode();

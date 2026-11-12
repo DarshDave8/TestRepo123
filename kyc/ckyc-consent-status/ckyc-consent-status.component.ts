@@ -5,7 +5,7 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { approveIcon, closeIcon, dotIcon, downloadIcon, refreshIcon, sendIcon } from 'src/app/constants/icons.constants';
 import { AuthenticationMode } from '../constants/ckyc-onboarding.constants';
-import { ICkycAuthNodeConfig } from '../models/ckyc-onboarding.model';
+import { AuthNodeStatus, ICkycAuthNodeConfig } from '../models/ckyc-onboarding.model';
 import { CkycAuthStateService } from '../services/ckyc-auth-state.service';
 
 // Heading of each mode's table; the stacked screens read as steps.
@@ -16,19 +16,26 @@ const MODE_TITLES: Record<AuthenticationMode, string> = {
   [AuthenticationMode.CONSENT_AVAILABLE]: 'Existing consent',
 };
 
-// What the Status column shows for a row: the row's state across both of its calls (send, then download / verify),
-// not only the send. A sent consent is not green until its data is in. The icon keeps the meaning from relying on
-// colour alone; "calling" has the pulsing dot instead.
-export interface ConsentStatusView {
-  text: string;
-  icon: IconDefinition | null;
-  tone: 'neutral' | 'calling' | 'success' | 'failed';
-}
+const STATUS_TEXT: Record<AuthNodeStatus, string> = {
+  PENDING: 'Awaiting action',
+  IN_PROGRESS: 'Calling',
+  SUCCESS: 'Success',
+  FAILED: 'Failed',
+};
+
+// Icon beside the status text, so Success / Failed do not rely on colour alone. IN_PROGRESS keeps its pulsing dot.
+const STATUS_ICON: Record<AuthNodeStatus, IconDefinition | null> = {
+  PENDING: dotIcon,
+  IN_PROGRESS: null,
+  SUCCESS: approveIcon,
+  FAILED: closeIcon,
+};
 
 /**
  * Consent call history for one auth mode: a row per node of that mode that has been sent, plus the node that
  * waits for the user to send it (its row carries Trigger / Re-trigger).
- * Shown at the top of the Face, Physical and OTP screens. Auth errors show once, above all the tables.
+ * Shown at the top of the Face, Physical and OTP screens. On the active screen it also shows the auth error
+ * (app-ckyc-error-alert scope="auth" with this table's mode).
  */
 @Component({
   selector: 'app-ckyc-consent-status',
@@ -58,35 +65,12 @@ export class CkycConsentStatusComponent {
       .filter((node) => node.mode === this.mode() && (node.status !== 'PENDING' || node.id === this.awaitingNodeId())),
   );
   readonly isBusy = this.authStore.isBusy;
+  readonly statusText = STATUS_TEXT;
+  readonly statusIcon = STATUS_ICON;
   // Font Awesome icons from the app's icons.constants
   readonly downloadIcon = downloadIcon;
   readonly refreshIcon = refreshIcon;
   readonly sendIcon = sendIcon;
-
-  /**
-   * - Awaiting action: not sent yet (waits for Trigger)
-   * - Calling: send running (or, for a mode without a send, its download)
-   * - Send failed: the consent call failed
-   * - Sent: consent sent, data not downloaded / OTP not verified yet
-   * - Downloading: Download Data running for this row
-   * - Download failed / Verification failed (OTP): the last download or verify failed
-   * - Verified: data downloaded / OTP verified
-   */
-  statusView(node: ICkycAuthNodeConfig): ConsentStatusView {
-    if (node.status === 'PENDING') return { text: 'Awaiting action', icon: dotIcon, tone: 'neutral' };
-    if (node.status === 'IN_PROGRESS') return { text: 'Calling', icon: null, tone: 'calling' };
-    if (node.validateSuccess === true) return { text: 'Verified', icon: approveIcon, tone: 'success' };
-    if (node.triggerSuccess === false) return { text: 'Send failed', icon: closeIcon, tone: 'failed' };
-    const isCurrent = this.authStore.currentNode()?.id === node.id;
-    if (isCurrent && this.authStore.authState().loading) {
-      return { text: this.downloadable() ? 'Downloading' : 'Verifying', icon: null, tone: 'calling' };
-    }
-    if (node.validateSuccess === false || node.status === 'FAILED') {
-      const text = this.downloadable() ? 'Download failed' : 'Verification failed';
-      return { text, icon: closeIcon, tone: 'failed' };
-    }
-    return { text: 'Sent', icon: sendIcon, tone: 'neutral' };
-  }
 
   canDownload(node: ICkycAuthNodeConfig): boolean {
     return this.downloadable() && this.authStore.canValidate(node);

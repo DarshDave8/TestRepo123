@@ -15,21 +15,18 @@
           <td class="consent-status__index">{{ index + 1 }}</td>
           <td class="consent-status__request">{{ node.label }}</td>
           <td class="consent-status__status">
-            <!-- The row's state across send and download / verify (statusView), not the send alone -->
-            @if (statusView(node); as view) {
-              <span
-                class="consent-result"
-                [class.consent-result--success]="view.tone === 'success'"
-                [class.consent-result--failed]="view.tone === 'failed'"
-                [class.consent-result--calling]="view.tone === 'calling'"
-              >
-                <!-- Calling has its pulsing dot instead of an icon -->
-                @if (view.icon; as icon) {
-                  <fa-icon [icon]="icon" />
-                }
-                {{ view.text }}
-              </span>
-            }
+            <span
+              class="consent-result"
+              [class.consent-result--success]="node.status === 'SUCCESS'"
+              [class.consent-result--failed]="node.status === 'FAILED'"
+              [class.consent-result--calling]="node.status === 'IN_PROGRESS'"
+            >
+              <!-- Calling has its pulsing dot instead of an icon -->
+              @if (statusIcon[node.status]; as icon) {
+                <fa-icon [icon]="icon" />
+              }
+              {{ statusText[node.status] }}
+            </span>
           </td>
           <td class="consent-status__action">
             @if (canDownload(node)) {

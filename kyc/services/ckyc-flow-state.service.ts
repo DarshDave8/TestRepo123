@@ -168,8 +168,11 @@ export class CkycFlowStateService {
     }
     return this.ckycApi.submit(submitRequest).pipe(
       map((res) => {
-        if (res?.success && res.body?.success) return true;
-        // Refused (top level or body): show why. A top-level refusal used to fail silently.
+        // Submitted: success at the top level, unless the body explicitly refuses (body.success false). With no
+        // enquiry (nothing found, so no record) the body comes back empty or without success: that is still a
+        // submit, and used to show "could not submit" although the backend had saved it.
+        if (res?.success && res.body?.success !== false) return true;
+        // Refused (top level or body): show why.
         this.submitError.set(ckycErrorMessage(res, CKYC_ERROR_MESSAGES.SUBMIT_FAILED));
         return false;
       }),

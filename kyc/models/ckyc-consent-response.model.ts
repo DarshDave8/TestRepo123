@@ -37,7 +37,7 @@ export interface IUpdateEnquiryResponseBody {
   enquiries: IUpdateEnquiry[];
 }
 export interface ISubmitCkycResponse {
-  body: ISubmitCkycResponseBody;
+  body?: ISubmitCkycResponseBody | null; // empty when nothing was enquired (no record to submit against)
   success: boolean;
 }
 export interface ISubmitCkycResponseBody {
@@ -46,5 +46,5 @@ export interface ISubmitCkycResponseBody {
   enquiryId: string;
   enquiryResponseId: string;
   messages: string[];
-  success: boolean; // false with success at the top level: the submit was refused, messages say why
+  success?: boolean; // false with success at the top level: the submit was refused, messages say why
 }

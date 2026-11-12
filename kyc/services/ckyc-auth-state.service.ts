@@ -435,10 +435,7 @@ export class CkycAuthStateService {
     }
     this._currentNodeIndex.set(next.order);
     if (next.mode !== usedUp.mode) {
-      this.authState.update((s) => ({
-        ...s,
-        error: `${AUTH_MODE_LABELS[usedUp.mode]} failed. Falling back to ${AUTH_MODE_LABELS[next.mode]}.`,
-      }));
+      // No "<mode> failed. Falling back to <mode>." of ours: the switch to the next mode shows no extra message.
       this.otpState.update((s) => ({ ...s, generated: false, expiresAt: null, lastAttemptedAt: null, successMessage: null }));
     }
     if (next.autoTrigger) {

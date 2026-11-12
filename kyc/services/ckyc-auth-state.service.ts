@@ -16,6 +16,7 @@ import {
   SearchAttemptedPhase,
 } from '../constants/ckyc-onboarding.constants';
 import { ckycErrorMessage } from '../utils/ckyc-error.util';
+import { parseCkycTimestamp } from '../utils/ckyc-date.util';
 import {
   AuthDomainState,
   ICkycAuthNodeConfig,
@@ -185,14 +186,10 @@ export class CkycAuthStateService {
     } as ITriggerConsentRequest;
     return defer(() => {
       this.updateNode(node.id, { status: 'IN_PROGRESS', lastError: null });
-      if (payload.consentType === AuthenticationMode.OTP) this.otpState.update((s) => ({ ...s, lastAttemptedAt: null }));
       return this.ckycApi.triggerConsent(payload);
     }).pipe(
       map((response) => {
-        if (payload.consentType === AuthenticationMode.OTP) {
-          const timestamp = Date.parse(response?.body?.timeStamp ?? '');
-          this.otpState.update((s) => ({ ...s, lastAttemptedAt: Number.isFinite(timestamp) ? timestamp : null }));
-        }
+        this.setOtpAttemptTime(node.mode, response?.body?.timeStamp);
         if (!response?.success) {
           this.onTriggerFailure(node.id, ckycErrorMessage(response, CKYC_ERROR_MESSAGES.CONSENT_TRIGGER_FAILED(node.label)));
           return false;
@@ -201,10 +198,7 @@ export class CkycAuthStateService {
         return true;
       }),
       catchError((error) => {
-        if (payload.consentType === AuthenticationMode.OTP) {
-          const timestamp = Date.parse(error?.error?.body?.timeStamp ?? '');
-          this.otpState.update((s) => ({ ...s, lastAttemptedAt: Number.isFinite(timestamp) ? timestamp : null }));
-        }
+        this.setOtpAttemptTime(node.mode, error?.error?.body?.timeStamp);
         this.onTriggerFailure(node.id, ckycErrorMessage(error, CKYC_ERROR_MESSAGES.CONSENT_TRIGGER_FAILED(node.label)));
         return of(false);
       }),
@@ -304,6 +298,15 @@ export class CkycAuthStateService {
     this._startFailedMatchKey.set(null);
     this.authState.set(INITIAL_AUTH_STATE);
     this.otpState.set(INITIAL_OTP_STATE);
+  }
+
+  /**
+   * The backend's time of the last OTP send (sent or failed), shown on the OTP screen. Kept while the next send
+   * runs, so it does not flicker; replaced by that send's time, or cleared when its response has none.
+   */
+  private setOtpAttemptTime(mode: AuthenticationMode, timeStamp?: string | null): void {
+    if (mode !== AuthenticationMode.OTP) return;
+    this.otpState.update((s) => ({ ...s, lastAttemptedAt: parseCkycTimestamp(timeStamp) }));
   }
 
   // Authenticate did not start for this match card: the card shows the auth error (see startFailedMatchKey).
@@ -440,7 +443,13 @@ export class CkycAuthStateService {
         ...s,
         error: `${AUTH_MODE_LABELS[usedUp.mode]} failed. Falling back to ${AUTH_MODE_LABELS[next.mode]}.`,
       }));
-      this.otpState.update((s) => ({ ...s, generated: false, expiresAt: null, lastAttemptedAt: null, successMessage: null }));
+      this.otpState.update((s) => ({
+        ...s,
+        generated: false,
+        expiresAt: null,
+        lastAttemptedAt: null,
+        successMessage: null,
+      }));
     }
     if (next.autoTrigger) {
       this.sendCurrentNode().subscribe();

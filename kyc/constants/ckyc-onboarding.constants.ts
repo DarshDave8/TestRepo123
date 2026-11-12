@@ -171,7 +171,8 @@ export const CKYC_ERROR_TITLES: Record<CkycErrorScope, string> = {
   submit: 'CKYC submission',
 };
 
-// Our messages, used only when the backend sends no message of its own (see utils/ckyc-error.util.ts).
+// Our messages, used only when the backend sends no message of its own (see utils/ckyc-error.util.ts). Nothing here
+// is added on top of a backend message.
 export const CKYC_ERROR_MESSAGES = {
   TRIGGER_ENQUIRIES_FAILED: 'We could not run the CKYC enquiries. Please retrigger them.',
   SEARCH_FAILED: 'We could not complete the CKYC search. Please try again.',
@@ -181,7 +182,6 @@ export const CKYC_ERROR_MESSAGES = {
   NO_AUTH_METHODS: 'No authentication method is available for this record.',
   CONSENT_TRIGGER_FAILED: (label: string) => `${label} could not be sent. Please try again.`,
   CONSENT_VALIDATE_FAILED: 'We could not verify the consent. Please try again.',
-  AUTH_METHODS_EXHAUSTED: (label: string) => `${label} failed. No other authentication method is available.`,
   OTP_VERIFY_FAILED: 'The OTP could not be verified. Check the code and try again.',
   OTP_NO_RESENDS_LEFT: 'The OTP has expired and no resends are left. Go back to the enquiry to start again.',
   OTP_EXPIRED: 'The OTP has expired. Resend it to continue.',

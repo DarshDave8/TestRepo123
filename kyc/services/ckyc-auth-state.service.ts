@@ -396,13 +396,10 @@ export class CkycAuthStateService {
     })!;
     // The last send failed: drop the "OTP sent" banner of an earlier send.
     if (node.mode === AuthenticationMode.OTP) this.otpState.update((s) => ({ ...s, successMessage: null }));
-    if (this.hasAttemptsLeft(node.triggerAttemptCount, node.maxTriggerAttempts)) {
-      // Stay on this node; the user sends it again (e.g. "Re-trigger OTP"). Backend message first (it used to be
-      // replaced by "<label> failed. Please try again.").
-      this.authState.update((s) => ({ ...s, error: message }));
-      return;
-    }
-    this.moveToNextNode(node);
+    // The failure's own message (the backend's; ours only when it sent none), whether the flow stays on this node
+    // ("Re-trigger") or moves on. Nothing of ours is added on top.
+    this.authState.update((s) => ({ ...s, error: message }));
+    if (!this.hasAttemptsLeft(node.triggerAttemptCount, node.maxTriggerAttempts)) this.moveToNextNode(node);
   }
 
   // Returns false, so validate() can return it directly.
@@ -427,22 +424,19 @@ export class CkycAuthStateService {
 
   /**
    * Moves past a used-up node. No node left -> manual verification. Otherwise the next node becomes current,
-   * and is sent right away when it is autoTrigger (else it waits for the user).
+   * and is sent right away when it is autoTrigger (else it waits for the user). The error shown stays the used-up
+   * node's own failure message (no "Falling back to …" / "No other authentication method" of ours); the next
+   * node's successful send dismisses it.
    */
   private moveToNextNode(usedUp: ICkycAuthNodeConfig): void {
     const next = this._authNodes()[usedUp.order + 1];
     if (!next) {
       this._currentNodeIndex.set(null);
-      this.authState.update((s) => ({ ...s, error: CKYC_ERROR_MESSAGES.AUTH_METHODS_EXHAUSTED(usedUp.label) }));
       this.ckycSharedStateService.setManualVerificationEnabled(true);
       return;
     }
     this._currentNodeIndex.set(next.order);
     if (next.mode !== usedUp.mode) {
-      this.authState.update((s) => ({
-        ...s,
-        error: `${AUTH_MODE_LABELS[usedUp.mode]} failed. Falling back to ${AUTH_MODE_LABELS[next.mode]}.`,
-      }));
       this.otpState.update((s) => ({
         ...s,
         generated: false,

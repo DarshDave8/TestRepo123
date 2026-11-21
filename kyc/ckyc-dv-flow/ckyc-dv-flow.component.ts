@@ -176,5 +176,29 @@ export class CkycDvFlowComponent implements OnChanges {
         }
       });
   }
+
+  // Bumped by refresh(). The template is keyed on it, so the whole CKYC section is created again.
+  readonly refreshKey = signal(0);
+
+  /**
+   * Starts the CKYC section over, as on a fresh visit to the screen: running calls stop, the CKYC services are
+   * cleared, and every child screen is created again (so whatever it loads on start is loaded again).
+   * Called by the DV screen when approving returns isCkycSectionToBeRefreshed.
+   */
+  refresh(): void {
+    // The same clean-up as when the screen closes (see the constructor)...
+    this.authService.resetAuth();
+    this.flowState.reset();
+    this.sharedService.reset();
+    // ...this component's own state...
+    this.validatedDetails.set(null);
+    this.isValidatedDetailsConfirmed.set(false);
+    this.isSubmitting.set(false);
+    this.isShowEnquiries = false;
+    // ...the lead id and details that sharedService.reset() cleared (set again from the input)...
+    this.resolveCkycTrigger();
+    // ...and a new key, so the template rebuilds the section.
+    this.refreshKey.update((key) => key + 1);
+  }
   resolveEmptyEnquiryList() {}
 }

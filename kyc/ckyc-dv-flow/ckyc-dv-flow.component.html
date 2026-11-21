@@ -1,5 +1,7 @@
 <!-- From commit 9689250e (diff photograph, 2026-11-03); UI step 6 (2026-11-04); isEditable gates (diff photos 2026-11-06). -->
 @if (isShowCkycFlow()) {
+  <!-- Keyed on refreshKey: refresh() destroys the section and creates it again from scratch. -->
+  @for (key of [refreshKey()]; track key) {
   <div class="dv-flow">
     @if (leadDetails()?.customerProfile?.profileProvider === "MANUAL") {
       @if (isEditable()) {
@@ -79,6 +81,7 @@
       }
     </div>
   </div>
+  }
 } @else if (
   leadDetails()?.customerProfile?.profileProvider === "CKYC" ||
   leadDetails()?.customerProfile?.profileProvider === "AADHAAR"

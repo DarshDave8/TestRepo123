@@ -1,5 +1,5 @@
 <!-- From commit 9689250e (diff photograph, 2026-11-03); UI step 6 (2026-11-04); isEditable gates (diff photos 2026-11-06). -->
-@if (isShowCkycFlow()) {
+@if (isShowCkycFlow() && !isRefreshing()) {
   <!-- Keyed on refreshKey: refresh() destroys the section and creates it again from scratch. -->
   @for (key of [refreshKey()]; track key) {
   <div class="dv-flow">
@@ -56,6 +56,10 @@
           }
         }
       }
+    }
+    <!-- Show a Trigger Enquiries error when the onboarding child is not present. -->
+    @if (!isShowEnquiries && flowState.enquiryError()) {
+      <app-ckyc-error-alert scope="enquiry" />
     }
     <!-- Update-enquiry / submit errors (including the DV auto-submit), right above Submit CKYC -->
     <app-ckyc-error-alert scope="submit" />

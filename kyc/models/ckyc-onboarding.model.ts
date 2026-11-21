@@ -180,7 +180,15 @@ export interface ITriggerEnquiriesRequest {
 export interface ITriggerEnquiriesResponse extends IResponse {
   body: ITriggerEnquiriesResponseBody;
 }
+export interface ITriggerEnquiriesSummary {
+  searchOption: CkycSearchOption;
+  success: boolean;
+  recordsFound: number;
+}
+
 export interface ITriggerEnquiriesResponseBody {
+  // Actual response shape visible in the Trigger Enquiries screenshot.
+  summary?: ITriggerEnquiriesSummary[];
   messages: string[];
   recordsFound: number;
   searchOption?: CkycSearchOption;

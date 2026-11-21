@@ -1,6 +1,7 @@
 // Screenshot transcription: images 3 and 4 (2026-10-29), plus the DV submit logic of commit 9689250e.
 // SOURCE GAP: not every original line is visible. Do not treat this as build-ready.
-// triggerEnquiries() reconstructed from the user-provided 2026-11-21 screenshot; verify against the real application.
+// SOURCE GAP: the real file also has triggerEnquiries() and triggerEnquiriesResponse (seen only in part in
+// 9689250e); they are not transcribed here.
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Subject, catchError, finalize, map, of, switchMap, takeUntil, type Observable } from 'rxjs';
 import { CkycOnboardingService } from './ckyc-onboarding.service';
@@ -19,8 +20,6 @@ import {
   CkycRelatedPersonName,
   CkycSavedOvd,
   IActiveMatchSelection,
-  ITriggerEnquiriesRequest,
-  ITriggerEnquiriesResponse,
 } from '../models/ckyc-onboarding.model';
 import { ICkycEnquiryListResponseBody, ICkycSearchResponse } from '../models/ckyc-search-response.model';
 import { CkycEnquiriesRequest, CkycSearchRequest } from '../models/ckyc-search-request.model';
@@ -45,8 +44,7 @@ export class CkycFlowStateService {
   // base signals
   readonly enquiries = signal<readonly ICkycEnquiryListResponseBody[]>([]);
   readonly activeMatchSelection = signal<IActiveMatchSelection | null>(null);
-  readonly isTriggerEnquiriesSuccess = signal<boolean>(false);
-  readonly triggerEnquiriesResponse = signal<ITriggerEnquiriesResponse | null>(null);
+  readonly isTriggerEnquiriesSuccess = signal<boolean>(false); // set by triggerEnquiries() (not transcribed)
 
   // status signal
   readonly isEditable = signal<boolean>(false);
@@ -108,47 +106,6 @@ export class CkycFlowStateService {
     }
     return grouped;
   });
-
-  /**
-   * Re-trigger DV searches. Successful if every search succeeds or a successful
-   * OVD search finds at least one record, as in the application screenshot.
-   */
-  triggerEnquiries(): Observable<boolean> {
-    const req: ITriggerEnquiriesRequest = {
-      leadId: this.ckycSharedStateService.leadId() ?? '',
-      searchAttemptedPhase: SearchAttemptedPhase.DIGITAL_VERIFICATION,
-    };
-    this.enquiryError.set(null);
-    this.isTriggerEnquiriesSuccess.set(false);
-    this.triggerEnquiriesResponse.set(null);
-
-    return this.ckycApi.triggerEnquiries(req).pipe(
-      map((res: ITriggerEnquiriesResponse) => {
-        const summary = res.body?.summary;
-        if (summary?.length) {
-          this.triggerEnquiriesResponse.set(res);
-          const isAnyOvdSearchWithRecordsFound = summary.some(
-            (item) =>
-              item.searchOption === CkycSearchOption.OVD &&
-              item.success === true &&
-              item.recordsFound > 0,
-          );
-          const isAllRecordsSuccess = summary.every((item) => item.success === true);
-          const success = isAllRecordsSuccess || isAnyOvdSearchWithRecordsFound;
-
-          this.isTriggerEnquiriesSuccess.set(success);
-          if (success) return true;
-        }
-        this.enquiryError.set('Unable to complete the request');
-        return false;
-      }),
-      catchError(() => {
-        this.enquiryError.set('Unable to complete the request');
-        return of(false);
-      }),
-      takeUntil(this.reset$),
-    );
-  }
 
   // Submit action for the CKYC flow in DV.
   // If the user confirmed that none of the enquiries pertains to the customer, mark them so with update-enquiry
@@ -352,7 +309,7 @@ export class CkycFlowStateService {
    * Back to the start: stops running requests and clears every signal, including the search form values.
    * Before 9689250e this service lived and died with the onboarding screen; it is app-wide now, so the screen
    * that owns the flow (DV flow, or onboarding in Profile Creation) calls this when it closes.
-   * Also clear the last Trigger Enquiries response so stale results cannot be reused.
+   * SOURCE GAP: the real file also has triggerEnquiriesResponse; reset it here too.
    */
   reset(): void {
     this.reset$.next();
@@ -361,7 +318,6 @@ export class CkycFlowStateService {
     this.enquiries.set([]);
     this.activeMatchSelection.set(null);
     this.isTriggerEnquiriesSuccess.set(false);
-    this.triggerEnquiriesResponse.set(null);
     // App-wide service: left true, the next lead's DV screen would emit finalSubmitted as soon as it opens.
     this.isDefaultSubmitTriggerSuccessful.set(false);
     this.historyLoading.set(false);

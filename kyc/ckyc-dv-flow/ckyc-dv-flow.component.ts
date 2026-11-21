@@ -179,7 +179,6 @@ export class CkycDvFlowComponent implements OnChanges {
 
   // Bumped by refresh(). The template is keyed on it, so the whole CKYC section is created again.
   readonly refreshKey = signal(0);
-  readonly isRefreshing = signal(false);
 
   /**
    * Starts the CKYC section over, as on a fresh visit to the screen: running calls stop, the CKYC services are
@@ -187,38 +186,19 @@ export class CkycDvFlowComponent implements OnChanges {
    * Called by the DV screen when approving returns isCkycSectionToBeRefreshed.
    */
   refresh(): void {
-    if (this.isRefreshing()) return;
-    this.isRefreshing.set(true);
-
+    // The same clean-up as when the screen closes (see the constructor)...
     this.authService.resetAuth();
     this.flowState.reset();
     this.sharedService.reset();
+    // ...this component's own state...
     this.validatedDetails.set(null);
     this.isValidatedDetailsConfirmed.set(false);
     this.isSubmitting.set(false);
     this.isShowEnquiries = false;
-
-    // Restore the lead context cleared by reset before Trigger Enquiries runs.
+    // ...the lead id and details that sharedService.reset() cleared (set again from the input)...
     this.resolveCkycTrigger();
-    if (!this.isShowCkycFlow() || !this.sharedService.leadId()) {
-      this.isRefreshing.set(false);
-      return;
-    }
-    this.sharedService.setSearchAttemptedPhase(SearchAttemptedPhase.DIGITAL_VERIFICATION);
-
-    // Only explicitly refreshing this DV section re-triggers the searches.
-    // The onboarding child loads history on mount, so remount after trigger succeeds.
-    this.flowState
-      .triggerEnquiries()
-      .pipe(
-        takeUntilDestroyed(this.destroyRef),
-        finalize(() => this.isRefreshing.set(false)),
-      )
-      .subscribe((success) => {
-        if (success) {
-          this.refreshKey.update((key) => key + 1);
-        }
-      });
+    // ...and a new key, so the template rebuilds the section.
+    this.refreshKey.update((key) => key + 1);
   }
   resolveEmptyEnquiryList() {}
 }

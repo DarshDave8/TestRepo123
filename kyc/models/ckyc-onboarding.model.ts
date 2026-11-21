@@ -168,6 +168,7 @@ export interface ICkycAuthNodeConfig {
   resendCount: number; // successful resends after the first send (OTP)
   maxResends: number | null; // from AUTH_CONFIG; null = no limit
   lastError: string | null;
+  selectable?: boolean; // from AUTH_CONFIG: offered in the method picker, never falls back to the next node
 }
 
 // Trigger-Enquiries

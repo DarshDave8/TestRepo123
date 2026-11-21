@@ -24,6 +24,7 @@ import { CkycAuthStateService } from './services/ckyc-auth-state.service';
 import { CkycErrorAlertComponent } from './ckyc-error-alert/ckyc-error-alert.component';
 import { CkycSharedStateService } from './services/ckyc-shared-state.service';
 import { CkycEnquiryDetailsComponent } from './ckyc-enquiry-list/ckyc-enquiry-details/ckyc-enquiry-details.component';
+import { CkycAuthMethodPickerComponent } from './ckyc-auth-method-picker/ckyc-auth-method-picker.component';
 
 @Component({
   selector: 'app-ckyc-onboarding',
@@ -36,6 +37,7 @@ import { CkycEnquiryDetailsComponent } from './ckyc-enquiry-list/ckyc-enquiry-de
     CkycSearchV2Component,
     CkycErrorAlertComponent,
     CkycEnquiryDetailsComponent,
+    CkycAuthMethodPickerComponent,
   ],
   templateUrl: './ckyc-onboarding.component.html',
   styleUrl: './ckyc-onboarding.component.scss',

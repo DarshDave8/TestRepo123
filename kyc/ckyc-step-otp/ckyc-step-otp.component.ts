@@ -49,6 +49,7 @@ export class CkycStepOtpComponent {
   readonly authMode = AuthenticationMode;
   readonly ckycAuthState = inject(CkycAuthStateService);
   private readonly destroyRef = inject(DestroyRef);
+  // Seconds until Resend OTP opens. Only a resend timer: the OTP does not expire here and can be verified at any time.
   readonly countdown = signal(0);
   readonly isSubmitting = signal<boolean>(false);
   readonly otpIdentifierEnum = OtpIdentifierEnum;
@@ -57,7 +58,7 @@ export class CkycStepOtpComponent {
     () => this.ckycAuthState.authNodes().find((node) => node.mode === AuthenticationMode.OTP) ?? null,
   );
   readonly isActive = computed(() => this.ckycAuthState.activeScreenMode() === AuthenticationMode.OTP);
-  // Every resend is used: Resend OTP is disabled. The current OTP can still be verified until it expires.
+  // Every resend is used: Resend OTP is disabled. The current OTP can still be verified.
   readonly noResendsLeft = computed(() => {
     const node = this.otpNode();
     return node !== null && node.maxResends !== null && node.resendCount >= node.maxResends;
@@ -115,7 +116,6 @@ export class CkycStepOtpComponent {
     if (
       this.otpControl.invalid ||
       this.radioControl.invalid ||
-      this.countdown() === 0 ||
       this.isSubmitting()
     ) {
       this.otpControl.markAsTouched();
@@ -145,7 +145,8 @@ export class CkycStepOtpComponent {
     this.ckycAuthState.cancelConsentFlow();
   }
   resend(): void {
-    if (this.isSubmitting() || this.noResendsLeft()) return;
+    // Not while a call is running: a second tap would send a second OTP and count two resends.
+    if (this.isSubmitting() || this.noResendsLeft() || this.ckycAuthState.isBusy()) return;
     this.ckycAuthState
       .resendOtp()
       .pipe(takeUntilDestroyed(this.destroyRef))

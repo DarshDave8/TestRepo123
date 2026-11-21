@@ -36,14 +36,13 @@
             }
           </p>
         </div>
-        <!-- Not aria-live: the timer changes every second. Expiry is announced once by the notice below. -->
+        <!-- Not aria-live: the timer changes every second. The timer only says when Resend OTP opens; the OTP does
+             not expire here, so the code can still be verified after it ends. -->
         <div class="ckyc-otp__chips">
           @if (countdown() > 0) {
             <span class="ckyc-otp__chip">
-              <span>Expires in <strong>{{ formatDisplayTime(countdown()) }}</strong></span>
+              <span>Resend in <strong>{{ formatDisplayTime(countdown()) }}</strong></span>
             </span>
-          } @else {
-            <span class="ckyc-otp__chip ckyc-otp__chip--expired">Expired</span>
           }
           <!-- Attempts = resends after the first OTP (wrong OTPs do not count) -->
           @if (otpNode()?.maxResends; as maxResends) {
@@ -120,16 +119,6 @@
             <!-- Backend message first (e.g. "Invalid OTP."), ours when it sent none -->
             <span>{{ otpNode()?.lastError || errorMessages.OTP_VERIFY_FAILED }}</span>
           </div>
-        } @else if (countdown() === 0 && noResendsLeft()) {
-          <div class="ckyc-otp__notice ckyc-otp__notice--warning" role="alert">
-            <fa-icon class="ckyc-otp__notice-icon" [icon]="warningIcon" />
-            <span>{{ errorMessages.OTP_NO_RESENDS_LEFT }}</span>
-          </div>
-        } @else if (countdown() === 0) {
-          <div class="ckyc-otp__notice" role="status">
-            <fa-icon class="ckyc-otp__notice-icon" [icon]="infoIcon" />
-            <span>{{ errorMessages.OTP_EXPIRED }}</span>
-          </div>
         }
       </div>
 
@@ -145,7 +134,7 @@
             mat-stroked-button
             class="ckyc-otp__resend"
             type="button"
-            [disabled]="countdown() > 0 || noResendsLeft()"
+            [disabled]="countdown() > 0 || noResendsLeft() || ckycAuthState.isBusy()"
             (click)="resend()"
           >
             <fa-icon [icon]="refreshIcon" />Resend OTP
@@ -155,7 +144,7 @@
             class="ckyc-otp__verify"
             type="button"
             [disabled]="
-              radioControl.invalid || otpControl.invalid || countdown() === 0 || isSubmitting()
+              radioControl.invalid || otpControl.invalid || isSubmitting()
             "
             [attr.aria-busy]="isSubmitting()"
             (click)="submit()"

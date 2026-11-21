@@ -4,17 +4,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { approveIcon, closeIcon, dotIcon, downloadIcon, refreshIcon, sendIcon } from 'src/app/constants/icons.constants';
-import { AuthenticationMode } from '../constants/ckyc-onboarding.constants';
+import { AUTH_MODE_TITLES, AuthenticationMode } from '../constants/ckyc-onboarding.constants';
 import { ICkycAuthNodeConfig } from '../models/ckyc-onboarding.model';
 import { CkycAuthStateService } from '../services/ckyc-auth-state.service';
-
-// Heading of each mode's table; the stacked screens read as steps.
-const MODE_TITLES: Record<AuthenticationMode, string> = {
-  [AuthenticationMode.MANUAL]: 'Manual authentication',
-  [AuthenticationMode.FACEAUTH]: 'Face authentication',
-  [AuthenticationMode.OTP]: 'OTP verification',
-  [AuthenticationMode.CONSENT_AVAILABLE]: 'Existing consent',
-};
 
 // State of one call of a row: Trigger status = the consent call, Download / Verify status = the validate call.
 type CallStatus = 'AWAITING' | 'CALLING' | 'SUCCESS' | 'FAILED';
@@ -70,7 +62,8 @@ export class CkycConsentStatusComponent {
   readonly downloadable = input(true);
 
   readonly captionId = computed(() => `consent-status-caption-${this.mode()}`);
-  readonly caption = computed(() => MODE_TITLES[this.mode()]);
+  // Heading of each mode's table (shared with the method picker); the stacked screens read as steps.
+  readonly caption = computed(() => AUTH_MODE_TITLES[this.mode()]);
   // The node waiting for the user's send (e.g. OTP after Face), if it belongs to this table.
   private readonly awaitingNodeId = computed(() =>
     this.authStore.awaitingUserTrigger() ? (this.authStore.currentNode()?.id ?? null) : null,

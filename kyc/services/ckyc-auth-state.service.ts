@@ -54,16 +54,29 @@ export class CkycAuthStateService {
   // Auth queue for the current match: one node per consent call, in fallback order (built from AUTH_CONFIG).
   private readonly _authNodes = signal<readonly ICkycAuthNodeConfig[]>([]);
   readonly authNodes = this._authNodes.asReadonly();
-  // Index of the node the flow is on; null = no queue, or every node is used up.
+  // Index of the node the flow is on; null = no queue, every node is used up, or the method picker is open.
   private readonly _currentNodeIndex = signal<number | null>(null);
+  // Method picker (AUTH_CONFIG selectable): open until the user picks a node. While open, no node is current.
+  private readonly _awaitingSelection = signal(false);
+  readonly awaitingSelection = this._awaitingSelection.asReadonly();
+  // The nodes the method picker offers, in queue order.
+  readonly selectableNodes = computed(() => this._authNodes().filter((node) => node.selectable === true));
   readonly currentNode = computed<ICkycAuthNodeConfig | null>(() => {
     const index = this._currentNodeIndex();
     return index === null ? null : (this._authNodes()[index] ?? null);
   });
   // The current node waits for the user to send it (autoTrigger false), e.g. the "Trigger OTP" button.
+  // FAILED: only a failed send is sent again (Re-trigger), while it has trigger attempts left. A node whose validate
+  // failed is not sent again from here: the user goes Back to the enquiries and picks again.
   readonly awaitingUserTrigger = computed(() => {
     const node = this.currentNode();
-    return node !== null && !node.autoTrigger && (node.status === 'PENDING' || node.status === 'FAILED');
+    if (node === null || node.autoTrigger) return false;
+    if (node.status === 'PENDING') return true;
+    return (
+      node.status === 'FAILED' &&
+      node.triggerSuccess === false &&
+      this.hasAttemptsLeft(node.triggerAttemptCount, node.maxTriggerAttempts)
+    );
   });
   // Modes the flow has reached, in queue order. Each gets its screen, and earlier screens stay visible.
   readonly reachedModes = computed<readonly AuthenticationMode[]>(() => {
@@ -132,8 +145,10 @@ export class CkycAuthStateService {
    * Starts this match's queue (after loadApplicableModes): sends the first node when it is autoTrigger,
    * otherwise it waits for the user. Returns false when no node is usable; manual verification is flagged.
    * CONSENT_AVAILABLE (consent already given) is first when the backend returns it: validate is called at once.
+   * Method picker open: nothing is sent; the picker waits for the user (see triggerPickedNode).
    */
   startQueue(): boolean {
+    if (this._awaitingSelection()) return true;
     const first = this.currentNode();
     if (!first) {
       this.authState.update((s) => ({ ...s, error: CKYC_ERROR_MESSAGES.NO_AUTH_METHODS }));
@@ -143,6 +158,21 @@ export class CkycAuthStateService {
     if (first.autoTrigger) {
       this.sendCurrentNode().subscribe();
     }
+    return true;
+  }
+
+  /**
+   * Method picker: makes the picked node current and sends it, the same way the queue sends a node (the call
+   * belongs to this service and resetAuth stops it, so it outlives the picker, which closes here).
+   * Returns false when the picker is not open or the node is not offered in it.
+   */
+  triggerPickedNode(nodeId: string): boolean {
+    const node = this.findNode(nodeId);
+    if (!this._awaitingSelection() || node?.selectable !== true) return false;
+    this._awaitingSelection.set(false);
+    this._currentNodeIndex.set(node.order);
+    this.authState.update((s) => ({ ...s, error: null }));
+    this.sendCurrentNode().subscribe();
     return true;
   }
 
@@ -217,11 +247,12 @@ export class CkycAuthStateService {
 
   /**
    * Sends the OTP again. Resends are the OTP's counted attempts (maxResends): only a resend the backend accepted
-   * counts, and none is sent once they are used up. Wrong OTPs are not counted.
+   * counts, and none is sent once they are used up. Wrong OTPs are not counted. Nothing is sent while a send is
+   * still running (a double tap used to send two OTPs and count two resends).
    */
   resendOtp(): Observable<boolean> {
     const node = this.currentNode();
-    if (!node || !this.hasAttemptsLeft(node.resendCount, node.maxResends)) return of(false);
+    if (!node || node.status === 'IN_PROGRESS' || !this.hasAttemptsLeft(node.resendCount, node.maxResends)) return of(false);
     return this.triggerConsent().pipe(
       tap((sent) => {
         const current = this.findNode(node.id);
@@ -239,8 +270,9 @@ export class CkycAuthStateService {
 
   /**
    * Validates the current node. A failure counts against the node's maxValidateAttempts (null = unlimited, as for
-   * OTP, whose attempts are its resends); once used up, the queue moves on. FACEAUTH / PHYSICAL show the error
-   * and stay, so "Download Data" can be retried.
+   * OTP, whose attempts are its resends); once used up, the queue moves on, except for a node picked in the method
+   * picker, which stops there (the user goes Back). With unlimited attempts the error shows and the node stays, so
+   * "Download Data" can be retried.
    */
   validate(otp?: string, otpIdentifier?: OtpIdentifier): Observable<boolean> {
     const node = this.currentNode();
@@ -318,7 +350,7 @@ export class CkycAuthStateService {
    * - a mode with factors gets one node per enabled factor (DOB -> RELATION -> BIRTHYEARPINCODE),
    *   and is skipped when every factor is off;
    * - a mode without factors (OTP) gets one node.
-   * The flow starts on the first node.
+   * The flow starts on the first node, or, when that node is selectable, the method picker opens instead.
    */
   private buildLinearQueue(phase: SearchAttemptedPhase, applicableModes: readonly AuthenticationMode[]): void {
     const nodes: ICkycAuthNodeConfig[] = [];
@@ -335,7 +367,10 @@ export class CkycAuthStateService {
       }
     }
     this._authNodes.set(nodes);
-    this._currentNodeIndex.set(nodes.length > 0 ? 0 : null);
+    // CONSENT_AVAILABLE is never selectable, so when the backend returns it the flow still starts on it.
+    const openPicker = nodes[0]?.selectable === true;
+    this._awaitingSelection.set(openPicker);
+    this._currentNodeIndex.set(nodes.length > 0 && !openPicker ? 0 : null);
   }
 
   private buildAuthNode(config: ModeConfiguration, subType: AuthFactor | null, order: number): ICkycAuthNodeConfig {
@@ -357,12 +392,14 @@ export class CkycAuthStateService {
       resendCount: 0,
       maxResends: config.maxResends ?? null,
       lastError: null,
+      selectable: config.selectable ?? false,
     };
   }
 
   private clearQueue(): void {
     this._authNodes.set([]);
     this._currentNodeIndex.set(null);
+    this._awaitingSelection.set(false);
   }
 
   // ---- Auth queue: progress ----
@@ -398,6 +435,11 @@ export class CkycAuthStateService {
       this.authState.update((s) => ({ ...s, error: message }));
       return;
     }
+    if (node.selectable) {
+      // Method picker: no fallback to another node. The user goes Back to the enquiries and picks again.
+      this.authState.update((s) => ({ ...s, error: message }));
+      return;
+    }
     this.moveToNextNode(node);
   }
 
@@ -416,7 +458,8 @@ export class CkycAuthStateService {
     }
     if (!this.hasAttemptsLeft(node.validateAttemptCount, node.maxValidateAttempts)) {
       this.updateNode(nodeId, { status: 'FAILED' });
-      this.moveToNextNode(node);
+      // Method picker: no fallback to another node. The user goes Back to the enquiries and picks again.
+      if (!node.selectable) this.moveToNextNode(node);
     }
     return false;
   }

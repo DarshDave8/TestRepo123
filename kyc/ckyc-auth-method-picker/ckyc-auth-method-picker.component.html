@@ -1,0 +1,56 @@
+<section class="ckyc-method-picker" aria-labelledby="ckyc-method-picker-title">
+  <h3 class="ckyc-method-picker__title" id="ckyc-method-picker-title">Choose a method, then a factor</h3>
+
+  @for (group of groups(); track group.mode) {
+    <div class="ckyc-method-picker__card" [class.ckyc-method-picker__card--selected]="group.mode === selectedMode()">
+      <!-- Standalone radio buttons sharing one name (see the component): one method at a time. -->
+      <mat-radio-button
+        class="ckyc-method-picker__method"
+        name="ckyc-auth-method"
+        [value]="group.mode"
+        [checked]="group.mode === selectedMode()"
+        (change)="selectMode(group.mode)"
+      >
+        <span class="ckyc-method-picker__method-text">
+          <span class="ckyc-method-picker__method-title">{{ group.title }}</span>
+          <span class="ckyc-method-picker__method-hint">{{ group.hint }}</span>
+        </span>
+      </mat-radio-button>
+
+      @if (group.hasFactors) {
+        <!-- The factors of this method; usable once the method is picked. -->
+        <mat-radio-group
+          class="ckyc-method-picker__factors"
+          [attr.aria-label]="'Factor for ' + group.title"
+          [disabled]="group.mode !== selectedMode()"
+          [value]="group.mode === selectedMode() ? selectedNode()?.id : null"
+          (change)="selectNode($event.value)"
+        >
+          @for (node of group.nodes; track node.id) {
+            <mat-radio-button class="ckyc-method-picker__factor" [value]="node.id">{{ factorTitle(node) }}</mat-radio-button>
+          }
+        </mat-radio-group>
+      } @else if (group.note) {
+        <p class="ckyc-method-picker__note">{{ group.note }}</p>
+      }
+    </div>
+  }
+
+  <div class="ckyc-method-picker__footer">
+    <p class="ckyc-method-picker__selected">
+      @if (selectedNode(); as node) {
+        Selected: <strong>{{ node.label }}</strong>
+      } @else {
+        Pick a method and a factor to continue.
+      }
+    </p>
+    <div class="ckyc-method-picker__actions">
+      <button mat-stroked-button class="ckyc-method-picker__back" type="button" (click)="goBack()">
+        <fa-icon [icon]="backArrowIcon" />Back
+      </button>
+      <button mat-flat-button class="ckyc-method-picker__trigger" type="button" [disabled]="!selectedNode()" (click)="triggerConsent()">
+        <fa-icon [icon]="sendIcon" />Trigger consent
+      </button>
+    </div>
+  </div>
+</section>

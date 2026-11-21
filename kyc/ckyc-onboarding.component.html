@@ -16,6 +16,11 @@
     <!-- Every auth error (load modes, send, verify, fallback), once, above all the consent tables. -->
     <app-ckyc-error-alert scope="auth" />
 
+    <!-- Method picker (DV): every method and its factors; nothing is sent until the user picks one. -->
+    @if (ckycAuthState.awaitingSelection()) {
+      <app-ckyc-auth-method-picker />
+    }
+
     <!-- One screen per auth mode the queue has reached, in queue order; earlier screens stay visible. -->
     @for (mode of ckycAuthState.reachedModes(); track mode) {
       @switch (mode) {
@@ -30,6 +35,10 @@
         }
         @case (authMode.OTP) {
           <app-ckyc-step-otp />
+        }
+        @default {
+          <!-- A mode added later through AUTH_CONFIG: the standard consent table (Trigger, Download Data, Back). -->
+          <app-non-otp-authentication [mode]="mode" />
         }
       }
     }

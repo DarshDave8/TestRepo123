@@ -44,6 +44,8 @@ export enum AuthFactor {
 }
 // OTP resends allowed after the first send (the attempt count shown on the OTP card). Wrong OTPs do not count.
 export const CKYC_OTP_MAX_RESENDS = 3;
+// Seconds after a send before Resend OTP opens. A resend timer only: the OTP is not expired on our side.
+// (The name is kept because existing code refers to it.)
 export const CKYC_OTP_TTL_SECONDS = 60;
 
 // ---- CKYC auth queue configuration ----
@@ -52,7 +54,7 @@ export type ModeConfiguration = {
   mode: AuthenticationMode;
   enabled: boolean;
   // Leave out for a mode with no factors (OTP): the mode gets one node.
-  // If present: one node per factor set to true, in AuthFactor order (DOB -> RELATION -> BIRTHYEARPINCODE).
+  // If present: one node per factor set to true, in the order AuthFactor declares them (DOB -> RELATION -> ...).
   // If every factor is false, the mode is skipped.
   factors?: Partial<Record<AuthFactor, boolean>>;
   // false = no consent call: the node goes straight to validate ("Download Data"). Leave out for true.
@@ -67,6 +69,10 @@ export type ModeConfiguration = {
   maxValidateAttempts: number | null;
   // Resends ("Resend OTP") allowed on one node after its first send. Leave out for none / not applicable.
   maxResends?: number | null;
+  // true = offered in the method picker (radio buttons): nothing is sent until the user picks this mode and a
+  // factor, and a used-up node never falls back to the next one (the user goes Back to the enquiries and picks
+  // again). Leave out for the queue order, where the next node is sent by itself.
+  selectable?: boolean;
 };
 
 const ALL_FACTORS: Partial<Record<AuthFactor, boolean>> = {
@@ -91,25 +97,30 @@ const CONSENT_AVAILABLE_CONFIG: ModeConfiguration = {
 export const AUTH_CONFIG: Record<SearchAttemptedPhase, readonly ModeConfiguration[]> = {
   [SearchAttemptedPhase.DIGITAL_VERIFICATION]: [
     CONSENT_AVAILABLE_CONFIG,
+    // Method picker: the user picks Manual / Face / OTP and a factor. A failed send is sent again with Re-trigger
+    // (no limit); a failed download ends the attempt (Back to the enquiries). A wrong OTP does not end it.
     {
       mode: AuthenticationMode.MANUAL,
       enabled: true,
       factors: { ...ALL_FACTORS },
-      autoTrigger: true,
-      maxTriggerAttempts: 1,
-      maxValidateAttempts: null,
+      selectable: true,
+      autoTrigger: false,
+      maxTriggerAttempts: null,
+      maxValidateAttempts: 1,
     },
     {
       mode: AuthenticationMode.FACEAUTH,
       enabled: true,
       factors: { ...ALL_FACTORS },
-      autoTrigger: true,
-      maxTriggerAttempts: 1,
-      maxValidateAttempts: null,
+      selectable: true,
+      autoTrigger: false,
+      maxTriggerAttempts: null,
+      maxValidateAttempts: 1,
     },
     {
       mode: AuthenticationMode.OTP,
       enabled: true,
+      selectable: true,
       autoTrigger: false,
       maxTriggerAttempts: null,
       maxValidateAttempts: null,
@@ -140,6 +151,26 @@ export const AUTH_FACTOR_LABELS: Record<AuthFactor, string> = {
   [AuthFactor.DOB]: 'with DOB',
   [AuthFactor.RELATION]: 'with relation',
   [AuthFactor.BIRTHYEARPINCODE]: 'with year of birth and pincode',
+};
+
+// ---- Method picker texts ----
+// Adding a mode or a factor: add it to its enum, give it its texts here and in the labels above (these are Records,
+// so the build fails until every text exists), then list it in AUTH_CONFIG. The picker, the queue and the calls need
+// no other change; a new mode is shown with the standard consent table (Trigger, Download Data, Back).
+export const AUTH_MODE_TITLES: Record<AuthenticationMode, string> = {
+  [AuthenticationMode.MANUAL]: 'Manual authentication',
+  [AuthenticationMode.FACEAUTH]: 'Face authentication',
+  [AuthenticationMode.OTP]: 'OTP verification',
+  [AuthenticationMode.CONSENT_AVAILABLE]: 'Existing consent',
+};
+export const AUTH_FACTOR_TITLES: Record<AuthFactor, string> = {
+  [AuthFactor.DOB]: 'Date of birth',
+  [AuthFactor.RELATION]: 'Relation',
+  [AuthFactor.BIRTHYEARPINCODE]: 'Year of birth and pincode',
+};
+// Optional line under a mode that has no factor to pick.
+export const AUTH_MODE_NOTES: Partial<Record<AuthenticationMode, string>> = {
+  [AuthenticationMode.OTP]: 'The OTP goes to the registered mobile or email.',
 };
 
 export const CKYC_CONSENT_TEXT = 'Placeholder CKYC consent text. The final approved consent declaration will replace this configuration without changing the flow.';

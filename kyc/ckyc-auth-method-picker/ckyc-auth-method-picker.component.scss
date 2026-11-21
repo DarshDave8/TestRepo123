@@ -1,0 +1,121 @@
+@use "../styles/ckyc-onboarding.tokens" as t;
+
+:host {
+  display: block;
+  margin-top: t.$space-6;
+}
+
+.ckyc-method-picker {
+  &__title {
+    margin: 0;
+    font-size: t.$font-md;
+    font-weight: 600;
+    color: t.$brand-purple;
+  }
+
+  // One card per method; the picked one gets the brand border.
+  &__card {
+    margin-top: t.$space-3;
+    border: 1px solid t.$border;
+    border-radius: t.$radius-md;
+    background: t.$surface;
+    overflow: hidden;
+
+    &--selected {
+      border-color: t.$brand-purple;
+      box-shadow: 0 0 0 1px t.$brand-purple;
+    }
+  }
+
+  &__method {
+    display: block;
+    padding: t.$space-2 t.$space-3;
+  }
+
+  &__method-text {
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__method-title {
+    font-size: t.$font-md;
+    font-weight: 600;
+    color: t.$brand-purple;
+  }
+
+  &__method-hint {
+    font-size: t.$font-xs;
+    color: t.$text-muted;
+  }
+
+  // Factors sit indented under their method; muted until the method is picked.
+  &__factors {
+    display: flex;
+    flex-direction: column;
+    padding: t.$space-1 t.$space-4 t.$space-2 t.$space-8;
+    border-top: 1px solid t.$border;
+    background: t.$surface-muted;
+  }
+
+  &__card--selected &__factors {
+    background: t.$surface;
+  }
+
+  &__note {
+    margin: 0;
+    padding: t.$space-2 t.$space-4 t.$space-3 t.$space-8;
+    border-top: 1px solid t.$border;
+    font-size: t.$font-sm;
+    color: t.$text-muted;
+  }
+
+  &__footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: t.$space-3;
+    margin-top: t.$space-4;
+  }
+
+  &__selected {
+    margin: 0;
+    font-size: t.$font-sm;
+    color: t.$text-muted;
+
+    strong {
+      color: t.$text;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: t.$space-2;
+  }
+
+  &__back {
+    @include t.button-secondary;
+    @include t.button-compact;
+  }
+
+  &__trigger {
+    @include t.button-primary;
+    @include t.button-compact;
+  }
+}
+
+@include t.phone {
+  .ckyc-method-picker__factors,
+  .ckyc-method-picker__note {
+    padding-left: t.$space-6;
+  }
+
+  .ckyc-method-picker__actions {
+    width: 100%;
+
+    button {
+      flex: 1;
+    }
+  }
+}
